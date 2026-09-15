@@ -137,6 +137,9 @@ scheduler_events = {
 # DocType event hooks
 # ---------------------------------------------------------------------
 doc_events = {
+    "Error Log": {
+        "before_insert": "engineering.api.fleet_health_privacy.redact_error_log",
+    },
     "WhatsApp Message": {
         "after_insert": "engineering.controllers.whatsapp_breakdown_import.whatsapp_message_after_insert",
     },
