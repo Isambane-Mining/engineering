@@ -6,7 +6,6 @@ Asset master records remain active elsewhere in ERPNext.
 """
 
 EXCLUDED_PRE_USE_AU_MACHINES = {
-    "426-492",
     "426-492 GWAB",
     "IS127",
     "IS127 GWAB",
