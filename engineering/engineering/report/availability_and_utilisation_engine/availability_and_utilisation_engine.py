@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import timedelta
 
 import frappe
+from engineering.engineering.machine_exclusions import is_pre_use_au_excluded
 from engineering.engineering.doctype.au_invalid_shift_exclusion.au_invalid_shift_exclusion import (
     apply_invalid_shift_exclusions,
 )
@@ -253,6 +254,22 @@ def get_data(filters):
         filters.get("asset_ownership") or "Isambane & Excavo Assets",
     )
 
+    # Shared Pre Use / A&U machine exclusions.
+    assets = [
+        asset
+        for asset in assets
+        if not (
+            is_pre_use_au_excluded(
+                getattr(asset, "location", None),
+                getattr(asset, "asset_name", None),
+            )
+            or is_pre_use_au_excluded(
+                getattr(asset, "location", None),
+                getattr(asset, "name", None),
+            )
+        )
+    ]
+
     if not assets:
         return []
 
@@ -488,6 +505,16 @@ def get_data(filters):
             current_date,
             1,
         )
+
+    # Shared defensive exclusion before A&U row processing.
+    shift_rows = [
+        row
+        for row in shift_rows
+        if not is_pre_use_au_excluded(
+            row.get("location"),
+            row.get("asset_name"),
+        )
+    ]
 
     mark_invalid_preuse_rows(
         shift_rows

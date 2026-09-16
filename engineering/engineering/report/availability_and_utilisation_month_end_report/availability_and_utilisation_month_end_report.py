@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from engineering.engineering.machine_exclusions import is_pre_use_au_excluded
 from datetime import timedelta
 from frappe.utils import flt, get_datetime, getdate, nowdate
 
@@ -2164,6 +2165,21 @@ def _month_end_direct_rows(filters):
         asset_ownership,
     )
 
+    # Shared Pre Use / A&U exclusions must not enter
+    # the Month End machine population.
+    asset_rows = [
+        row
+        for row in asset_rows
+        if not is_pre_use_au_excluded(
+            location,
+            (
+                row.get("asset_name")
+                if hasattr(row, "get")
+                else getattr(row, "asset_name", None)
+            ),
+        )
+    ]
+
     detailed_machine_scope = machine_scope
 
     if (
@@ -2518,6 +2534,14 @@ def _month_end_direct_rows(filters):
         machine_rows = []
 
         for asset_name in sorted(machines_by_category.get(category) or []):
+
+            # Final shared machine exclusion for Month End.
+            if is_pre_use_au_excluded(
+                location,
+                asset_name,
+            ):
+                continue
+
             is_spare = is_spare_swing_asset(asset_name, spare_swing_asset_map)
 
             if machine_scope == "Production Machines" and is_spare:
@@ -3780,3 +3804,132 @@ def execute(filters=None):
 
 
 # MONTH_END_PLANNED_REASON_SPLIT_END
+
+
+# ============================================================
+# MONTH END IS538 DUPLICATE CLEANUP
+#
+# IS538 can enter the Month End machine population under more
+# than one source identifier. Only one machine row must be
+# displayed. If duplicates exist, retain the row containing
+# the most meaningful A&U values.
+# ============================================================
+
+_month_end_execute_before_is538_dedupe = execute
+
+
+def _month_end_is538_score(row):
+    """
+    Rank duplicate IS538 rows.
+
+    Always prefer the row created from the
+    Availability and Utilisation Engine.
+    """
+
+    if not hasattr(row, "get"):
+        return (-1, -1, -1)
+
+    def number(fieldname):
+        try:
+            return float(
+                row.get(fieldname)
+                or 0
+            )
+        except Exception:
+            return 0.0
+
+    has_engine_source = bool(
+        row.get("_au_source_row")
+    )
+
+    work_hours = number(
+        "work_hrs"
+    )
+
+    required_hours = number(
+        "required_hrs"
+    )
+
+    return (
+        1 if has_engine_source else 0,
+        work_hours,
+        required_hours,
+    )
+
+
+def _month_end_remove_duplicate_is538(rows):
+    if not rows:
+        return rows
+
+    target_indexes = []
+
+    for index, row in enumerate(rows):
+        if not hasattr(row, "get"):
+            continue
+
+        asset_name = "".join(
+            str(
+                row.get("asset_name")
+                or ""
+            )
+            .strip()
+            .upper()
+            .split()
+        )
+
+        # Only individual IS538 machine rows.
+        if (
+            asset_name == "IS538"
+            and row.get("asset_name")
+        ):
+            target_indexes.append(index)
+
+    if len(target_indexes) <= 1:
+        return rows
+
+    keep_index = max(
+        target_indexes,
+        key=lambda index: _month_end_is538_score(
+            rows[index]
+        ),
+    )
+
+    return [
+        row
+        for index, row in enumerate(rows)
+        if (
+            index == keep_index
+            or index not in target_indexes
+        )
+    ]
+
+
+def execute(filters=None):
+    result = _month_end_execute_before_is538_dedupe(
+        filters
+    )
+
+    if not result:
+        return result
+
+    # Standard Script Report:
+    # (columns, data, ...)
+    if isinstance(result, tuple):
+        result = list(result)
+
+        if len(result) > 1:
+            result[1] = (
+                _month_end_remove_duplicate_is538(
+                    result[1]
+                )
+            )
+
+        return tuple(result)
+
+    # Defensive support if this report returns a list.
+    if isinstance(result, list):
+        return _month_end_remove_duplicate_is538(
+            result
+        )
+
+    return result
