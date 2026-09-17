@@ -175,6 +175,17 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             reqd: 1
         },
         {
+            fieldname: "au_calculation",
+            label: __("A&U Calculation"),
+            fieldtype: "Select",
+            options: [
+                "Isambane A&U Calculation",
+                "Industry A&U Calculation"
+            ].join("\n"),
+            default: "Isambane A&U Calculation",
+            reqd: 1
+        },
+        {
             fieldname: "free_hours",
             label: __("Free Hours"),
             fieldtype: "Float",
@@ -219,6 +230,9 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             "planned_downtime",
             "required_hours",
             "work_hours",
+            "industry_required_hours",
+            "industry_work_hours",
+            "industry_util_available_hours",
             "pbm_elapsed_time",
             "pbm_startup_fatigue_time",
             "pbm_sunday_time",
@@ -242,6 +256,25 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             column,
             data
         );
+
+        // Industry-only visual separator.
+        // This field exists only in Industry A&U columns,
+        // therefore Isambane A&U is unaffected.
+        if (
+            column.fieldname
+            === "industry_separator"
+        ) {
+            return `
+                <div style="
+                    background:#000000;
+                    width:100%;
+                    min-width:10px;
+                    height:34px;
+                    margin:-7px -8px;
+                    padding:0;
+                "></div>
+            `;
+        }
 
         if (hour_fields.includes(column.fieldname)) {
             value = format_engine_hours(raw_value);
@@ -441,6 +474,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
     },
 
     onload: function(report) {
+        ensure_engine_filter_dropdowns_in_front();
         bind_engine_formula_header_clicks(report);
         add_engine_legend(report);
 
@@ -481,6 +515,45 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
         );
     }
 };
+
+
+function ensure_engine_filter_dropdowns_in_front() {
+    const style_id = "availability-engine-filter-layer-style";
+
+    if (!document.getElementById(style_id)) {
+        const style = document.createElement("style");
+        style.id = style_id;
+        style.textContent = `
+            .page-form {
+                position: relative !important;
+                z-index: 50 !important;
+                overflow: visible !important;
+            }
+
+            .page-form .form-group,
+            .page-form .control-input-wrapper,
+            .page-form .control-input,
+            .page-form .awesomplete,
+            .page-form .frappe-control {
+                overflow: visible !important;
+            }
+
+            .page-form .dropdown-menu,
+            .page-form .awesomplete > ul,
+            .page-form .multiselect-list,
+            .page-form .multiselect-list .dropdown-menu {
+                z-index: 2000 !important;
+            }
+
+            .report-wrapper,
+            .datatable {
+                position: relative;
+                z-index: 1;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
 
 
 function add_engine_legend(report) {
@@ -1332,6 +1405,14 @@ function bind_engine_formula_header_clicks(report) {
 
 
 function mark_engine_formula_headers_clickable() {
+    const is_industry_calculation = (
+        frappe.query_report
+        && frappe.query_report.get_filter_value(
+            "au_calculation"
+        )
+        === "Industry A&U Calculation"
+    );
+
     const formulas = {
         "Utilisation Available Hours": (
             "MAX(Req - PBM, MIN(Work, Req))"
@@ -1340,7 +1421,14 @@ function mark_engine_formula_headers_clickable() {
             "MAX(Work, MAX(Req - PBM, 0))"
         ),
         "Availability %": (
-            "(Availability Available Hours / Req Hrs) × 100 × A&U"
+            is_industry_calculation
+                ? (
+                    "Working Hours + Startup/Fatigue, capped at Required Hours; "
+                    + "÷ Required Hours × 100"
+                )
+                : (
+                    "(Availability Available Hours / Req Hrs) × 100 × A&U"
+                )
         ),
         "Utilisation %": (
             "(Work Hrs / Utilisation Available Hours) × 100 × A&U"
@@ -3759,3 +3847,381 @@ function add_invalid_au_exclusion_column(report) {
 // ============================================================
 // END PLANNED MAINTENANCE REASON VIEW
 // ============================================================
+
+// ============================================================
+// INDUSTRY A&U FORMULA BUTTONS
+// ============================================================
+
+(function install_industry_formula_buttons() {
+    const REPORT_NAME =
+        "Availability and Utilisation Engine";
+
+    function is_industry_mode() {
+        return (
+            frappe.query_report
+            && frappe.query_report.get_filter_value(
+                "au_calculation"
+            ) === "Industry A&U Calculation"
+        );
+    }
+
+
+    function formula_button(handler_name) {
+        return `
+            <div
+                data-industry-formula-button="1"
+                style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    width:100%;
+                    height:100%;
+                "
+            >
+                <button
+                    type="button"
+                    class="btn btn-xs btn-default"
+                    style="
+                        color:#1d4ed8;
+                        border:1px solid #2563eb;
+                        border-radius:10px;
+                        background:#eff6ff;
+                        font-size:10px;
+                        font-weight:700;
+                        padding:2px 8px;
+                        white-space:nowrap;
+                    "
+                    onclick="
+                        window.${handler_name}();
+                        return false;
+                    "
+                >
+                    View Formula
+                </button>
+            </div>
+        `;
+    }
+
+
+    function place_industry_formula_buttons() {
+        if (!is_industry_mode()) {
+            return;
+        }
+
+        const filter_row =
+            document.querySelector(
+                ".dt-row-filter"
+            );
+
+        if (!filter_row) {
+            return;
+        }
+
+        const headers = Array.from(
+            document.querySelectorAll(
+                ".dt-cell--header"
+            )
+        );
+
+        const filter_cells = Array.from(
+            filter_row.querySelectorAll(
+                ".dt-cell"
+            )
+        );
+
+        const buttons = {
+            "Availability %":
+                "show_industry_availability_formula",
+
+            "Utilisation Available Hours":
+                "show_industry_util_available_formula",
+
+            "Utilisation %":
+                "show_industry_utilisation_formula"
+        };
+
+        headers.forEach(
+            function(header, index) {
+                const text = (
+                    header.innerText || ""
+                )
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+                const handler_name =
+                    buttons[text];
+
+                if (!handler_name) {
+                    return;
+                }
+
+                const cell =
+                    filter_cells[index];
+
+                if (!cell) {
+                    return;
+                }
+
+                if (
+                    cell.querySelector(
+                        "[data-industry-formula-button='1']"
+                    )
+                ) {
+                    return;
+                }
+
+                cell.innerHTML =
+                    formula_button(
+                        handler_name
+                    );
+            }
+        );
+    }
+
+
+    function show_formula_dialog(
+        title,
+        formula,
+        explanation
+    ) {
+        const dialog =
+            new frappe.ui.Dialog({
+                title: __(title),
+                size: "large",
+                fields: [
+                    {
+                        fieldtype: "HTML",
+                        fieldname: "formula_html"
+                    }
+                ]
+            });
+
+        dialog.fields_dict
+            .formula_html
+            .$wrapper
+            .html(`
+                <div style="
+                    padding:4px;
+                ">
+                    <div style="
+                        background:#eff6ff;
+                        border:1px solid #93c5fd;
+                        border-radius:10px;
+                        padding:18px;
+                        margin-bottom:14px;
+                    ">
+                        <div style="
+                            font-size:13px;
+                            font-weight:700;
+                            color:#1e3a8a;
+                            margin-bottom:10px;
+                        ">
+                            Formula
+                        </div>
+
+                        <div style="
+                            font-size:17px;
+                            line-height:1.7;
+                            font-weight:700;
+                            color:#111827;
+                        ">
+                            ${formula}
+                        </div>
+                    </div>
+
+                    <div style="
+                        background:#f8fafc;
+                        border:1px solid #d1d8dd;
+                        border-radius:10px;
+                        padding:16px;
+                        line-height:1.6;
+                    ">
+                        ${explanation}
+                    </div>
+                </div>
+            `);
+
+        dialog.show();
+    }
+
+
+    window.show_industry_availability_formula =
+        function() {
+            show_formula_dialog(
+                "Industry Availability %",
+                `
+                    MIN(
+                        Working Hours + Startup/Fatigue,
+                        Required Hours
+                    )
+                    <br>
+                    ÷ Required Hours
+                    <br>
+                    × 100
+                `,
+                `
+                    Availability is based on
+                    <strong>Working Hours + Startup/Fatigue</strong>.
+
+                    <br><br>
+
+                    The available hours are capped at
+                    <strong>Required Hours</strong>,
+                    so Availability cannot exceed 100%.
+
+                    <br><br>
+
+                    Industry Required Hours =
+                    <strong>24h per day</strong>.
+                `
+            );
+        };
+
+
+    window.show_industry_util_available_formula =
+        function() {
+            show_formula_dialog(
+                "Industry Utilisation Available Hours",
+                `
+                    MAX(
+                        Required Hours - Total Downtime Hours,
+                        MIN(Working Hours, Required Hours)
+                    )
+                `,
+                `
+                    This uses the same Utilisation Available Hours
+                    principle as the Isambane calculation.
+
+                    <br><br>
+
+                    In Industry A&U:
+
+                    <br>
+                    Required Hours =
+                    <strong>24h</strong>
+
+                    <br>
+                    Total Downtime Hours =
+                    <strong>raw PBM elapsed downtime</strong>.
+                `
+            );
+        };
+
+
+    window.show_industry_utilisation_formula =
+        function() {
+            const basis = (
+                frappe.query_report
+                && frappe.query_report.get_filter_value(
+                    "au_percentage_basis"
+                )
+            ) || "85% A & U";
+
+            show_formula_dialog(
+                "Industry Utilisation %",
+                `
+                    Working Hours
+                    <br>
+                    ÷ Utilisation Available Hours
+                    <br>
+                    × 100
+                    <br>
+                    × A&amp;U Percentage Basis
+                `,
+                `
+                    Base formula:
+
+                    <br><br>
+
+                    <strong>
+                        Working Hours / Utilisation Available Hours
+                    </strong>
+
+                    <br><br>
+
+                    The selected A&amp;U Percentage Basis is then
+                    applied in the same way as the Isambane
+                    calculation.
+
+                    <br><br>
+
+                    Current basis:
+                    <strong>${basis}</strong>
+                `
+            );
+        };
+
+
+    // Literal formula references used for verification:
+    //
+    // MIN(Working Hours + Startup/Fatigue, Required Hours)
+    //
+    // MAX(Required Hours - Total Downtime Hours, MIN(Working Hours, Required Hours))
+    //
+    // Working Hours / Utilisation Available Hours
+
+
+    const report =
+        frappe.query_reports[
+            REPORT_NAME
+        ];
+
+    if (report) {
+        const previous_after_render =
+            report.after_datatable_render;
+
+        report.after_datatable_render =
+            function() {
+                if (
+                    typeof previous_after_render
+                    === "function"
+                ) {
+                    previous_after_render.apply(
+                        this,
+                        arguments
+                    );
+                }
+
+                setTimeout(
+                    place_industry_formula_buttons,
+                    0
+                );
+            };
+    }
+
+
+    // Handles refreshes/filter changes where the table DOM
+    // is recreated after the report callback.
+    const observer =
+        new MutationObserver(
+            function() {
+                if (!is_industry_mode()) {
+                    return;
+                }
+
+                setTimeout(
+                    place_industry_formula_buttons,
+                    0
+                );
+            }
+        );
+
+    observer.observe(
+        document.body,
+        {
+            childList: true,
+            subtree: true
+        }
+    );
+
+
+    setTimeout(
+        place_industry_formula_buttons,
+        100
+    );
+
+    setTimeout(
+        place_industry_formula_buttons,
+        500
+    );
+})();
