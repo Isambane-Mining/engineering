@@ -10,6 +10,14 @@ from engineering.engineering.report.availability_and_utilisation_month_end_repor
 
 _ = frappe._
 
+
+def breakdown_only_hours(total_pbm, planned_maintenance):
+    """Return breakdown downtime excluding planned maintenance."""
+    return max(
+        flt(total_pbm) - flt(planned_maintenance),
+        0.0,
+    )
+
 CATEGORY_MAP = {
     "ADT": "ADT",
     "ADT's": "ADT",
@@ -1459,7 +1467,10 @@ def build_hours_based_performance_html(
                 )
             )
             bucket["work"] += flt(row.get("work_hours"))
-            bucket["breakdown"] += flt(row.get("pbm_total_downtime"))
+            bucket["breakdown"] += breakdown_only_hours(
+                row.get("pbm_total_downtime"),
+                row.get("planned_maintenance_hours"),
+            )
             bucket["planned_maintenance"] += flt(
                 row.get("planned_maintenance_hours")
             )
@@ -1602,7 +1613,7 @@ def build_hours_based_performance_html(
 
             series = (
                 ("work", "#2563eb", "Utilisation / Average Working"),
-                ("breakdown", "#dc2626", "Availability / Average Breakdown and Planned Maintenance"),
+                ("breakdown", "#dc2626", "Availability / Average Breakdown"),
                 ("planned_maintenance", "#16a34a", "Average Planned Maintenance"),
                 ("required", "#6b7280", "Average Required"),
             )
@@ -1699,14 +1710,14 @@ def build_hours_based_performance_html(
             <div style="font-size:26px;font-weight:900;color:#2563eb;">{period_avg_work:.2f}h</div>
         </div>
         <div class="frappe-card" style="padding:14px;border-left:5px solid #dc2626;">
-            <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Breakdown Hours/Planned Maintenance — Selected Period</div>
+            <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Breakdown Hours — Selected Period</div>
             <div style="font-size:26px;font-weight:900;color:#dc2626;">{period_avg_breakdown:.2f}h</div>
         </div>
     </div>
 
     <div style="display:flex;gap:18px;flex-wrap:wrap;padding:9px 12px;margin-bottom:12px;border:1px solid #d8dde2;border-radius:8px;background:#fff;font-size:12px;font-weight:700;">
         <span style="color:#2563eb;">━━ Working Hours — Day + Night</span>
-        <span style="color:#dc2626;">━━ Breakdown Hours/Planned Maintenance — Day + Night</span>
+        <span style="color:#dc2626;">━━ Breakdown Hours — Day + Night</span>
         <span style="color:#16a34a;">━━ Planned Maintenance — Day + Night</span>
         <span style="color:#6b7280;">┅┅ Required Hours</span>
     </div>
