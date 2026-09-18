@@ -18,12 +18,8 @@
   "expiring_threshold_days",
   "column_break_settings_1",
   "send_weekly_digest",
-  "digest_day",
-  "digest_hour",
   "send_terminated_driver_alert",
-  "terminated_driver_alert_hour",
   "send_temporary_loan_digest",
-  "temporary_loan_digest_hour",
   "manage_recipients_tab",
   "weekly_digest_recipients_section",
   "weekly_digest_recipients",
@@ -107,58 +103,24 @@
   },
   {
    "default": "1",
+   "description": "Sent once a week, Sundays at 00:00 server time — Frappe's native Weekly scheduled job, no custom timing.",
    "fieldname": "send_weekly_digest",
    "fieldtype": "Check",
    "label": "Send Weekly Digest"
   },
   {
-   "default": "Monday",
-   "depends_on": "send_weekly_digest",
-   "fieldname": "digest_day",
-   "fieldtype": "Select",
-   "label": "Digest Day",
-   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
-  },
-  {
-   "default": "6",
-   "depends_on": "send_weekly_digest",
-   "description": "24-hour clock, site timezone.",
-   "fieldname": "digest_hour",
-   "fieldtype": "Int",
-   "label": "Digest Hour",
-   "non_negative": 1
-  },
-  {
    "default": "1",
-   "description": "Checks every Current, submitted Vehicle Allocation's Drivers for anyone whose Employee status is Left, or who has a Termination Form on file, and notifies the Terminated Driver Alert Recipients for that Location.",
+   "description": "Checks every Current, submitted Vehicle Allocation's Drivers for anyone whose Employee status is Left, or who has a Termination Form on file, and notifies the Terminated Driver Alert Recipients for that Location. Sent once a day at 00:00 server time — Frappe's native Daily scheduled job, no custom timing.",
    "fieldname": "send_terminated_driver_alert",
    "fieldtype": "Check",
    "label": "Send Terminated Driver Alert"
   },
   {
-   "default": "6",
-   "depends_on": "send_terminated_driver_alert",
-   "description": "24-hour clock, site timezone.",
-   "fieldname": "terminated_driver_alert_hour",
-   "fieldtype": "Int",
-   "label": "Terminated Driver Alert Hour",
-   "non_negative": 1
-  },
-  {
    "default": "1",
-   "description": "Notifies the Temporary Loan Digest Recipients, per Location, of every active \"Is Temporary Loan\" Vehicle Allocation.",
+   "description": "Notifies the Temporary Loan Digest Recipients, per Location, of every active \"Is Temporary Loan\" Vehicle Allocation. Sent once a day at 00:00 server time — Frappe's native Daily scheduled job, no custom timing.",
    "fieldname": "send_temporary_loan_digest",
    "fieldtype": "Check",
    "label": "Send Temporary Loan Digest"
-  },
-  {
-   "default": "6",
-   "depends_on": "send_temporary_loan_digest",
-   "description": "24-hour clock, site timezone.",
-   "fieldname": "temporary_loan_digest_hour",
-   "fieldtype": "Int",
-   "label": "Temporary Loan Digest Hour",
-   "non_negative": 1
   },
   {
    "fieldname": "manage_recipients_tab",
@@ -206,7 +168,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-14 13:54:12.513332",
+ "modified": "2026-09-18 10:09:23.266778",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Management Settings",
