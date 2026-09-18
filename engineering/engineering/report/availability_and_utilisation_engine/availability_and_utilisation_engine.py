@@ -474,13 +474,16 @@ def calculate_industry_utilisation_available_hours(
     work_hours,
     total_downtime_hours,
 ):
+    """
+    Industry utilisation denominator:
+
+    Required Hours - Total Breakdown Elapsed Hours.
+
+    Required Hours is 24 for Industry A&U.
+    Working Hours does not alter the denominator.
+    """
     required_hours = max(
         flt(required_hours),
-        0,
-    )
-
-    work_hours = max(
-        flt(work_hours),
         0,
     )
 
@@ -489,18 +492,10 @@ def calculate_industry_utilisation_available_hours(
         0,
     )
 
-    remaining_required_hours = max(
-        required_hours - total_downtime_hours,
-        0,
-    )
-
     return round(
         max(
-            remaining_required_hours,
-            min(
-                work_hours,
-                required_hours,
-            ),
+            required_hours - total_downtime_hours,
+            0,
         ),
         3,
     )
@@ -511,6 +506,12 @@ def calculate_industry_utilisation_percent(
     utilisation_available_hours,
     percentage_multiplier=1.0,
 ):
+    """
+    Industry utilisation is always the raw percentage.
+
+    The Isambane 85% / 100% A&U basis does not alter
+    Industry Utilisation %.
+    """
     utilisation_available_hours = flt(
         utilisation_available_hours
     )
@@ -523,8 +524,7 @@ def calculate_industry_utilisation_percent(
             flt(work_hours)
             / utilisation_available_hours
         )
-        * 100
-        * flt(percentage_multiplier),
+        * 100,
         3,
     )
 
@@ -619,12 +619,6 @@ def get_industry_startup_fatigue_hours(
 def build_industry_daily_rows(rows, percentage_basis="100% A & U"):
     """Combine Day + Night into one Industry A&U row per machine/day."""
     daily = {}
-
-    percentage_multiplier = (
-        1.0
-        if percentage_basis == "100% A & U"
-        else 0.85
-    )
 
     for row in rows or []:
         if not isinstance(row, dict):
@@ -722,7 +716,6 @@ def build_industry_daily_rows(rows, percentage_basis="100% A & U"):
                 row.get(
                     "industry_util_available_hours"
                 ),
-                percentage_multiplier,
             )
         )
 

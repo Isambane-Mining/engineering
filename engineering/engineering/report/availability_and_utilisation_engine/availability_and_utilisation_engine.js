@@ -4083,26 +4083,24 @@ function add_invalid_au_exclusion_column(report) {
             show_formula_dialog(
                 "Industry Utilisation Available Hours",
                 `
-                    MAX(
-                        Required Hours - Total Downtime Hours,
-                        MIN(Working Hours, Required Hours)
-                    )
+                    24h
+                    <br>
+                    - Total Breakdown Elapsed Hours
                 `,
                 `
-                    This uses the same Utilisation Available Hours
-                    principle as the Isambane calculation.
+                    Industry Utilisation Available Hours always
+                    starts from <strong>24 hours</strong>.
 
                     <br><br>
 
-                    In Industry A&U:
+                    <strong>
+                        24h - Total Breakdown Elapsed Hours
+                    </strong>
 
-                    <br>
-                    Required Hours =
-                    <strong>24h</strong>
+                    <br><br>
 
-                    <br>
-                    Total Downtime Hours =
-                    <strong>raw PBM elapsed downtime</strong>.
+                    Working Hours does not change the
+                    utilisation denominator.
                 `
             );
         };
@@ -4110,13 +4108,6 @@ function add_invalid_au_exclusion_column(report) {
 
     window.show_industry_utilisation_formula =
         function() {
-            const basis = (
-                frappe.query_report
-                && frappe.query_report.get_filter_value(
-                    "au_percentage_basis"
-                )
-            ) || "85% A & U";
-
             show_formula_dialog(
                 "Industry Utilisation %",
                 `
@@ -4125,28 +4116,26 @@ function add_invalid_au_exclusion_column(report) {
                     ÷ Utilisation Available Hours
                     <br>
                     × 100
-                    <br>
-                    × A&amp;U Percentage Basis
                 `,
                 `
-                    Base formula:
-
-                    <br><br>
-
                     <strong>
-                        Working Hours / Utilisation Available Hours
+                        Working Hours / Utilisation Available Hours × 100
                     </strong>
 
                     <br><br>
 
-                    The selected A&amp;U Percentage Basis is then
-                    applied in the same way as the Isambane
-                    calculation.
+                    Where:
+
+                    <br>
+                    Utilisation Available Hours =
+                    <strong>
+                        24h - Total Breakdown Elapsed Hours
+                    </strong>
 
                     <br><br>
 
-                    Current basis:
-                    <strong>${basis}</strong>
+                    The 85% / 100% A&amp;U Percentage selector
+                    does not change Industry Utilisation %.
                 `
             );
         };
@@ -4156,9 +4145,9 @@ function add_invalid_au_exclusion_column(report) {
     //
     // MIN(Working Hours + Startup/Fatigue, Required Hours)
     //
-    // MAX(Required Hours - Total Downtime Hours, MIN(Working Hours, Required Hours))
+    // 24h - Total Breakdown Elapsed Hours
     //
-    // Working Hours / Utilisation Available Hours
+    // Working Hours / Utilisation Available Hours × 100
 
 
     const report =
