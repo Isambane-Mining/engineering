@@ -1,4 +1,4 @@
-"""Request-scoped protection for contextual OAuth diagnostics in LAB Frappe."""
+"""Request-scoped protection for Fleet Health email delivery diagnostics."""
 from contextlib import contextmanager
 from contextvars import ContextVar
 
@@ -36,7 +36,7 @@ def private_delivery():
 
 def redact_error_log(doc, method=None):
     """Frappe before_insert hook: also discard raw exception messages/metadata."""
-    if _private.get() and frappe.local.site == "juan.isambane.co.za":
+    if _private.get() and frappe.local.site in {"juan.isambane.co.za", "isambane.co.za"}:
         doc.error = "Fleet Health delivery failed. Diagnostics redacted."
         doc.method = "Fleet Health delivery"
         doc.metadata = None

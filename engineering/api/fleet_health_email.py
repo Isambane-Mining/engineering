@@ -1,4 +1,4 @@
-"""Private LAB Fleet Health delivery boundary. Never register this as an MCP tool."""
+"""Private Fleet Health email delivery boundary. Never register this as an MCP tool."""
 import base64
 import binascii
 import re
