@@ -2,23 +2,12 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.utils import now_datetime
 
 from engineering.controllers.fleet_compliance import bulk_drivers, compute_all, get_expiring_threshold_days
 from engineering.controllers.notifications import _get_outgoing_email_account
 from engineering.engineering.doctype.fleet_management_settings.fleet_management_settings import (
 	get_reportable_asset_names,
 )
-
-DAY_NAMES = [
-	"Monday",
-	"Tuesday",
-	"Wednesday",
-	"Thursday",
-	"Friday",
-	"Saturday",
-	"Sunday",
-]
 
 ATTENTION_STATUSES = ["Attention Required", "Non-Compliant"]
 
@@ -173,79 +162,38 @@ def _send_location_grouped(*, by_location_lines, recipients, subject_prefix, log
 	return payloads
 
 
-def _daily_gate_already_ran(cache_key):
-	if frappe.cache().get_value(cache_key):
-		return True
-
-	frappe.cache().set_value(cache_key, 1, expires_in_sec=60 * 60 * 20)
-	return False
-
-
+# These three are registered directly against Frappe's own native
+# scheduler buckets (scheduler_events["weekly"] / ["daily"] in hooks.py) —
+# "Weekly" fires once, Sundays at 00:00 server time; "Daily" fires once, at
+# 00:00 server time; both cron-driven and deduplicated by Frappe's own
+# Scheduled Job Type (via last_execution), so there is no custom day/hour
+# field or dedup cache to maintain here. Each gate only ever decides
+# whether the notification is enabled at all — never when it runs.
 def send_weekly_fleet_digest_gate():
-	"""Run the weekly digest only on the configured day/hour (per Fleet
-	Management Settings), once per week."""
 	if not frappe.db.exists("DocType", "Fleet Management Settings"):
 		return
 
-	settings = frappe.get_single("Fleet Management Settings")
-
-	if not settings.send_weekly_digest:
-		return
-
-	dt = now_datetime()  # server TZ
-	configured_day = settings.digest_day or "Monday"
-	configured_hour = settings.digest_hour if settings.digest_hour is not None else 6
-
-	if DAY_NAMES[dt.weekday()] != configured_day or dt.hour != configured_hour:
-		return
-
-	iso_year, iso_week, _ = dt.isocalendar()
-
-	if _daily_gate_already_ran(f"fleet_weekly_digest_ran::{iso_year}-{iso_week}"):
+	if not frappe.db.get_single_value("Fleet Management Settings", "send_weekly_digest"):
 		return
 
 	return send_weekly_fleet_digest(dry_run=False)
 
 
 def send_terminated_driver_alert_gate():
-	"""Run the terminated-driver alert once a day, at the configured hour."""
 	if not frappe.db.exists("DocType", "Fleet Management Settings"):
 		return
 
-	settings = frappe.get_single("Fleet Management Settings")
-
-	if not settings.send_terminated_driver_alert:
-		return
-
-	dt = now_datetime()
-	configured_hour = settings.terminated_driver_alert_hour if settings.terminated_driver_alert_hour is not None else 6
-
-	if dt.hour != configured_hour:
-		return
-
-	if _daily_gate_already_ran(f"fleet_terminated_driver_alert_ran::{dt.date().isoformat()}"):
+	if not frappe.db.get_single_value("Fleet Management Settings", "send_terminated_driver_alert"):
 		return
 
 	return send_terminated_driver_alert(dry_run=False)
 
 
 def send_temporary_loan_digest_gate():
-	"""Run the temporary-loan digest once a day, at the configured hour."""
 	if not frappe.db.exists("DocType", "Fleet Management Settings"):
 		return
 
-	settings = frappe.get_single("Fleet Management Settings")
-
-	if not settings.send_temporary_loan_digest:
-		return
-
-	dt = now_datetime()
-	configured_hour = settings.temporary_loan_digest_hour if settings.temporary_loan_digest_hour is not None else 6
-
-	if dt.hour != configured_hour:
-		return
-
-	if _daily_gate_already_ran(f"fleet_temporary_loan_digest_ran::{dt.date().isoformat()}"):
+	if not frappe.db.get_single_value("Fleet Management Settings", "send_temporary_loan_digest"):
 		return
 
 	return send_temporary_loan_digest(dry_run=False)

@@ -189,12 +189,22 @@ if "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folder
 # FLEET MANAGEMENT (Vehicle Allocation / Vehicle Licence) — weekly compliance
 # digest, plus two daily alerts (terminated/pending-termination drivers,
 # temporary loans). Compliance/expiry status is computed live (virtual
-# fields, never stored), so there is nothing to recalculate daily — every
-# gate below only actually sends on the day/hour configured in Fleet
-# Management Settings, computing fresh values at send time.
+# fields, never stored), so there is nothing to recalculate on a schedule —
+# each gate below just checks its own enable flag on Fleet Management
+# Settings and, if on, sends with freshly computed values. Registered
+# directly against Frappe's own native "weekly"/"daily" scheduler buckets
+# (Weekly = Sundays 00:00 server time, Daily = 00:00 server time) rather
+# than a custom day/hour field — Frappe's Scheduled Job Type already
+# guarantees each of these runs at most once per its period.
 # ==========================================================
+scheduler_events.setdefault("weekly", [])
+
+if "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate" not in scheduler_events["weekly"]:
+    scheduler_events["weekly"].append(
+        "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate"
+    )
+
 for _fleet_job in (
-    "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate",
     "engineering.controllers.fleet_notifications.send_terminated_driver_alert_gate",
     "engineering.controllers.fleet_notifications.send_temporary_loan_digest_gate",
 ):
