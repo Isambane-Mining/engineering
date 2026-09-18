@@ -36,7 +36,7 @@ def execute(filters=None):
     validate_filters(filters)
 
     return (
-        get_columns(),
+        get_columns(filters),
         get_data(filters),
     )
 
@@ -54,7 +54,142 @@ def validate_filters(filters):
         )
 
 
-def get_columns():
+def get_columns(filters=None):
+    filters = frappe._dict(filters or {})
+
+    if (
+        filters.get("au_calculation")
+        == "Industry A&U Calculation"
+    ):
+        return [
+            {
+                "label": "Asset Category",
+                "fieldname": "asset_category",
+                "fieldtype": "Data",
+                "width": 130,
+            },
+            {
+                "label": "Date",
+                "fieldname": "shift_date",
+                "fieldtype": "Date",
+                "width": 100,
+            },
+            {
+                "label": "Asset Name",
+                "fieldname": "asset_name",
+                "fieldtype": "Data",
+                "width": 115,
+            },
+            {
+                "label": "Location",
+                "fieldname": "location",
+                "fieldtype": "Link",
+                "options": "Location",
+                "width": 120,
+            },
+            {
+                "label": "Company",
+                "fieldname": "company",
+                "fieldtype": "Link",
+                "options": "Company",
+                "width": 150,
+            },
+            {
+                "label": "Required Hours",
+                "fieldname": "required_hours",
+                "fieldtype": "Float",
+                "precision": 3,
+                "width": 175,
+            },
+            {
+                "label": "Working Hours",
+                "fieldname": "work_hours",
+                "fieldtype": "Float",
+                "precision": 3,
+                "width": 120,
+            },
+            {
+                "label": "Startup + Fatigue",
+                "fieldname": "startup_fatigue_window_hours",
+                "fieldtype": "Float",
+                "precision": 3,
+                "width": 140,
+            },
+            {
+                "label": "Total Downtime Hours",
+                "fieldname": "pbm_elapsed_time",
+                "fieldtype": "Float",
+                "precision": 3,
+                "width": 155,
+            },
+            {
+                "label": "Planned Maintenance",
+                "fieldname": "planned_maintenance_hours",
+                "fieldtype": "Float",
+                "precision": 3,
+                "width": 165,
+            },
+            {
+                "label": "Availability %",
+                "fieldname": "available_hours",
+                "fieldtype": "Percent",
+                "precision": 2,
+                "width": 125,
+            },
+            {
+                "label": "Breakdown Reason",
+                "fieldname": "breakdown_reason",
+                "fieldtype": "Data",
+                "width": 150,
+            },
+            {
+                "label": "Planned Maintenance Reason",
+                "fieldname": "planned_maintenance_reason",
+                "fieldtype": "Data",
+                "width": 190,
+            },
+            {
+                "label": "",
+                "fieldname": "industry_separator",
+                "fieldtype": "Data",
+                "width": 18,
+            },
+            {
+                "label": "Required Hours",
+                "fieldname": "industry_required_hours",
+                "fieldtype": "Float",
+                "precision": 3,
+                "width": 120,
+            },
+            {
+                "label": "Working Hours",
+                "fieldname": "industry_work_hours",
+                "fieldtype": "Float",
+                "precision": 3,
+                "width": 120,
+            },
+            {
+                "label": "Utilisation Available Hours",
+                "fieldname": "industry_util_available_hours",
+                "fieldtype": "Float",
+                "precision": 3,
+                "width": 175,
+            },
+            {
+                "label": "Utilisation %",
+                "fieldname": "industry_utilisation",
+                "fieldtype": "Percent",
+                "precision": 2,
+                "width": 125,
+            },
+            {
+                "label": "Other Delay Reason",
+                "fieldname": "other_delay_reason",
+                "fieldtype": "Data",
+                "width": 165,
+            },
+        ]
+
     return [
         {
             "label": "Asset Category",
@@ -216,6 +351,553 @@ def get_columns():
     ]
 
 
+def get_industry_day_type(shift_date):
+    weekday = getdate(shift_date).weekday()
+
+    if weekday == 5:
+        return "Saturday"
+
+    if weekday == 6:
+        return "Sunday"
+
+    return "Weekday"
+
+
+def _industry_time_to_seconds(value):
+    if value is None:
+        return None
+
+    if isinstance(value, timedelta):
+        return (
+            int(value.total_seconds())
+            % 86400
+        )
+
+    if hasattr(value, "hour"):
+        return (
+            int(value.hour) * 3600
+            + int(value.minute) * 60
+            + int(getattr(value, "second", 0))
+        )
+
+    value = str(value).strip()
+
+    if not value:
+        return None
+
+    value = value.split(".")[0]
+
+    parts = value.split(":")
+
+    if len(parts) < 2:
+        return None
+
+    try:
+        hours = int(parts[0])
+        minutes = int(parts[1])
+        seconds = (
+            int(parts[2])
+            if len(parts) > 2
+            else 0
+        )
+    except (TypeError, ValueError):
+        return None
+
+    return (
+        hours * 3600
+        + minutes * 60
+        + seconds
+    )
+
+
+def calculate_time_window_hours(
+    start_time,
+    end_time,
+):
+    start_seconds = _industry_time_to_seconds(
+        start_time
+    )
+
+    end_seconds = _industry_time_to_seconds(
+        end_time
+    )
+
+    if (
+        start_seconds is None
+        or end_seconds is None
+    ):
+        return 0.0
+
+    if end_seconds < start_seconds:
+        end_seconds += 86400
+
+    return round(
+        max(
+            end_seconds - start_seconds,
+            0,
+        )
+        / 3600,
+        3,
+    )
+
+
+def calculate_industry_available_hours(
+    work_hours,
+    startup_fatigue_hours,
+    required_hours,
+):
+    required_hours = flt(required_hours)
+
+    if required_hours <= 0:
+        return None
+
+    available_hours = min(
+        (
+            flt(work_hours)
+            + flt(startup_fatigue_hours)
+        ),
+        required_hours,
+    )
+
+    return round(
+        (
+            available_hours
+            / required_hours
+        )
+        * 100,
+        3,
+    )
+
+
+def calculate_industry_utilisation_available_hours(
+    required_hours,
+    work_hours,
+    total_downtime_hours,
+):
+    """
+    Industry utilisation denominator:
+
+    Required Hours - Total Breakdown Elapsed Hours.
+
+    Required Hours is 24 for Industry A&U.
+    Working Hours does not alter the denominator.
+    """
+    required_hours = max(
+        flt(required_hours),
+        0,
+    )
+
+    total_downtime_hours = max(
+        flt(total_downtime_hours),
+        0,
+    )
+
+    return round(
+        max(
+            required_hours - total_downtime_hours,
+            0,
+        ),
+        3,
+    )
+
+
+def calculate_industry_utilisation_percent(
+    work_hours,
+    utilisation_available_hours,
+    percentage_multiplier=1.0,
+):
+    """
+    Industry utilisation is always the raw percentage.
+
+    The Isambane 85% / 100% A&U basis does not alter
+    Industry Utilisation %.
+    """
+    utilisation_available_hours = flt(
+        utilisation_available_hours
+    )
+
+    if utilisation_available_hours <= 0:
+        return 0.0
+
+    return round(
+        (
+            flt(work_hours)
+            / utilisation_available_hours
+        )
+        * 100,
+        3,
+    )
+
+
+def get_industry_startup_fatigue_hours(
+    location,
+    shift,
+    shift_date,
+    cache=None,
+):
+    """
+    Read the configured Startup + Fatigue period duration
+    for Site + Shift + Weekday/Saturday/Sunday.
+
+    This is the configured period itself, NOT the amount
+    of PBM downtime that happened inside the period.
+    """
+    if cache is None:
+        cache = {}
+
+    day_type = get_industry_day_type(
+        shift_date
+    )
+
+    key = (
+        location,
+        shift,
+        day_type,
+    )
+
+    if key in cache:
+        return cache[key]
+
+    fields = [
+        "startup_start",
+        "startup_end",
+        "fatigue_start",
+        "fatigue_end",
+    ]
+
+    configuration = frappe.db.get_value(
+        "Startup and Fatigue spesification",
+        {
+            "site": location,
+            "shift": shift,
+            "day_type": day_type,
+        },
+        fields,
+        as_dict=True,
+    )
+
+    # Same legacy fallback used by the existing PBM engine:
+    # if only one site/shift configuration exists, use it.
+    if not configuration:
+        legacy_configurations = frappe.get_all(
+            "Startup and Fatigue spesification",
+            filters={
+                "site": location,
+                "shift": shift,
+            },
+            fields=fields,
+            limit=2,
+        )
+
+        if len(legacy_configurations) == 1:
+            configuration = frappe._dict(
+                legacy_configurations[0]
+            )
+
+    if not configuration:
+        cache[key] = 0.0
+        return 0.0
+
+    startup_hours = calculate_time_window_hours(
+        configuration.get("startup_start"),
+        configuration.get("startup_end"),
+    )
+
+    fatigue_hours = calculate_time_window_hours(
+        configuration.get("fatigue_start"),
+        configuration.get("fatigue_end"),
+    )
+
+    cache[key] = round(
+        startup_hours + fatigue_hours,
+        3,
+    )
+
+    return cache[key]
+
+
+def build_industry_daily_rows(rows, percentage_basis="100% A & U"):
+    """Combine Day + Night into one Industry A&U row per machine/day."""
+    daily = {}
+
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+
+        key = (
+            row.get("asset_category"),
+            str(row.get("shift_date")),
+            row.get("asset_name"),
+            row.get("location"),
+            row.get("company"),
+        )
+
+        if key not in daily:
+            daily[key] = {
+                "asset_category": row.get("asset_category"),
+                "shift_date": row.get("shift_date"),
+                "asset_name": row.get("asset_name"),
+                "location": row.get("location"),
+                "company": row.get("company"),
+                "required_hours": 24.0,
+                "work_hours": 0.0,
+                "startup_fatigue_window_hours": 0.0,
+                "pbm_elapsed_time": 0.0,
+                "planned_maintenance_hours": 0.0,
+                "available_hours": None,
+                "indent": 0,
+            }
+
+        daily[key]["work_hours"] += flt(
+            row.get("work_hours")
+        )
+        daily[key]["startup_fatigue_window_hours"] += flt(
+            row.get("startup_fatigue_window_hours")
+        )
+        daily[key]["pbm_elapsed_time"] += flt(
+            row.get("pbm_elapsed_time")
+        )
+        daily[key]["planned_maintenance_hours"] += flt(
+            row.get("planned_maintenance_hours")
+        )
+
+    result = list(daily.values())
+
+    for row in result:
+        row["required_hours"] = 24.0
+        row["work_hours"] = round(
+            flt(row.get("work_hours")),
+            3,
+        )
+
+        # Right-hand Industry utilisation section.
+        row["industry_required_hours"] = (
+            row["required_hours"]
+        )
+
+        row["industry_work_hours"] = (
+            row["work_hours"]
+        )
+
+        row["industry_separator"] = ""
+        row["startup_fatigue_window_hours"] = round(
+            flt(row.get("startup_fatigue_window_hours")),
+            3,
+        )
+        row["pbm_elapsed_time"] = round(
+            flt(row.get("pbm_elapsed_time")),
+            3,
+        )
+        row["available_hours"] = (
+            calculate_industry_available_hours(
+                row.get("work_hours"),
+                row.get(
+                    "startup_fatigue_window_hours"
+                ),
+                row.get("required_hours"),
+            )
+        )
+        row["planned_maintenance_hours"] = round(
+            flt(row.get("planned_maintenance_hours")),
+            3,
+        )
+
+        row["industry_util_available_hours"] = (
+            calculate_industry_utilisation_available_hours(
+                row.get("required_hours"),
+                row.get("work_hours"),
+                row.get("pbm_elapsed_time"),
+            )
+        )
+
+        row["industry_utilisation"] = (
+            calculate_industry_utilisation_percent(
+                row.get("work_hours"),
+                row.get(
+                    "industry_util_available_hours"
+                ),
+            )
+        )
+
+    result.sort(
+        key=lambda row: (
+            str(row.get("asset_category") or ""),
+            str(row.get("shift_date") or ""),
+            str(row.get("asset_name") or ""),
+        )
+    )
+
+    return result
+
+
+
+def build_industry_tree_rows(rows):
+    """
+    Build the Industry A&U hierarchy:
+
+    Asset Category
+      -> Date
+         -> Asset
+
+    Industry remains daily, so there is intentionally no
+    Day/Night shift level beneath the asset.
+    """
+    grouped = defaultdict(
+        lambda: defaultdict(list)
+    )
+
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+
+        grouped[
+            row.get("asset_category")
+        ][
+            str(row.get("shift_date"))
+        ].append(row)
+
+    data = []
+
+    priority_categories = {
+        "ADT": 0,
+        "Dozer": 1,
+        "Excavator": 2,
+    }
+
+    sorted_categories = sorted(
+        grouped,
+        key=lambda category: (
+            priority_categories.get(
+                category,
+                999,
+            ),
+            str(category or ""),
+        ),
+    )
+
+    def build_summary(
+        child_rows,
+        indent,
+        **identity_fields,
+    ):
+        summary = {
+            **identity_fields,
+            "indent": indent,
+            "industry_separator": "",
+            "breakdown_reason": "",
+            "planned_maintenance_reason": "",
+            "other_delay_reason": "",
+        }
+
+        for fieldname in (
+            "required_hours",
+            "work_hours",
+            "startup_fatigue_window_hours",
+            "pbm_elapsed_time",
+            "planned_maintenance_hours",
+            "industry_required_hours",
+            "industry_work_hours",
+            "industry_util_available_hours",
+        ):
+            summary[fieldname] = round(
+                sum(
+                    flt(row.get(fieldname))
+                    for row in child_rows
+                ),
+                3,
+            )
+
+        summary["available_hours"] = (
+            calculate_industry_available_hours(
+                summary["work_hours"],
+                summary[
+                    "startup_fatigue_window_hours"
+                ],
+                summary["required_hours"],
+            )
+        )
+
+        total_util_available = flt(
+            summary.get(
+                "industry_util_available_hours"
+            )
+        )
+
+        if total_util_available > 0:
+            weighted_utilisation = sum(
+                flt(
+                    row.get(
+                        "industry_utilisation"
+                    )
+                )
+                * flt(
+                    row.get(
+                        "industry_util_available_hours"
+                    )
+                )
+                for row in child_rows
+            )
+
+            summary["industry_utilisation"] = round(
+                weighted_utilisation
+                / total_util_available,
+                3,
+            )
+        else:
+            summary["industry_utilisation"] = 0.0
+
+        return summary
+
+    for category in sorted_categories:
+        category_rows = [
+            row
+            for date_rows
+            in grouped[category].values()
+            for row in date_rows
+        ]
+
+        data.append(
+            build_summary(
+                category_rows,
+                0,
+                asset_category=category,
+                shift_date=None,
+                asset_name=None,
+                location=None,
+                company=None,
+            )
+        )
+
+        for shift_date in sorted(
+            grouped[category]
+        ):
+            date_rows = sorted(
+                grouped[category][shift_date],
+                key=lambda row: str(
+                    row.get("asset_name")
+                    or ""
+                ),
+            )
+
+            data.append(
+                build_summary(
+                    date_rows,
+                    1,
+                    asset_category=None,
+                    shift_date=shift_date,
+                    asset_name=None,
+                    location=None,
+                    company=None,
+                )
+            )
+
+            for row in date_rows:
+                asset_row = dict(row)
+                asset_row["indent"] = 2
+                data.append(asset_row)
+
+    return data
+
 def get_data(filters):
     locations = parse_multiselect(
         filters.get("locations")
@@ -317,6 +999,8 @@ def get_data(filters):
         ].append(asset)
 
     shift_rows = []
+
+    industry_startup_fatigue_cache = {}
 
     current_date = getdate(
         filters.from_date
@@ -464,6 +1148,19 @@ def get_data(filters):
                             0,
                         ),
                         "work_hours": work_hours,
+                        "startup_fatigue_window_hours": (
+                            get_industry_startup_fatigue_hours(
+                                location,
+                                shift,
+                                current_date,
+                                industry_startup_fatigue_cache,
+                            )
+                            if (
+                                filters.get("au_calculation")
+                                == "Industry A&U Calculation"
+                            )
+                            else 0.0
+                        ),
                         "pre_use_avail_status": (
                             pre_use_status
                         ),
@@ -515,6 +1212,24 @@ def get_data(filters):
             row.get("asset_name"),
         )
     ]
+
+    if (
+        filters.get("au_calculation")
+        == "Industry A&U Calculation"
+    ):
+        industry_daily_rows = (
+            build_industry_daily_rows(
+                shift_rows,
+                percentage_basis=filters.get(
+                    "au_percentage_basis"
+                )
+                or "85% A & U",
+            )
+        )
+
+        return build_industry_tree_rows(
+            industry_daily_rows
+        )
 
     mark_invalid_preuse_rows(
         shift_rows
@@ -1702,7 +2417,10 @@ def get_assets(
         conditions.append(
             "(asset.asset_owner = 'Company' OR IFNULL(TRIM(asset.asset_owner), '') = '')"
         )
-    elif asset_ownership == "Suppliers Assets":
+    elif asset_ownership in (
+        "Supplier Assets",
+        "Suppliers Assets",
+    ):
         conditions.append(
             "asset.asset_owner IN ('Supplier', 'Customer')"
         )
@@ -3266,6 +3984,19 @@ def get_invalid_au_pbm_records(
             breakdown_start_datetime ASC,
             name ASC
         """,
+        {
+            "label": "█",
+            "fieldname": "industry_separator",
+            "fieldtype": "Data",
+            "width": 18,
+        },
+        {
+            "label": "Working Hours",
+            "fieldname": "industry_work_hours",
+            "fieldtype": "Float",
+            "precision": 3,
+            "width": 120,
+        },
         {
             "asset_name": asset_name,
             "location": location,

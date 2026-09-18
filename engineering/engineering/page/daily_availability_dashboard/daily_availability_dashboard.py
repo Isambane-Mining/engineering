@@ -1530,6 +1530,13 @@ def build_hours_based_performance_html(
                     sum(value["planned_maintenance"] for value in valid) / count
                     if count else 0.0
                 ),
+                "total_downtime": (
+                    sum(
+                        value["breakdown"] + value["planned_maintenance"]
+                        for value in valid
+                    ) / count
+                    if count else 0.0
+                ),
                 "required": sum(value["required"] for value in valid) / count if count else 0.0,
                 "machines": count,
             }
@@ -1576,6 +1583,7 @@ def build_hours_based_performance_html(
                     "work",
                     "breakdown",
                     "planned_maintenance",
+                    "total_downtime",
                     "required",
                 )
             ]
@@ -1615,6 +1623,7 @@ def build_hours_based_performance_html(
                 ("work", "#2563eb", "Utilisation / Average Working"),
                 ("breakdown", "#dc2626", "Availability / Average Breakdown"),
                 ("planned_maintenance", "#16a34a", "Average Planned Maintenance"),
+                ("total_downtime", "#f59e0b", "Average Total Breakdown + Planned Maintenance"),
                 ("required", "#6b7280", "Average Required"),
             )
 
@@ -1622,6 +1631,7 @@ def build_hours_based_performance_html(
                 "work": -11,
                 "breakdown": 17,
                 "planned_maintenance": -11,
+                "total_downtime": 17,
             }
 
             # Automatically separate labels whose points are close
@@ -1633,6 +1643,7 @@ def build_hours_based_performance_html(
                         "work",
                         "breakdown",
                         "planned_maintenance",
+                        "total_downtime",
                     )
                 ],
                 key=lambda item: item[1],
@@ -1658,8 +1669,10 @@ def build_hours_based_performance_html(
             for cluster in clusters:
                 if len(cluster) == 2:
                     cluster_offsets = (-14, 18)
-                elif len(cluster) >= 3:
+                elif len(cluster) == 3:
                     cluster_offsets = (-20, 0, 20)
+                elif len(cluster) >= 4:
+                    cluster_offsets = (-27, -9, 9, 27)
                 else:
                     continue
 
@@ -1719,6 +1732,7 @@ def build_hours_based_performance_html(
         <span style="color:#2563eb;">━━ Working Hours — Day + Night</span>
         <span style="color:#dc2626;">━━ Breakdown Hours — Day + Night</span>
         <span style="color:#16a34a;">━━ Planned Maintenance — Day + Night</span>
+        <span style="color:#f59e0b;">━━ Total Downtime — Breakdown + Planned Maintenance</span>
         <span style="color:#6b7280;">┅┅ Required Hours</span>
     </div>
 
@@ -1729,6 +1743,7 @@ def build_hours_based_performance_html(
         <polyline points="{points('work')}" fill="none" stroke="#2563eb" stroke-width="3" />
         <polyline points="{points('breakdown')}" fill="none" stroke="#dc2626" stroke-width="3" />
         <polyline points="{points('planned_maintenance')}" fill="none" stroke="#16a34a" stroke-width="3" />
+        <polyline points="{points('total_downtime')}" fill="none" stroke="#f59e0b" stroke-width="3" />
         {''.join(marks)}
         {''.join(labels)}
     </svg>
