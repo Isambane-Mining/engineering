@@ -2417,7 +2417,10 @@ def get_assets(
         conditions.append(
             "(asset.asset_owner = 'Company' OR IFNULL(TRIM(asset.asset_owner), '') = '')"
         )
-    elif asset_ownership == "Suppliers Assets":
+    elif asset_ownership in (
+        "Supplier Assets",
+        "Suppliers Assets",
+    ):
         conditions.append(
             "asset.asset_owner IN ('Supplier', 'Customer')"
         )
