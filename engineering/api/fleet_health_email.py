@@ -10,8 +10,9 @@ import frappe
 from frappe.email.doctype.email_account.email_account import EmailAccount
 from engineering.api.fleet_health_privacy import private_delivery
 
-LAB_SITE = "juan.isambane.co.za"
-RECIPIENT = "juan@isambane.co.za"
+ALLOWED_SITES = {"juan.isambane.co.za", "isambane.co.za"}
+ALLOWED_USERS = {"erp.intelligence@isambane.co.za", "Administrator"}
+SPEC_DOCTYPE = "Daily Weekly Machine Health Reporting Specification"
 METHOD = "engineering.api.fleet_health_email.send_fleet_health_email"
 MAX_BYTES = 10 * 1024 * 1024
 MAX_ENCODED = 4 * ((MAX_BYTES + 2) // 3)
@@ -119,11 +120,69 @@ def _attachments(items):
     return decoded
 
 
+def _get_delivery_configuration(mode):
+    """Resolve sender and recipients only from the ERP reporting specification."""
+    if mode not in {"daily", "weekly"}:
+        _reject()
+
+    spec = frappe.get_single(SPEC_DOCTYPE)
+
+    if not spec.enabled:
+        _reject("Machine Health reporting is disabled.")
+
+    if not getattr(spec, f"{mode}_enabled", 0):
+        _reject(f"{mode.title()} Machine Health reporting is disabled.")
+
+    account_name = (spec.email_account or "").strip()
+    if not account_name:
+        _reject("Machine Health Email Account is not configured.")
+
+    account = frappe.get_doc("Email Account", account_name)
+
+    rows = getattr(spec, f"{mode}_recipients", None) or []
+    recipients = []
+
+    for row in rows:
+        if not getattr(row, "enabled", 0):
+            continue
+
+        email = (getattr(row, "email", "") or "").strip().lower()
+
+        if not email or "\\r" in email or "\\n" in email:
+            _reject("Invalid Machine Health recipient.")
+
+        parsed = parseaddr(email)[1].lower()
+        if parsed != email:
+            _reject("Invalid Machine Health recipient.")
+
+        if email not in recipients:
+            recipients.append(email)
+
+    if not recipients:
+        _reject(f"No enabled {mode} Machine Health recipients configured.")
+
+    return spec, account, recipients
+
+
+def _get_mode(subject):
+    if not isinstance(subject, str):
+        _reject()
+
+    clean_subject = subject.removeprefix("[PARTIAL] ")
+
+    if clean_subject.startswith("Daily Fleet Health"):
+        return "daily"
+    if clean_subject.startswith("Weekly Fleet Health"):
+        return "weekly"
+
+    _reject()
+
+
 @frappe.whitelist(methods=["POST"])
 def send_fleet_health_email(subject=None, text=None, html=None, attachments=None, **kwargs):
     """Send exactly two generated reports; return only confirmed queue delivery evidence."""
-    if frappe.local.site != LAB_SITE or frappe.session.user not in {"erp.intelligence@isambane.co.za", "Administrator"}:
-        frappe.throw("Fleet Health delivery is restricted to the LAB service account.", frappe.PermissionError)
+    if frappe.local.site not in ALLOWED_SITES or frappe.session.user not in ALLOWED_USERS:
+        frappe.throw("Fleet Health delivery is restricted.", frappe.PermissionError)
     if getattr(frappe, "request", None) and frappe.request.method != "POST":
         frappe.throw("POST required.", frappe.PermissionError)
     # Frappe's v1 dispatcher supplies cmd. No other extra inputs are accepted.
@@ -138,24 +197,42 @@ def send_fleet_health_email(subject=None, text=None, html=None, attachments=None
         _reject()
     _validate_html(html)
     files = _attachments(attachments)
+    mode = _get_mode(subject)
+    spec, account, recipients = _get_delivery_configuration(mode)
+
     with private_delivery():
-        account = EmailAccount.find_default_outgoing()
-        if (not account or account.email_id != RECIPIENT or not account.enable_outgoing
-                or not account.default_outgoing or account.auth_method != "OAuth"
+        if (not account or not account.email_id or not account.enable_outgoing
+                or account.auth_method != "OAuth"
                 or account.smtp_server not in {"smtp.office365.com", "smtp-mail.outlook.com"}
                 or getattr(account, "service", None) == "Frappe Mail"
                 or getattr(account, "no_smtp_authentication", False)
                 or not account.connected_app or account.always_bcc
                 or frappe.are_emails_muted() or frappe.get_hooks("override_email_send")):
-            _reject("Approved LAB default outgoing Microsoft OAuth account required.")
+            _reject("Approved Microsoft OAuth Email Account required.")
         queue = None
         delivery_started = False
         try:
-            queue = frappe.sendmail(recipients=[RECIPIENT], subject=subject, message=html,
-                attachments=files, cc=[], bcc=[], delayed=True, add_unsubscribe_link=0)
+            queue = frappe.sendmail(
+                recipients=recipients,
+                sender=account.email_id,
+                subject=subject,
+                message=html,
+                attachments=files,
+                cc=[],
+                bcc=[],
+                delayed=True,
+                add_unsubscribe_link=0,
+            )
             # Check the actual queue too, before any SMTP side effect, including hook/account drift.
-            if (not queue or queue.email_account != account.name or parseaddr(queue.sender)[1] != RECIPIENT
-                    or [row.recipient for row in queue.recipients] != [RECIPIENT]):
+            queue_recipients = [
+                (row.recipient or "").strip().lower()
+                for row in (queue.recipients or [])
+            ]
+
+            if (not queue
+                    or queue.email_account != account.name
+                    or parseaddr(queue.sender)[1].lower() != account.email_id.lower()
+                    or queue_recipients != recipients):
                 _reject()
             delivery_started = True
             queue.send()

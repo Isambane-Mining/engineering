@@ -19,12 +19,40 @@ class TestFleetHealthEmail(unittest.TestCase):
             sender="LAB <juan@isambane.co.za>", recipients=[SimpleNamespace(recipient="juan@isambane.co.za", status="Sent")],
             send=Mock(), reload=Mock(), db_set=Mock())
         self.queue.send.side_effect = lambda: setattr(self.queue, "status", "Sent")
-        self.frappe = SimpleNamespace(local=SimpleNamespace(site="juan.isambane.co.za"),
+        self.spec = SimpleNamespace(
+            enabled=1,
+            email_account="LAB OAuth",
+            daily_enabled=1,
+            weekly_enabled=1,
+            daily_recipients=[
+                SimpleNamespace(
+                    recipient_name="Juan",
+                    email="juan@isambane.co.za",
+                    enabled=1,
+                )
+            ],
+            weekly_recipients=[
+                SimpleNamespace(
+                    recipient_name="Juan",
+                    email="juan@isambane.co.za",
+                    enabled=1,
+                )
+            ],
+        )
+
+        self.frappe = SimpleNamespace(
+            local=SimpleNamespace(site="juan.isambane.co.za"),
             session=SimpleNamespace(user="erp.intelligence@isambane.co.za"),
-            request=SimpleNamespace(method="POST"), PermissionError=PermissionError,
-            ValidationError=ValueError, throw=lambda message, exc=ValueError: self.fail_with(message, exc),
-            sendmail=Mock(return_value=self.queue), are_emails_muted=lambda: False,
-            get_hooks=Mock(return_value=[]))
+            request=SimpleNamespace(method="POST"),
+            PermissionError=PermissionError,
+            ValidationError=ValueError,
+            throw=lambda message, exc=ValueError: self.fail_with(message, exc),
+            sendmail=Mock(return_value=self.queue),
+            are_emails_muted=lambda: False,
+            get_hooks=Mock(return_value=[]),
+            get_single=lambda doctype: self.spec,
+            get_doc=lambda doctype, name: self.account,
+        )
         self.fp = patch.object(self.api, "frappe", self.frappe)
         self.ap = patch.object(self.api.EmailAccount, "find_default_outgoing", return_value=self.account)
         self.fp.start(); self.ap.start()
@@ -55,7 +83,7 @@ class TestFleetHealthEmail(unittest.TestCase):
         self.assertEqual(result, {"status": "sent", "queue_id": "test-queue"})
         kwargs = self.frappe.sendmail.call_args.kwargs
         self.assertEqual(kwargs["recipients"], ["juan@isambane.co.za"])
-        self.assertNotIn("sender", kwargs)  # Let Frappe resolve global default outgoing.
+        self.assertEqual(kwargs["sender"], "juan@isambane.co.za")
         self.assertEqual(kwargs["cc"], [])
         self.assertEqual(kwargs["bcc"], [])
         self.assertTrue(kwargs["delayed"])
@@ -130,7 +158,7 @@ class TestFleetHealthEmail(unittest.TestCase):
             self.rejected(); self.payload[key] = old
 
     def test_requires_approved_default_microsoft_oauth_without_bcc(self):
-        for key, value in [("email_id", "other@example.test"), ("auth_method", "Basic"), ("smtp_server", "smtp.example.test"), ("always_bcc", "juan@isambane.co.za"), ("enable_outgoing", 0), ("default_outgoing", 0), ("connected_app", "")]:
+        for key, value in [("email_id", ""), ("auth_method", "Basic"), ("smtp_server", "smtp.example.test"), ("always_bcc", "juan@isambane.co.za"), ("enable_outgoing", 0), ("connected_app", "")]:
             old = getattr(self.account, key); setattr(self.account, key, value)
             self.rejected(); setattr(self.account, key, old)
 
