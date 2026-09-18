@@ -1,0 +1,160 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-09-18 07:08:10.687518",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "scope_section",
+  "location",
+  "asset_ownership",
+  "email_section",
+  "email_account",
+  "sender_email",
+  "daily_section",
+  "daily_enabled",
+  "daily_send_time",
+  "daily_recipients",
+  "weekly_section",
+  "weekly_enabled",
+  "weekly_send_day",
+  "weekly_send_time",
+  "weekly_recipients",
+  "status_section",
+  "last_daily_sent",
+  "last_weekly_sent"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "scope_section",
+   "fieldtype": "Section Break",
+   "label": "Reporting Scope"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "label": "Location",
+   "options": "Location"
+  },
+  {
+   "default": "Isambane & Excavo Assets",
+   "fieldname": "asset_ownership",
+   "fieldtype": "Select",
+   "label": "Asset Ownership",
+   "options": "Isambane & Excavo Assets\nSuppliers Assets\nAll Assets"
+  },
+  {
+   "fieldname": "email_section",
+   "fieldtype": "Section Break",
+   "label": "Email Configuration"
+  },
+  {
+   "fieldname": "email_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Email Account",
+   "options": "Email Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sender_email",
+   "fieldtype": "Data",
+   "label": "Sender Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "daily_section",
+   "fieldtype": "Section Break",
+   "label": "Daily Reporting"
+  },
+  {
+   "default": "0",
+   "fieldname": "daily_enabled",
+   "fieldtype": "Check",
+   "label": "Daily Enabled"
+  },
+  {
+   "default": "07:00:00",
+   "fieldname": "daily_send_time",
+   "fieldtype": "Time",
+   "label": "Daily Send Time"
+  },
+  {
+   "fieldname": "daily_recipients",
+   "fieldtype": "Table",
+   "label": "Daily Recipients",
+   "options": "Machine Health Report Recipient"
+  },
+  {
+   "fieldname": "weekly_section",
+   "fieldtype": "Section Break",
+   "label": "Weekly Reporting"
+  },
+  {
+   "default": "0",
+   "fieldname": "weekly_enabled",
+   "fieldtype": "Check",
+   "label": "Weekly Enabled"
+  },
+  {
+   "default": "Monday",
+   "fieldname": "weekly_send_day",
+   "fieldtype": "Select",
+   "label": "Weekly Send Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
+   "default": "07:15:00",
+   "fieldname": "weekly_send_time",
+   "fieldtype": "Time",
+   "label": "Weekly Send Time"
+  },
+  {
+   "fieldname": "weekly_recipients",
+   "fieldtype": "Table",
+   "label": "Weekly Recipients",
+   "options": "Machine Health Report Recipient"
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "fieldname": "last_daily_sent",
+   "fieldtype": "Datetime",
+   "label": "Last Daily Sent",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_weekly_sent",
+   "fieldtype": "Datetime",
+   "label": "Last Weekly Sent",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-18 07:08:10.687518",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Daily Weekly Machine Health Reporting Specification",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
