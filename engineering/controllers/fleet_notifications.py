@@ -22,7 +22,7 @@ from engineering.engineering.doctype.fleet_management_settings.fleet_management_
 
 ATTENTION_STATUSES = ["Attention Required", "Non-Compliant"]
 
-# Used as the by_location_blocks key for content that has no Location at all
+# Used as a row's "location" value for content that has no Location at all
 # (e.g. an unregistered Asset with a blank Location) — it can never be
 # routed to a Location-specific recipient, only to a blank-Location
 # (company-wide) one.
@@ -88,43 +88,63 @@ def _recipients_by_scope(recipients):
 	return {loc: _dedupe(emails) for loc, emails in specific.items()}, _dedupe(catch_all)
 
 
-def _send_location_grouped(
-	*, by_location_blocks, by_location_counts, recipients, subject_prefix, intro_text, severity, log_label, dry_run
-):
+def _send_location_grouped(*, tables, recipients, subject_prefix, intro_text, severity, log_label, dry_run):
 	"""Shared sender for every Location-scoped fleet notification (Weekly
 	Compliance Digest, Terminated Driver Alert, Temporary Loan Digest) —
 	`recipients` is that specific notification's own Recipients table.
 
-	by_location_blocks: {location_or_NO_LOCATION: [html_block, ...]} — each
-	block is a self-contained, already-rendered HTML fragment (a section
-	heading and/or a styled table from fleet_email_style), concatenated
-	directly (no <br> joining — these are block-level elements). Only keys
-	with actual content should be present. by_location_counts carries the
-	item count per location for the subject line, since a "block" isn't a
-	1:1 stand-in for an item count once it's a table rather than a line.
+	tables: [{"title": str | None, "headers": [str, ...], "rows": [{"location":
+	str, "cells": [html, ...]}, ...]}, ...] — one entry per logical
+	category (e.g. weekly digest has "Compliance Issues" and "Unregistered
+	Assets" as two separate tables, since their columns differ; the other
+	two notifications each have just one). `cells` line up with `headers`
+	and never include a Location cell — that's injected here, and only for
+	the "All Locations" catch-all email; a Location-scoped recipient's
+	email only ever contains their own Location's rows, so a repeated
+	Location column there would just be noise.
 
-	A recipient with a specific Location gets one email scoped to just
-	that Location. A recipient with a blank Location gets a single
-	company-wide email covering every Location's content (including the
-	NO_LOCATION bucket, which can never reach a Location-specific
-	recipient since it isn't tied to one) — "no Location set" means
-	"across the whole company", not "nothing"."""
+	A recipient with a specific Location gets one email containing every
+	table's rows for just that Location (no separate table per Location —
+	one consolidated table per category, exactly like the catch-all case,
+	just pre-filtered). A recipient with a blank Location gets a single
+	company-wide email covering every Location's rows in one table per
+	category, with a Location column so they can still tell them apart —
+	"no Location set" means "across the whole company", not "nothing"."""
 	specific_recipients, catch_all_recipients = _recipients_by_scope(recipients)
+
+	locations_present = {
+		(row["location"] or "").strip() for table in tables for row in table["rows"]
+	} - {NO_LOCATION}
 
 	payloads = {}
 
-	for location, blocks in by_location_blocks.items():
-		if location == NO_LOCATION or not blocks:
-			continue
-
+	for location in locations_present:
 		recips = specific_recipients.get(location, [])
 
 		if not recips:
 			continue
 
+		blocks = []
+		count = 0
+
+		for table in tables:
+			rows_here = [row["cells"] for row in table["rows"] if (row["location"] or "").strip() == location]
+
+			if not rows_here:
+				continue
+
+			if table.get("title"):
+				blocks.append(section_title(table["title"]))
+
+			blocks.append(render_table(table["headers"], rows_here))
+			count += len(rows_here)
+
+		if not blocks:
+			continue
+
 		payloads[location] = {
 			"recipients": recips,
-			"subject": f"{subject_prefix} — {location} ({by_location_counts.get(location, 0)})",
+			"subject": f"{subject_prefix} — {location} ({count})",
 			"message": (
 				EMAIL_STYLE_BLOCK
 				+ intro(f"{intro_text} Location: <b>{escape_html(location)}</b>.")
@@ -137,15 +157,20 @@ def _send_location_grouped(
 		combined_blocks = []
 		total = 0
 
-		for location in sorted(by_location_blocks, key=lambda k: (k == NO_LOCATION, k)):
-			blocks = by_location_blocks.get(location) or []
-
-			if not blocks:
+		for table in tables:
+			if not table["rows"]:
 				continue
 
-			combined_blocks.append(section_title(location or "Unassigned"))
-			combined_blocks.extend(blocks)
-			total += by_location_counts.get(location, 0)
+			rows_sorted = sorted(table["rows"], key=lambda row: (row["location"] or "").strip())
+			rows_here = [
+				[escape_html((row["location"] or "").strip() or "Unassigned"), *row["cells"]] for row in rows_sorted
+			]
+
+			if table.get("title"):
+				combined_blocks.append(section_title(table["title"]))
+
+			combined_blocks.append(render_table(["Location", *table["headers"]], rows_here))
+			total += len(rows_here)
 
 		if combined_blocks:
 			payloads["All Locations"] = {
@@ -281,10 +306,9 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 
 	unregistered = _get_unregistered_assets()
 
-	by_location_issue_rows = {}
+	issue_rows = []
 
 	for r in flagged:
-		location = (r.get("location") or "").strip()
 		issues = []
 
 		if r["vehicle_licence_status"] in ("Expiring", "Expired", "Incomplete", "Outstanding"):
@@ -309,49 +333,36 @@ def send_weekly_fleet_digest(dry_run: bool = False):
 
 		driver_display = escape_html(", ".join(d.driver_name or d.driver for d in r["driver_rows"]) or "no driver")
 
-		by_location_issue_rows.setdefault(location, []).append(
-			[
-				record_link("Vehicle Allocation", r["name"], label=r["asset_name"] or r["asset"]),
-				driver_display,
-				"<br>".join(issues) or status_badge(r["overall_status"]),
-			]
+		issue_rows.append(
+			{
+				"location": (r.get("location") or "").strip(),
+				"cells": [
+					record_link("Vehicle Allocation", r["name"], label=r["asset_name"] or r["asset"]),
+					driver_display,
+					"<br>".join(issues) or status_badge(r["overall_status"]),
+				],
+			}
 		)
 
-	by_unregistered_rows = {}
+	unregistered_rows = [
+		{
+			"location": (u.get("location") or "").strip(),
+			"cells": [record_link("Asset", u.asset, label=u.asset_name or u.asset), escape_html(u.asset_category or "—")],
+		}
+		for u in unregistered
+	]
 
-	for u in unregistered:
-		location = (u.get("location") or "").strip()
-		by_unregistered_rows.setdefault(location, []).append(
-			[record_link("Asset", u.asset, label=u.asset_name or u.asset), escape_html(u.asset_category or "—")]
-		)
-
-	by_location_blocks = {}
-	by_location_counts = {}
-
-	for location in set(by_location_issue_rows) | set(by_unregistered_rows):
-		blocks = []
-		count = 0
-
-		issue_rows = by_location_issue_rows.get(location)
-
-		if issue_rows:
-			blocks.append(section_title("Compliance Issues"))
-			blocks.append(render_table(["Asset", "Driver(s)", "Issues"], issue_rows))
-			count += len(issue_rows)
-
-		unregistered_rows = by_unregistered_rows.get(location)
-
-		if unregistered_rows:
-			blocks.append(section_title("Unregistered Assets (no Vehicle Allocation yet)"))
-			blocks.append(render_table(["Asset", "Category"], unregistered_rows))
-			count += len(unregistered_rows)
-
-		by_location_blocks[location] = blocks
-		by_location_counts[location] = count
+	tables = [
+		{"title": "Compliance Issues", "headers": ["Asset", "Driver(s)", "Issues"], "rows": issue_rows},
+		{
+			"title": "Unregistered Assets (no Vehicle Allocation yet)",
+			"headers": ["Asset", "Category"],
+			"rows": unregistered_rows,
+		},
+	]
 
 	return _send_location_grouped(
-		by_location_blocks=by_location_blocks,
-		by_location_counts=by_location_counts,
+		tables=tables,
 		recipients=settings.get("weekly_digest_recipients"),
 		subject_prefix="Fleet Compliance Weekly Digest",
 		intro_text="The following need attention this week.",
@@ -396,7 +407,7 @@ def send_terminated_driver_alert(dry_run: bool = False):
 	settings = frappe.get_single("Fleet Management Settings")
 	statuses = _get_terminated_or_pending_drivers()
 
-	by_location_rows = {}
+	rows = []
 
 	if statuses:
 		current_allocations = _get_current_allocations()
@@ -413,22 +424,20 @@ def send_terminated_driver_alert(dry_run: bool = False):
 			if not flagged_drivers:
 				continue
 
-			location = (row.get("location") or "").strip()
-			by_location_rows.setdefault(location, []).append(
-				[
-					record_link("Vehicle Allocation", row.name, label=row.asset_name or row.asset),
-					"<br>".join(flagged_drivers),
-				]
+			rows.append(
+				{
+					"location": (row.get("location") or "").strip(),
+					"cells": [
+						record_link("Vehicle Allocation", row.name, label=row.asset_name or row.asset),
+						"<br>".join(flagged_drivers),
+					],
+				}
 			)
 
-	by_location_blocks = {
-		location: [render_table(["Asset", "Driver(s)"], rows)] for location, rows in by_location_rows.items()
-	}
-	by_location_counts = {location: len(rows) for location, rows in by_location_rows.items()}
+	tables = [{"title": None, "headers": ["Asset", "Driver(s)"], "rows": rows}]
 
 	return _send_location_grouped(
-		by_location_blocks=by_location_blocks,
-		by_location_counts=by_location_counts,
+		tables=tables,
 		recipients=settings.get("terminated_driver_alert_recipients"),
 		subject_prefix="Fleet Terminated Driver Alert",
 		intro_text="The following allocated vehicles have a Terminated or Pending Termination driver.",
@@ -445,28 +454,26 @@ def send_temporary_loan_digest(dry_run: bool = False):
 	current_allocations = [row for row in _get_current_allocations() if row.is_temp]
 	drivers_by_parent = bulk_drivers([row.name for row in current_allocations])
 
-	by_location_rows = {}
+	rows = []
 
 	for row in current_allocations:
 		driver_rows = drivers_by_parent.get(row.name, [])
 		driver_display = escape_html(", ".join(d.driver_name or d.driver for d in driver_rows) or "no driver")
-		location = (row.get("location") or "").strip()
-		by_location_rows.setdefault(location, []).append(
-			[
-				record_link("Vehicle Allocation", row.name, label=row.asset_name or row.asset),
-				driver_display,
-				escape_html(str(row.valid_from or "—")),
-			]
+		rows.append(
+			{
+				"location": (row.get("location") or "").strip(),
+				"cells": [
+					record_link("Vehicle Allocation", row.name, label=row.asset_name or row.asset),
+					driver_display,
+					escape_html(str(row.valid_from or "—")),
+				],
+			}
 		)
 
-	by_location_blocks = {
-		location: [render_table(["Asset", "Driver(s)", "Since"], rows)] for location, rows in by_location_rows.items()
-	}
-	by_location_counts = {location: len(rows) for location, rows in by_location_rows.items()}
+	tables = [{"title": None, "headers": ["Asset", "Driver(s)", "Since"], "rows": rows}]
 
 	return _send_location_grouped(
-		by_location_blocks=by_location_blocks,
-		by_location_counts=by_location_counts,
+		tables=tables,
 		recipients=settings.get("temporary_loan_digest_recipients"),
 		subject_prefix="Fleet Temporary Loan Digest",
 		intro_text="The following are active Temporary Loan allocations.",
