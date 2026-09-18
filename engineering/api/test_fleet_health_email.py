@@ -170,6 +170,12 @@ class TestFleetHealthEmail(unittest.TestCase):
         with self.assertRaises(ValueError): self.send()
         self.queue.db_set.assert_called_once_with({"status": "Error", "error": "Fleet Health delivery failed."}, commit=True)
 
+    def test_cleanup_failure_still_returns_only_generic_delivery_error(self):
+        self.queue.send.side_effect = RuntimeError("synthetic OAuth diagnostic")
+        self.queue.db_set.side_effect = RuntimeError("synthetic cleanup diagnostic")
+        with self.assertRaisesRegex(ValueError, r"^Fleet Health delivery failed\.$"):
+            self.send()
+
     def test_rejects_css_escapes_and_comments(self):
         for css in [r"body{background:u\72l(https://example.test/pixel)}", "@im/**/port 'https://example.test/a.css'"]:
             self.payload["html"] = "<style>" + css + "</style><h2>Fleet Health</h2>"

@@ -166,7 +166,10 @@ def send_fleet_health_email(subject=None, text=None, html=None, attachments=None
             # Frappe commits failed queues as retryable. Stop background retries so a
             # failed agent run cannot leave another deliverable copy behind.
             if delivery_started and queue.status != "Sent":
-                queue.db_set({"status": "Error", "error": "Fleet Health delivery failed."}, commit=True)
+                try:
+                    queue.db_set({"status": "Error", "error": "Fleet Health delivery failed."}, commit=True)
+                except Exception:
+                    pass
             # Never propagate upstream OAuth/server diagnostics into API responses or Node logs.
             raise frappe.ValidationError("Fleet Health delivery failed.") from None
         return {"status": "sent", "queue_id": queue.name}
