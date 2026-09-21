@@ -3985,19 +3985,6 @@ def get_invalid_au_pbm_records(
             name ASC
         """,
         {
-            "label": "█",
-            "fieldname": "industry_separator",
-            "fieldtype": "Data",
-            "width": 18,
-        },
-        {
-            "label": "Working Hours",
-            "fieldname": "industry_work_hours",
-            "fieldtype": "Float",
-            "precision": 3,
-            "width": 120,
-        },
-        {
             "asset_name": asset_name,
             "location": location,
             "shift_start": shift_start,
