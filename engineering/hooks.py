@@ -92,17 +92,18 @@ scheduler_events = {
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
         "engineering.controllers.importer.run_scheduled_wearcheck_sync",
-        "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_all_hourly_downtime_summaries",
     ],
     "cron": {
         "0 6 * * *": [
-            "engineering.api.deviation_email.send_open_deviation_emails"
+            "engineering.api.deviation_email.send_open_deviation_emails",
+            "engineering.engineering.report.down_time.down_time.send_daily_downtime_night_shift",
+            "engineering.engineering.report.down_time.down_time.send_full_daily_downtime_summary",
         ],
-        "5 6 * * *": [
-            "engineering.engineering.report.down_time.down_time.send_daily_downtime_night_shift"
-        ],
-        "5 18 * * *": [
+        "0 18 * * *": [
             "engineering.engineering.report.down_time.down_time.send_daily_downtime_day_shift"
+        ],
+        "15 * * * *": [
+            "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_all_hourly_downtime_summaries"
         ],
         # ==========================================================
         # OPEN BREAKDOWN DIGEST + A&U DAILY RUN
@@ -219,4 +220,3 @@ doctype_list_js = dict(
         "Breakdown History": "public/js/breakdown_history_list.js"
     }
 )
-
