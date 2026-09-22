@@ -1351,7 +1351,12 @@ def build_daily_downtime_message(report_date, site, shift):
     open_records = len([row for row in data if str(row.get("open_closed") or "").lower() == "open"])
     closed_records = total_records - open_records
 
-    shift_period = "06:00 TO 18:00" if shift == "Day Shift" else "18:00 TO 06:00"
+    if shift == "Day Shift":
+        shift_period = "06:00 TO 18:00"
+    elif shift == "Full Daily":
+        shift_period = "06:00 TO 06:00"
+    else:
+        shift_period = "18:00 TO 06:00"
 
     lines = [
         f"{site.upper()} DAILY DOWNTIME REPORT",
@@ -1432,7 +1437,7 @@ def create_daily_downtime_summary(site, report_date, shift):
 def create_daily_downtime_summaries(shift):
     today = getdate(now_datetime())
 
-    if shift == "Night Shift":
+    if shift in ("Night Shift", "Full Daily"):
         report_date = today - timedelta(days=1)
     else:
         report_date = today
@@ -1459,6 +1464,11 @@ def send_daily_downtime_day_shift():
 @frappe.whitelist()
 def send_daily_downtime_night_shift():
     return create_daily_downtime_summaries("Night Shift")
+
+
+@frappe.whitelist()
+def send_full_daily_downtime_summary():
+    return create_daily_downtime_summaries("Full Daily")
 
 # === DOWNTIME SELECTED DATE PRINT PREVIEW V3 START ===
 
