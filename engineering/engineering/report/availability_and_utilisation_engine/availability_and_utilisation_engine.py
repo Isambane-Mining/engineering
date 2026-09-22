@@ -448,21 +448,36 @@ def calculate_time_window_hours(
 
 
 def calculate_industry_available_hours(
-    work_hours,
-    startup_fatigue_hours,
+    total_downtime_hours,
     required_hours,
 ):
-    required_hours = flt(required_hours)
+    """
+    Industry Availability:
+
+    Available Hours =
+    Required Hours - PBM Total Downtime
+
+    Availability % =
+    Available Hours / Required Hours * 100
+
+    Required Hours is 24 for Industry A&U.
+    """
+    required_hours = max(
+        flt(required_hours),
+        0,
+    )
 
     if required_hours <= 0:
         return None
 
-    available_hours = min(
-        (
-            flt(work_hours)
-            + flt(startup_fatigue_hours)
-        ),
-        required_hours,
+    total_downtime_hours = max(
+        flt(total_downtime_hours),
+        0,
+    )
+
+    available_hours = max(
+        required_hours - total_downtime_hours,
+        0,
     )
 
     return round(
@@ -713,10 +728,7 @@ def build_industry_daily_rows(rows, percentage_basis="100% A & U"):
         )
         row["available_hours"] = (
             calculate_industry_available_hours(
-                row.get("work_hours"),
-                row.get(
-                    "startup_fatigue_window_hours"
-                ),
+                row.get("pbm_elapsed_time"),
                 row.get("required_hours"),
             )
         )
@@ -849,10 +861,7 @@ def build_industry_tree_rows(rows, shift_rows=None):
 
         summary["available_hours"] = (
             calculate_industry_available_hours(
-                summary["work_hours"],
-                summary[
-                    "startup_fatigue_window_hours"
-                ],
+                summary["pbm_elapsed_time"],
                 summary["required_hours"],
             )
         )
