@@ -963,10 +963,11 @@ def build_industry_tree_rows(rows, shift_rows=None):
 
                 for source in source_shifts:
                     shift_row = {
-                        "asset_category": None,
-                        "shift_date": None,
-                        "asset_name": None,
+                        "asset_category": source.get("asset_category"),
+                        "shift_date": source.get("shift_date"),
+                        "asset_name": source.get("asset_name"),
                         "shift": source.get("shift"),
+                        "actual_hours": source.get("actual_hours"),
                         "location": source.get("location"),
                         "company": source.get("company"),
                         "required_hours": round(
