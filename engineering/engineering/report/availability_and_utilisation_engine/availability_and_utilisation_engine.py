@@ -475,15 +475,27 @@ def calculate_industry_utilisation_available_hours(
     total_downtime_hours,
 ):
     """
-    Industry utilisation denominator:
+    Industry utilisation denominator.
 
-    Required Hours - Total Breakdown Elapsed Hours.
+    Calculated Available Hours =
+    MAX(
+        Required Hours - PBM Total Downtime,
+        MIN(Work Hours, Required Hours),
+    )
 
-    Required Hours is 24 for Industry A&U.
-    Working Hours does not alter the denominator.
+    If Calculated Available Hours >= 18h:
+        use the full 24h Industry denominator.
+
+    If Calculated Available Hours < 18h:
+        use Calculated Available Hours.
     """
     required_hours = max(
         flt(required_hours),
+        0,
+    )
+
+    work_hours = max(
+        flt(work_hours),
         0,
     )
 
@@ -492,11 +504,16 @@ def calculate_industry_utilisation_available_hours(
         0,
     )
 
+    calculated_available_hours = max(
+        required_hours - total_downtime_hours,
+        min(work_hours, required_hours),
+    )
+
+    if calculated_available_hours >= 18:
+        return round(required_hours, 3)
+
     return round(
-        max(
-            required_hours - total_downtime_hours,
-            0,
-        ),
+        calculated_available_hours,
         3,
     )
 

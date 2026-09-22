@@ -4083,24 +4083,37 @@ function add_invalid_au_exclusion_column(report) {
             show_formula_dialog(
                 "Industry Utilisation Available Hours",
                 `
-                    24h
+                    Calculated Available Hours =
                     <br>
-                    - Total Breakdown Elapsed Hours
+                    MAX(
+                        24h - PBM Total Downtime,
+                        MIN(Working Hours, 24h)
+                    )
+                    <br><br>
+                    If Calculated Available Hours &gt;= 18h:
+                    <strong>Use 24h</strong>
+                    <br>
+                    If Calculated Available Hours &lt; 18h:
+                    <strong>Use Calculated Available Hours</strong>
                 `,
                 `
-                    Industry Utilisation Available Hours always
-                    starts from <strong>24 hours</strong>.
+                    If the machine was available for
+                    <strong>18 hours or more</strong>,
+                    Industry Utilisation uses the full
+                    <strong>24 hours</strong>.
 
                     <br><br>
 
-                    <strong>
-                        24h - Total Breakdown Elapsed Hours
-                    </strong>
+                    If actual calculated availability is
+                    <strong>below 18 hours</strong>,
+                    those available hours are used.
 
                     <br><br>
 
-                    Working Hours does not change the
-                    utilisation denominator.
+                    <strong>Example:</strong><br>
+                    Work = 15h, PBM = 8h<br>
+                    Available = MAX(24 - 8, 15) = 16h<br>
+                    Denominator = <strong>16h</strong>.
                 `
             );
         };
@@ -4124,18 +4137,22 @@ function add_invalid_au_exclusion_column(report) {
 
                     <br><br>
 
-                    Where:
-
-                    <br>
-                    Utilisation Available Hours =
-                    <strong>
-                        24h - Total Breakdown Elapsed Hours
-                    </strong>
+                    If calculated available hours are
+                    <strong>18h or more</strong>,
+                    Utilisation Available Hours = <strong>24h</strong>.
 
                     <br><br>
 
-                    The 85% / 100% A&amp;U Percentage selector
-                    does not change Industry Utilisation %.
+                    If calculated available hours are
+                    <strong>below 18h</strong>,
+                    those calculated available hours are used.
+
+                    <br><br>
+
+                    Example: Work = 15h, PBM = 8h<br>
+                    Available = 16h<br>
+                    Utilisation = 15 / 16 × 100 =
+                    <strong>93.75%</strong>.
                 `
             );
         };
@@ -4145,7 +4162,9 @@ function add_invalid_au_exclusion_column(report) {
     //
     // MIN(Working Hours + Startup/Fatigue, Required Hours)
     //
-    // 24h - Total Breakdown Elapsed Hours
+    // MAX(24h - PBM Total Downtime, MIN(Working Hours, 24h))
+    // If Calculated Available Hours >= 18h: use 24h
+    // If Calculated Available Hours < 18h: use Calculated Available Hours
     //
     // Working Hours / Utilisation Available Hours × 100
 
