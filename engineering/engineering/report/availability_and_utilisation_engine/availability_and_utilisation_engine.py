@@ -81,6 +81,12 @@ def get_columns(filters=None):
                 "width": 115,
             },
             {
+                "label": "Shift",
+                "fieldname": "shift",
+                "fieldtype": "Data",
+                "width": 85,
+            },
+            {
                 "label": "Location",
                 "fieldname": "location",
                 "fieldtype": "Link",
@@ -442,21 +448,36 @@ def calculate_time_window_hours(
 
 
 def calculate_industry_available_hours(
-    work_hours,
-    startup_fatigue_hours,
+    total_downtime_hours,
     required_hours,
 ):
-    required_hours = flt(required_hours)
+    """
+    Industry Availability:
+
+    Available Hours =
+    Required Hours - PBM Total Downtime
+
+    Availability % =
+    Available Hours / Required Hours * 100
+
+    Required Hours is 24 for Industry A&U.
+    """
+    required_hours = max(
+        flt(required_hours),
+        0,
+    )
 
     if required_hours <= 0:
         return None
 
-    available_hours = min(
-        (
-            flt(work_hours)
-            + flt(startup_fatigue_hours)
-        ),
-        required_hours,
+    total_downtime_hours = max(
+        flt(total_downtime_hours),
+        0,
+    )
+
+    available_hours = max(
+        required_hours - total_downtime_hours,
+        0,
     )
 
     return round(
@@ -707,10 +728,7 @@ def build_industry_daily_rows(rows, percentage_basis="100% A & U"):
         )
         row["available_hours"] = (
             calculate_industry_available_hours(
-                row.get("work_hours"),
-                row.get(
-                    "startup_fatigue_window_hours"
-                ),
+                row.get("pbm_elapsed_time"),
                 row.get("required_hours"),
             )
         )
@@ -748,16 +766,17 @@ def build_industry_daily_rows(rows, percentage_basis="100% A & U"):
 
 
 
-def build_industry_tree_rows(rows):
+def build_industry_tree_rows(rows, shift_rows=None):
     """
     Build the Industry A&U hierarchy:
 
     Asset Category
       -> Date
          -> Asset
+            -> Shift
 
-    Industry remains daily, so there is intentionally no
-    Day/Night shift level beneath the asset.
+    Industry calculations remain daily.
+    Shift rows are drill-down source detail only.
     """
     grouped = defaultdict(
         lambda: defaultdict(list)
@@ -774,6 +793,22 @@ def build_industry_tree_rows(rows):
         ].append(row)
 
     data = []
+
+    shift_lookup = defaultdict(list)
+
+    for shift_row in shift_rows or []:
+        if not isinstance(shift_row, dict):
+            continue
+
+        shift_lookup[
+            (
+                shift_row.get("asset_category"),
+                str(shift_row.get("shift_date")),
+                shift_row.get("asset_name"),
+                shift_row.get("location"),
+                shift_row.get("company"),
+            )
+        ].append(shift_row)
 
     priority_categories = {
         "ADT": 0,
@@ -826,10 +861,7 @@ def build_industry_tree_rows(rows):
 
         summary["available_hours"] = (
             calculate_industry_available_hours(
-                summary["work_hours"],
-                summary[
-                    "startup_fatigue_window_hours"
-                ],
+                summary["pbm_elapsed_time"],
                 summary["required_hours"],
             )
         )
@@ -911,7 +943,83 @@ def build_industry_tree_rows(rows):
             for row in date_rows:
                 asset_row = dict(row)
                 asset_row["indent"] = 2
+                asset_row["shift"] = None
                 data.append(asset_row)
+
+                key = (
+                    row.get("asset_category"),
+                    str(row.get("shift_date")),
+                    row.get("asset_name"),
+                    row.get("location"),
+                    row.get("company"),
+                )
+
+                source_shifts = sorted(
+                    shift_lookup.get(key, []),
+                    key=lambda shift_row: str(
+                        shift_row.get("shift") or ""
+                    ),
+                )
+
+                for source in source_shifts:
+                    shift_row = {
+                        "asset_category": None,
+                        "shift_date": None,
+                        "asset_name": None,
+                        "shift": source.get("shift"),
+                        "location": source.get("location"),
+                        "company": source.get("company"),
+                        "required_hours": round(
+                            flt(source.get("required_hours")),
+                            3,
+                        ),
+                        "work_hours": round(
+                            flt(source.get("work_hours")),
+                            3,
+                        ),
+                        "startup_fatigue_window_hours": round(
+                            flt(
+                                source.get(
+                                    "startup_fatigue_window_hours"
+                                )
+                            ),
+                            3,
+                        ),
+                        "pbm_elapsed_time": round(
+                            flt(source.get("pbm_elapsed_time")),
+                            3,
+                        ),
+                        "planned_maintenance_hours": round(
+                            flt(
+                                source.get(
+                                    "planned_maintenance_hours"
+                                )
+                            ),
+                            3,
+                        ),
+                        "available_hours": None,
+                        "industry_separator": "",
+                        "industry_required_hours": None,
+                        "industry_work_hours": round(
+                            flt(source.get("work_hours")),
+                            3,
+                        ),
+                        "industry_util_available_hours": None,
+                        "industry_utilisation": None,
+                        "breakdown_reason": (
+                            source.get("breakdown_reason") or ""
+                        ),
+                        "planned_maintenance_reason": (
+                            source.get(
+                                "planned_maintenance_reason"
+                            )
+                            or ""
+                        ),
+                        "other_delay_reason": "",
+                        "indent": 3,
+                    }
+
+                    data.append(shift_row)
 
     return data
 
@@ -1245,7 +1353,8 @@ def get_data(filters):
         )
 
         return build_industry_tree_rows(
-            industry_daily_rows
+            industry_daily_rows,
+            shift_rows=shift_rows,
         )
 
     mark_invalid_preuse_rows(
