@@ -464,6 +464,45 @@ def interval_due_at_hours(planned_hours):
     return 250
 
 
+
+def next_service_target_from_service_hours(last_service_hours):
+    """Return the service threshold after the service represented by the latest MSR."""
+    try:
+        h = float(last_service_hours or 0)
+    except Exception:
+        h = 0.0
+
+    if h <= 0:
+        return 0
+
+    completed_service_threshold = round_to_250(h)
+    return int(completed_service_threshold + 250)
+
+
+def planning_status_for_hours(estimate_hours, planned_hours):
+    """Return persisted Service Planning Summary status and hours remaining."""
+    try:
+        estimate = float(estimate_hours or 0)
+        planned = float(planned_hours or 0)
+    except Exception:
+        return "", 0
+
+    if planned <= 0:
+        return "", 0
+
+    remaining = int(round(planned - estimate))
+
+    if remaining < 0:
+        return "Overdue", remaining
+    if remaining == 0:
+        return "Due", 0
+    if remaining <= 65:
+        return "Due within 65 hours", remaining
+    if remaining <= 260:
+        return "Due within 260 hours", remaining
+
+    return "", remaining
+
 def find_threshold_crossing_date(series, planned_hours):
     """series: list of (date, estimate_hours) sorted asc.
     Returns first date where estimate crosses planned (>= planned and previous < planned).
@@ -607,20 +646,27 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             seed_name = (chosen.get("name") or "") if chosen else ""
             seed_ref = seed_name
 
-            # Only stamp MSR fields on the exact MSR day row (must be within the month)
-            is_msr_day = bool(seed_service_date and getdate(seed_service_date) == getdate(d))
+            # Carry the latest valid completed service forward.
+            # A newer MSR inside the month automatically replaces this baseline
+            # from its service date onward.
+            date_of_previous_service = seed_service_date
+            hours_previous_service = seed_hours
+            last_service_interval = seed_interval
+            msr_reference_number = seed_ref
+            msr_record_name = seed_name
 
-            date_of_previous_service = seed_service_date if is_msr_day else None
-            hours_previous_service = seed_hours if is_msr_day else 0
-            last_service_interval = seed_interval if is_msr_day else ""
-            msr_reference_number = seed_ref if is_msr_day else ""
-            msr_record_name = seed_name if is_msr_day else ""
-
-
-
-
-
-
+            # Persist the authoritative next service target from the latest
+            # completed MSR available as of this specific day.
+            planning_planned_hours = next_service_target_from_service_hours(seed_hours)
+            planning_status, planning_hours_remaining = planning_status_for_hours(
+                estimate_hours,
+                planning_planned_hours,
+            )
+            planning_service_interval = (
+                _fmt_hours(interval_due_at_hours(planning_planned_hours))
+                if planning_planned_hours
+                else ""
+            )
 
             row = doc.append("service_schedule_child", {
                 "date": d,
@@ -637,6 +683,11 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
                 "msr_record_name": msr_record_name,
                 "oem_booking_date": 1 if oem_map.get((asset, d_iso)) else 0,
                 "oem_booking_name": oem_map.get((asset, d_iso)) or "",
+                "planning_status": planning_status,
+                "planning_hours_remaining": planning_hours_remaining,
+                "planning_planned_hours": planning_planned_hours,
+                "planning_service_interval": planning_service_interval,
+                "planning_flagged_on": d if planning_status else None,
 
             })
 
@@ -655,9 +706,9 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             continue
 
 
-        planned1 = round_to_250(base_hours)
-        planned2 = ceiling_to_250(planned1 + 250)
-        planned3 = ceiling_to_250(planned2 + 250)
+        planned1 = next_service_target_from_service_hours(base_hours)
+        planned2 = planned1 + 250
+        planned3 = planned2 + 250
 
 
         # Populate planned hours on EVERY row for this asset (child table visibility)
@@ -671,15 +722,12 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             r_all.planned_hours_next_service_3 = planned3
 
 
-            # NEW: populate intervals on every row once estimate reaches planned
-            est = float(r_all.estimate_hours or 0)
-
-            if est >= float(planned1):
-                r_all.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
-            if est >= float(planned2):
-                r_all.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
-            if est >= float(planned3):
-                r_all.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
+            # Always show the service interval for each future planned target.
+            # These are planning fields, so they must be visible before the
+            # estimated hours reach the service threshold.
+            r_all.next_service_interval_1 = _fmt_hours(interval_due_at_hours(planned1))
+            r_all.next_service_interval_2 = _fmt_hours(interval_due_at_hours(planned2))
+            r_all.next_service_interval_3 = _fmt_hours(interval_due_at_hours(planned3))
 
 
 
@@ -703,7 +751,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             if r:
                 r.date_of_next_service_1 = d1
                 r.planned_hours_next_service_1 = planned1
-                r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
+                r.next_service_interval_1 = _fmt_hours(interval_due_at_hours(planned1))
 
 
         if d2:
@@ -711,7 +759,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             if r:
                 r.date_of_next_service_2 = d2
                 r.planned_hours_next_service_2 = planned2
-                r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
+                r.next_service_interval_2 = _fmt_hours(interval_due_at_hours(planned2))
 
 
         if d3:
@@ -719,7 +767,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             if r:
                 r.date_of_next_service_3 = d3
                 r.planned_hours_next_service_3 = planned3
-                r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
+                r.next_service_interval_3 = _fmt_hours(interval_due_at_hours(planned3))
 
 
 
@@ -768,6 +816,22 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
                 r.estimate_hours = float(prev_estimate) + float(daily_use)
 
 
+        # Recalculate the persisted planning flag without changing the
+        # service target. The target only advances when a completed MSR exists.
+        planned_target = cint(r.planning_planned_hours) or 0
+        planning_status, planning_hours_remaining = planning_status_for_hours(
+            r.estimate_hours,
+            planned_target,
+        )
+        r.planning_status = planning_status
+        r.planning_hours_remaining = planning_hours_remaining
+        r.planning_service_interval = (
+            _fmt_hours(interval_due_at_hours(planned_target))
+            if planned_target
+            else ""
+        )
+        r.planning_flagged_on = getdate(r.date) if planning_status else None
+
         prev_estimate = float(r.estimate_hours or 0.0)
         prev_start_hours = start_hours
         series.append((getdate(r.date), float(r.estimate_hours or 0.0)))
@@ -812,11 +876,11 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
                 est = float(r.estimate_hours or 0)
 
                 if est >= float(planned1):
-                    r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
+                    r.next_service_interval_1 = _fmt_hours(interval_due_at_hours(planned1))
                 if est >= float(planned2):
-                    r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
+                    r.next_service_interval_2 = _fmt_hours(interval_due_at_hours(planned2))
                 if est >= float(planned3):
-                    r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
+                    r.next_service_interval_3 = _fmt_hours(interval_due_at_hours(planned3))
 
 
             d1 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned1), month_start=month_start)
@@ -833,21 +897,21 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
                     if getdate(r.date) == d1:
                         r.date_of_next_service_1 = d1
                         r.planned_hours_next_service_1 = planned1
-                        r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
+                        r.next_service_interval_1 = _fmt_hours(interval_due_at_hours(planned1))
                         break
             if d2:
                 for r in rows:
                     if getdate(r.date) == d2:
                         r.date_of_next_service_2 = d2
                         r.planned_hours_next_service_2 = planned2
-                        r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
+                        r.next_service_interval_2 = _fmt_hours(interval_due_at_hours(planned2))
                         break
             if d3:
                 for r in rows:
                     if getdate(r.date) == d3:
                         r.date_of_next_service_3 = d3
                         r.planned_hours_next_service_3 = planned3
-                        r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
+                        r.next_service_interval_3 = _fmt_hours(interval_due_at_hours(planned3))
 
                         break
 
