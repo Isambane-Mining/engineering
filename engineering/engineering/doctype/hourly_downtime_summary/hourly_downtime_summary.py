@@ -30,11 +30,20 @@ def get_completed_hour_slot():
     current_hour_start = now.replace(minute=0, second=0, microsecond=0)
     previous_hour_start = current_hour_start - timedelta(hours=1)
 
-    report_date = previous_hour_start.date()
-    start_text = previous_hour_start.strftime("%H:00")
-    end_text = current_hour_start.strftime("%H:00")
+    period_date = previous_hour_start.date()
+    report_date = period_date
 
-    return report_date, f"{start_text}-{end_text}"
+    if previous_hour_start.hour < 6:
+        report_date -= timedelta(days=1)
+
+    start_text = previous_hour_start.strftime("%H:00")
+    end_text = (
+        "24:00"
+        if current_hour_start.hour == 0
+        else current_hour_start.strftime("%H:00")
+    )
+
+    return report_date, f"{start_text}-{end_text}", period_date
 
 
 def create_koppie_hourly_downtime_summary():
@@ -56,14 +65,14 @@ def create_all_hourly_downtime_summaries():
     return created
 
 def create_hourly_downtime_summary(site):
-    report_date, hour_slot = get_completed_hour_slot()
+    report_date, hour_slot, period_date = get_completed_hour_slot()
     channel_id = SITE_CHANNELS.get(site)
 
     if not channel_id:
         frappe.throw(f"No Raven channel configured for site: {site}")
 
     filters = {
-        "report_date": str(report_date),
+        "report_date": str(period_date),
         "hour_slot": hour_slot,
         "site": site,
     }

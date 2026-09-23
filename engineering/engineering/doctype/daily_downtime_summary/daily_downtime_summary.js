@@ -34,6 +34,19 @@ frappe.ui.form.on("Daily Downtime Summary", {
 });
 
 
+function get_daily_shift_period(shift) {
+    if (shift === "Day Shift") {
+        return "06:00 - 18:00";
+    }
+
+    if (shift === "Full Daily") {
+        return "06:00 - 06:00 next day";
+    }
+
+    return "18:00 - 06:00";
+}
+
+
 function render_daily_downtime(frm) {
     if (!frm.fields_dict.daily_downtime) {
         return;
@@ -50,7 +63,7 @@ function render_daily_downtime(frm) {
     const site = frm.doc.site || "";
     const report_date = frm.doc.report_date || "";
     const shift = frm.doc.shift || "";
-    const period = shift === "Day Shift" ? "06:00 - 18:00" : "18:00 - 06:00";
+    const period = get_daily_shift_period(shift);
 
     const total = data.length;
     const open = data.filter(row => String(row.open_closed || "").toLowerCase() === "open").length;

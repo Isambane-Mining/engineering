@@ -4050,29 +4050,34 @@ function add_invalid_au_exclusion_column(report) {
             show_formula_dialog(
                 "Industry Availability %",
                 `
-                    MIN(
-                        Working Hours + Startup/Fatigue,
-                        Required Hours
-                    )
+                    Available Hours =
                     <br>
-                    ÷ Required Hours
+                    24h - PBM Total Downtime
+                    <br><br>
+                    Availability % =
                     <br>
-                    × 100
+                    Available Hours ÷ 24h × 100
                 `,
                 `
-                    Availability is based on
-                    <strong>Working Hours + Startup/Fatigue</strong>.
+                    Industry Availability is based on the time
+                    the machine was mechanically available,
+                    not on how many hours it worked.
 
                     <br><br>
 
-                    The available hours are capped at
-                    <strong>Required Hours</strong>,
-                    so Availability cannot exceed 100%.
+                    <strong>Example 1:</strong><br>
+                    PBM Total Downtime = 0h<br>
+                    Available Hours = 24 - 0 = 24h<br>
+                    Availability = 24 / 24 × 100 =
+                    <strong>100%</strong>.
 
                     <br><br>
 
-                    Industry Required Hours =
-                    <strong>24h per day</strong>.
+                    <strong>Example 2:</strong><br>
+                    PBM Total Downtime = 6h<br>
+                    Available Hours = 24 - 6 = 18h<br>
+                    Availability = 18 / 24 × 100 =
+                    <strong>75%</strong>.
                 `
             );
         };

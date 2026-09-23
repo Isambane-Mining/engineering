@@ -100,7 +100,7 @@
    "fieldname": "shift",
    "fieldtype": "Select",
    "label": "Shift",
-   "options": "Day Shift\nNight Shift"
+   "options": "Day Shift\nNight Shift\nFull Daily"
   },
   {
    "fieldname": "site_manager",
