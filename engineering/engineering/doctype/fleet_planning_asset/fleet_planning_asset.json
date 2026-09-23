@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "creation": "2026-09-22 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "asset",
+  "asset_name",
+  "item_name",
+  "location",
+  "is_temp",
+  "required_licence_type",
+  "generated_vehicle_allocation"
+ ],
+ "fields": [
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Asset",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "asset.asset_name",
+   "fieldname": "asset_name",
+   "fieldtype": "Read Only",
+   "in_list_view": 1,
+   "label": "Asset Name"
+  },
+  {
+   "fetch_from": "asset.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Read Only",
+   "label": "Model"
+  },
+  {
+   "description": "Blank means this Asset sits in the \"Unallocated\" row on the board — it has no planned Location yet.",
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Planned Location",
+   "options": "Location"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_temp",
+   "fieldtype": "Check",
+   "label": "Is Temporary Loan"
+  },
+  {
+   "description": "Copied from the Asset's Current Vehicle Allocation at import time (if any) — used to compute each Driver's licence compliance for the card's colour coding. Not shown/edited on the board itself.",
+   "fieldname": "required_licence_type",
+   "fieldtype": "Link",
+   "label": "Required Licence Type",
+   "options": "Employee Induction"
+  },
+  {
+   "fieldname": "generated_vehicle_allocation",
+   "fieldtype": "Link",
+   "label": "Generated Vehicle Allocation",
+   "options": "Vehicle Allocation",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-23 09:29:29.274298",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Planning Asset",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

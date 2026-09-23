@@ -723,7 +723,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Fleet Management",
-   "link_count": 8,
+   "link_count": 9,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -807,9 +807,19 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fleet Planning",
+   "link_count": 0,
+   "link_to": "Fleet Planning",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-09-12 08:48:24.373374",
+ "modified": "2026-09-22 06:32:26.229615",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
