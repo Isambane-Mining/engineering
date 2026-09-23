@@ -1132,3 +1132,47 @@
         top: calc(10px + 220px * 0.20) !important;
     }
 }
+
+/* Service Schedule Dashboard */
+.service-schedule-page .layout-main-section {max-width:none;padding:16px 20px}
+.service-schedule-page .page-content {max-width:none}
+.ss-filters {display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:0 0 18px}
+.ss-filters .frappe-control {min-width:150px;margin:0}
+.ss-filters .ss-site {min-width:190px}
+.ss-filters .ss-search {min-width:180px;flex:1}
+.ss-month-field {display:flex;flex-direction:column;gap:5px;min-width:150px}
+.ss-month-field label {font-size:12px;color:#525f70;margin:0}
+.ss-month-field input {height:32px;padding:5px 8px;border:1px solid #d1d8dd;border-radius:4px}
+.ss-kpis {display:grid;grid-template-columns:repeat(5,minmax(135px,1fr));gap:10px;margin-bottom:18px}
+.ss-kpi {border:1px solid #dbe1e5;border-left:4px solid var(--accent);border-radius:8px;background:#fff;text-align:left;padding:12px;cursor:pointer}
+.ss-kpi strong {display:block;font-size:24px;line-height:1.2;color:#17212b}
+.ss-kpi span {font-size:12px;color:#4a5564}
+.ss-kpi.active {box-shadow:0 0 0 2px var(--accent)}
+.ss-info {margin:0 0 10px;color:#5e6874;font-size:12px}
+.ss-table-wrap {overflow:auto;max-height:calc(100vh - 330px);min-height:240px;border:1px solid #dbe1e5;border-radius:8px;background:#fff}
+.ss-table {width:100%;min-width:1320px;border-collapse:separate;border-spacing:0;font-size:12px}
+.ss-table th {position:sticky;top:0;z-index:2;background:#f4f6f8;color:#344054;text-align:left;white-space:normal;line-height:1.25;cursor:pointer;font-weight:600}
+.ss-table th,.ss-table td {padding:8px 8px;border-bottom:1px solid #e8ecf0;vertical-align:middle}
+.ss-table tbody tr:hover {background:#f8fafc}
+.ss-table td.num {text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ss-table td a {font-weight:600}
+.ss-table td:nth-child(2),.ss-table td:nth-child(3) {max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-badge {display:inline-block;border-radius:12px;padding:3px 8px;font-weight:600;white-space:nowrap;background:#edf2f7;color:#394b59}
+.ss-badge.overdue {background:#fee2e2;color:#991b1b}
+.ss-badge.due {background:#fecaca;color:#7f1d1d}
+.ss-badge.due65 {background:#ffedd5;color:#9a3412}
+.ss-badge.due260 {background:#fef9c3;color:#854d0e}
+.ss-badge.nohistory {background:#e5e7eb;color:#374151}
+.ss-empty {padding:42px 16px;text-align:center;color:#687685}
+@media(max-width:1440px) {
+ .ss-table {min-width:1120px}
+ .ss-table th:nth-child(4),.ss-table td:nth-child(4),
+ .ss-table th:nth-child(5),.ss-table td:nth-child(5),
+ .ss-table th:nth-child(14),.ss-table td:nth-child(14) {display:none}
+}
+@media(max-width:900px) {
+ .ss-kpis {grid-template-columns:repeat(2,minmax(0,1fr))}
+ .service-schedule-page .layout-main-section {padding:10px}
+ .ss-table-wrap {max-height:65vh}
+}
+/* End Service Schedule Dashboard */
