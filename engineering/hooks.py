@@ -102,7 +102,7 @@ scheduler_events = {
         "0 18 * * *": [
             "engineering.engineering.report.down_time.down_time.send_daily_downtime_day_shift"
         ],
-        "15 * * * *": [
+        "0 * * * *": [
             "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_all_hourly_downtime_summaries"
         ],
         # ==========================================================
