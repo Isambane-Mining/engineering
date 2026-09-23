@@ -18,7 +18,7 @@ function get_dashboard_wrapper(frm) {
 frappe.ui.form.on("Service Schedule", {
     refresh(frm) {
         if (!frm.is_new()) {
-            frm.add_custom_button(__("Open Service Schedule"), () => frappe.set_route("service-schedule"));
+            frm.add_custom_button(__("Open Service Schedule"), () => frappe.set_route("service-schedule-dashboard"));
         }
 
 // ✅ Force OEM Booking checkbox to reflect doc value in grid list-view

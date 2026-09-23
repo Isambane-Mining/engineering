@@ -1,8 +1,8 @@
-frappe.pages["service-schedule"].on_page_load = function (wrapper) {
+frappe.pages["service-schedule-dashboard"].on_page_load = function (wrapper) {
     wrapper.service_schedule_page = new ServiceSchedulePage(wrapper);
 };
 
-frappe.pages["service-schedule"].on_page_show = function (wrapper) {
+frappe.pages["service-schedule-dashboard"].on_page_show = function (wrapper) {
     if (wrapper.service_schedule_page) wrapper.service_schedule_page.load();
 };
 
