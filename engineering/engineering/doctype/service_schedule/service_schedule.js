@@ -1,32 +1,5 @@
 function ss_queue_daily_update(frm) {
-    if (frm.__ss_updating) return;
-    frm.__ss_updating = true;
-
-    frappe.call({
-        method: "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update",
-        args: {
-            schedule_name: frm.doc.name,
-            daily_usage_default: 15
-        },
-        freeze: true,
-        freeze_message: "Queueing Service Schedule Update...",
-        callback: () => {
-            frm.__ss_updating = false;
-
-            frm.reload_doc().then(() => {
-                const dashWrapper = get_dashboard_wrapper(frm);
-                if (dashWrapper) render_service_board(frm);
-                if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
-                    render_due_soon_summary(frm);
-                }
-            });
-
-            frappe.msgprint("Update queued and refreshed.");
-        },
-        error: () => {
-            frm.__ss_updating = false;
-        }
-    });
+    generate_service_schedule(frm);
 }
 
 
@@ -78,12 +51,6 @@ setTimeout(() => {
         // render dashboard if the fields exist on the form
         const dashWrapper = get_dashboard_wrapper(frm);
         if (dashWrapper) {
-            console.log("🧪 render_service_board called", {
-                child_rows: (frm.doc.service_schedule_child || []).length,
-                history_rows: (frm.doc.service_schedule_history || []).length,
-                has_service_schedule_field: !!frm.fields_dict.service_schedule,
-                has_service_schedule_dashboard_field: !!frm.fields_dict.service_schedule_dashboard
-            });
             render_service_board(frm);
         }
 
@@ -132,31 +99,24 @@ function generate_service_schedule(frm) {
 }
 
 
-function run_backend_generation(frm) {
-    frappe.call({
-        method: "engineering.engineering.doctype.service_schedule.service_schedule.generate_schedule_backend",
-        args: { schedule_name: frm.doc.name, daily_usage_default: 15 },
-        freeze: true,
-        freeze_message: "Generating Schedule...",
-        callback: () => {
-            frappe.model.remove_from_locals(frm.doc.doctype, frm.doc.name);
-
-            frm.reload_doc().then(() => {
-                
-
-                const dashWrapper = get_dashboard_wrapper(frm);
-                if (dashWrapper) {
-                    render_service_board(frm);
-                }
-
-                if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
-                    render_due_soon_summary(frm);
-                }
-            });
-        }
-    });
+async function run_backend_generation(frm) {
+    try {
+        const result = await frappe.call({
+            method: "engineering.engineering.doctype.service_schedule.service_schedule.generate_schedule_backend",
+            args: { schedule_name: frm.doc.name, daily_usage_default: 15 },
+            freeze: true,
+            freeze_message: __("Generating Schedule...")
+        });
+        if (!result.message || !result.message.ok) throw new Error(__("Schedule generation did not complete."));
+        frappe.model.remove_from_locals(frm.doc.doctype, frm.doc.name);
+        await frm.reload_doc();
+        render_service_board(frm);
+        render_due_soon_summary(frm);
+    } catch (error) {
+        frappe.msgprint({title: __("Service Schedule generation failed"),
+            message: error.message || __("Check the error log and retry."), indicator: "red"});
+    }
 }
-
 
 
 // ---------------------------------------------------------------------------
@@ -1036,35 +996,7 @@ if (a.service_date) {
 
 // GREEN BORDER: only when an actual MSR exists on this date for this asset
 const msrEvent = (a.msr_events && a.msr_events[dateStr]) ? a.msr_events[dateStr] : null;
-if (a.fleet_number === "IS609" && dateStr === "2025-09-17") {
-    console.log("🧪 IS609 2025-09-17 msrEvent", msrEvent, "all events:", a.msr_events);
-}
 const greenBorderClass = msrEvent ? " ss-green-border" : "";
-
-
-if (a.fleet_number === "IS609") {
-    console.log("🧪 IS609 BORDER CHECK", {
-        dateStr,
-        service_date_raw: a.service_date,
-        serviceDate_normalized: serviceDate,
-        match: (dateStr === serviceDate)
-    });
-}
-
-
-
-
-if (greenBorderClass) {
-    console.log("✅ GREEN BORDER HIT", {
-        fleet: a.fleet_number,
-        dateStr,
-        service_date_raw: a.service_date,
-        serviceDate_normalized: serviceDate,
-        msr_ref: a.msr_reference_number,
-        msr_record_name: a.msr_record_name
-    });
-}
-
 
 
 const msrRef = msrEvent ? msrEvent.msr_reference_number : "";
@@ -1271,55 +1203,25 @@ setTimeout(() => {
     $(this).val(dailyUse);
 
 
-        const cells = $(`.day-cell[data-asset="${asset}"]`)
-            .toArray()
-            .sort((a, b) => String($(a).data("date")).localeCompare(String($(b).data("date"))));
-
-    let prevEst = null;
-    let prevStart = null;
-
-    cells.forEach((elem, idx) => {
-        const cell = $(elem);
-
-        const startText = cell.find(".start-val").text().trim();
-        const startVal = startText ? (parseFloat(startText) || 0) : 0;
-
-        let estVal = 0;
-
-        if (idx === 0) {
-            estVal = startVal; // Day 1
-        } else if ((prevStart ?? 0) > 0) {
-            estVal = (prevStart ?? 0) + dailyUse; // prev day had start_hours
-        } else {
-            estVal = (prevEst ?? 0) + dailyUse;   // continue from prev estimate
-        }
-
-        cell.find(".est-val").text(estVal);
-        prevEst = estVal;
-        prevStart = startVal;
-    });
-
-
         // Persist the edited daily usage to child rows and recompute next-service markers server-side (debounced)
         window._ss_usage_timers = window._ss_usage_timers || {};
         clearTimeout(window._ss_usage_timers[asset]);
         window._ss_usage_timers[asset] = setTimeout(() => {
             frappe.call({
                 method: "engineering.engineering.doctype.service_schedule.service_schedule.set_daily_usage_and_recompute",
-                args: {
-                    schedule_name: frm.doc.name,
-                    fleet_number: asset,
-                    daily_usage: dailyUse
-                },
-                callback: () => {
-                    frm.reload_doc().then(() => {
-                        render_service_board(frm);
-                        if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
-                            render_due_soon_summary(frm);
-                        }
-                    });
-                }
-            });
+                args: {schedule_name: frm.doc.name, fleet_number: asset, daily_usage: dailyUse},
+                freeze: true,
+                freeze_message: __("Recalculating Service Schedule...")
+            }).then(async result => {
+                if (!result.message || !result.message.ok) throw new Error(__("Recalculation did not complete."));
+                await frm.reload_doc();
+                render_service_board(frm);
+                render_due_soon_summary(frm);
+            }).catch(error => frappe.msgprint({
+                title: __("Service Schedule recalculation failed"),
+                message: error.message || __("Check the error log and retry."),
+                indicator: "red"
+            }));
         }, 600);
     });
 }, 50);
@@ -1341,11 +1243,16 @@ function render_due_soon_summary(frm) {
         return;
     }
 
+    const dates = [...new Set(rows.map(r => String(r.date || "").slice(0, 10)).filter(Boolean))].sort();
     const today = frappe.datetime.get_today();
+    const month = String(frm.doc.month || "");
+    const todayMonth = frappe.datetime.str_to_obj(today).toLocaleString("en", {month: "long", year: "numeric"});
+    let snapshot = dates[0];
+    if (month === todayMonth) snapshot = dates.includes(today) ? today : (dates.filter(d => d <= today).pop() || dates[0]);
+    else if (dates.length && dates[0] < today) snapshot = dates[dates.length - 1];
 
-    // Planning status is persisted in Service Schedule Child.
     rows = rows.filter(r =>
-        String(r.date || "").slice(0, 10) === today &&
+        String(r.date || "").slice(0, 10) === snapshot &&
         String(r.planning_status || "").trim()
     );
 
@@ -1353,8 +1260,9 @@ function render_due_soon_summary(frm) {
     const due = rows.filter(r => r.planning_status === "Due");
     const due65 = rows.filter(r => r.planning_status === "Due within 65 hours");
     const due260 = rows.filter(r => r.planning_status === "Due within 260 hours");
+    const noHistory = rows.filter(r => r.planning_status === "No Service History");
 
-    if (!overdue.length && !due.length && !due65.length && !due260.length) {
+    if (!overdue.length && !due.length && !due65.length && !due260.length && !noHistory.length) {
         wrapper.html("<p>No assets currently due or close to service.</p>");
         return;
     }
@@ -1457,6 +1365,11 @@ function render_due_soon_summary(frm) {
     if (due260.length) {
         html += `<div class="ss-summary-title">66-260 hours before service</div>`;
         html += build_summary_table(due260);
+    }
+
+    if (noHistory.length) {
+        html += `<div class="ss-summary-title">NO SERVICE HISTORY</div>`;
+        html += build_summary_table(noHistory);
     }
 
     html += `</div>`;
