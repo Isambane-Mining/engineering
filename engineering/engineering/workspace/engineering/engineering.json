@@ -1,876 +1,772 @@
 {
- "app": "engineering",
- "charts": [],
- "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h1\\\">Engineering</span>\",\"col\":12}},{\"id\":\"sZDBbZCI3L\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">Dashboards</span>\",\"col\":12}},{\"id\":\"LtXdvfLbmE\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly A & U Dashboard\",\"col\":6}},{\"id\":\"aCmzuqPZli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Performance Tool\",\"col\":6}},{\"id\":\"lKxVpGPEZa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Availability & Utilisation Dashboard\",\"col\":6}},{\"id\":\"fleetMgmtShortcut1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Fleet Management Dashboard\",\"col\":6}},{\"id\":\"fleetMgmtSpacer1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ngshvtiyUP\",\"type\":\"card\",\"data\":{\"card_name\":\"Downtime Verification and Reports\",\"col\":6}},{\"id\":\"ff-YLzTyzs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"OeS-8We268\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Capture\",\"col\":6}},{\"id\":\"l27-epjru2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"BJ1IGn-pXU\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Capturing\",\"col\":6}},{\"id\":\"3nTbUdn6sC\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Report\",\"col\":6}},{\"id\":\"U0E_aVRgp2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Y_vUfdikNP\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Management\",\"col\":6}},{\"id\":\"n0zteetS9m\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Planning\",\"col\":6}},{\"id\":\"6lM7a_TdfA\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Dq5KicizMW\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Legals Reports\",\"col\":6}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":6}},{\"id\":\"rZWIfUNJRQ\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"7fnJchMR8X\",\"type\":\"card\",\"data\":{\"card_name\":\"Diesel\",\"col\":6}},{\"id\":\"vsQTdHb-Bj\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":6}},{\"id\":\"fleetMgmtSpacer2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"fleetMgmtCard1\",\"type\":\"card\",\"data\":{\"card_name\":\"Fleet Management\",\"col\":12}}]",
- "creation": "2026-09-01 06:16:15.374789",
- "custom_blocks": [],
- "docstatus": 0,
- "doctype": "Workspace",
- "for_user": "",
- "hide_custom": 0,
- "icon": "tool",
- "idx": 3,
- "indicator_color": "",
- "is_hidden": 0,
- "label": "Engineering",
- "links": [
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Avail & Util Report",
-   "link_count": 0,
-   "link_to": "Availability & Utilisation- Monthly",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Availability and Utilisation",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Legals Report",
-   "link_count": 0,
-   "link_to": "Engineering Legals Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Engineering Legals",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Jobcard",
-   "link_count": 0,
-   "link_to": "Mechanical Service Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Component Replacement Report",
-   "link_count": 0,
-   "link_to": "Component Replacement Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "OEM Booking",
-   "link_count": 0,
-   "link_to": "OEM Booking",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Breakdowns (Capture)",
-   "link_count": 0,
-   "link_to": "Plant Breakdown or Maintenance",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Breakdown Report",
-   "link_count": 0,
-   "link_to": "Availability and utilization Asset timeline",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Breakdown History",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Other Lost Hours (Capture)",
-   "link_count": 0,
-   "link_to": "Daily Lost Hours Recon",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Logsheet Report",
-   "link_count": 0,
-   "link_to": "MSR Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Mechanical Service Report",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "OEM Booking",
-   "link_count": 0,
-   "link_to": "OEM Booking",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Component Replacement Report",
-   "link_count": 0,
-   "link_to": "Component Replacement Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Jobcard",
-   "link_count": 0,
-   "link_to": "Mechanical Service Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Component Replacement Report",
-   "link_count": 0,
-   "link_to": "Component Replacement Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "OEM Booking",
-   "link_count": 0,
-   "link_to": "OEM Booking",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Breakdowns (Capture)",
-   "link_count": 0,
-   "link_to": "Plant Breakdown or Maintenance",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Breakdown Report",
-   "link_count": 0,
-   "link_to": "Availability and utilization Asset timeline",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Breakdown History",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Other Lost Hours (Capture)",
-   "link_count": 0,
-   "link_to": "Daily Lost Hours Recon",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Logsheet Report",
-   "link_count": 0,
-   "link_to": "MSR Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Mechanical Service Report",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Repair Log Sheet",
-   "link_count": 0,
-   "link_to": "Repair Log Sheet",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Support Equipment",
-   "link_count": 0,
-   "link_to": "Support Equipment",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Checklist Register",
-   "link_count": 0,
-   "link_to": "Engineering Checklist Register",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Pre Use Deviation",
-   "link_count": 0,
-   "link_to": "Pre Use Deviation",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Legals",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Legals (Capture)",
-   "link_count": 0,
-   "link_to": "Engineering Legals",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Legals Reports",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Legals Report",
-   "link_count": 0,
-   "link_to": "Engineering Legals Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Engineering Legals",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Machine Management",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asset List",
-   "link_count": 0,
-   "link_to": "Asset",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asset Movement",
-   "link_count": 0,
-   "link_to": "Asset Movement",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Component and Item Code List",
-   "link_count": 0,
-   "link_to": "Item",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Machine Information Capturing",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "MSR",
-   "link_count": 0,
-   "link_to": "Mechanical Service Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Component Replacement Report",
-   "link_count": 0,
-   "link_to": "Component Replacement Report",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Mechanical Daily Worksheet",
-   "link_count": 0,
-   "link_to": "Mechanical Daily Worksheet",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Machine Checklist Register",
-   "link_count": 0,
-   "link_to": "Engineering Checklist Register",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "LDV Checklist Register",
-   "link_count": 0,
-   "link_to": "Engineering LDV Checklist Register",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Pre-Use Deviation",
-   "link_count": 0,
-   "link_to": "Pre Use Deviation",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Diesel",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Daily Diesel Management",
-   "link_count": 0,
-   "link_to": "Daily Diesel Management",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Daily Diesel Sheet",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Monthly Diesel Recon",
-   "link_count": 0,
-   "link_to": "Monthly Diesel Reconciliation",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Daily Diesel Sheet",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Downtime Verification",
-   "link_count": 0,
-   "link_to": "Down Time",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Plant Breakdown or Maintenance",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Control Room Correction Dashboard",
-   "link_count": 0,
-   "link_to": "Downtime Correction Dashboard",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Mechanical Downtime sign-off",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Downtime Verification and Reports",
-   "link_count": 2,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Downtime Verification and Reports",
-   "link_count": 0,
-   "link_to": "Down Time",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Control Room Correction Dashboard",
-   "link_count": 0,
-   "link_to": "Downtime Correction Dashboard",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Availability and Utilisation Capture",
-   "link_count": 4,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Breakdowns (Capture)",
-   "link_count": 0,
-   "link_to": "Plant Breakdown or Maintenance",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Other Lost Hours (Capture)",
-   "link_count": 0,
-   "link_to": "Daily Lost Hours Recon",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Pre-Use Hours (Capture)",
-   "link_count": 0,
-   "link_to": "Pre-Use Hours",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Breakdown Records",
-   "link_count": 0,
-   "link_to": "Breakdown Status History",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Availability and Utilisation Reports",
-   "link_count": 3,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Summary",
-   "link_count": 0,
-   "link_to": "Availability and Utilisation Month End Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Availability and Utilisation Engine",
-   "link_count": 0,
-   "link_to": "Availability and Utilisation Engine",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Breakdown and Standby Machine Report",
-   "link_count": 0,
-   "link_to": "Availability and utilization Asset timeline",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Machine Information Report",
-   "link_count": 6,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Repaired Logsheet Report",
-   "link_count": 0,
-   "link_to": "MSR Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Mechanical Service Report",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Pre Use Deviation Dashboard",
-   "link_count": 0,
-   "link_to": "Pre Use Deviation Dashboard",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Pre Use Deviation",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Pre-Use Report",
-   "link_count": 0,
-   "link_to": "Pre-Use Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Pre-Use Hours",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Oil Sample Report",
-   "link_count": 0,
-   "link_to": "Oil Sample",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "WearCheck Results",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Legals Monthly Summary",
-   "link_count": 0,
-   "link_to": "engineering-legals-monthly-summary-link",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "description": "This is where you can change emails and system related settings. Note that your actions is recorded.(Do not take yourself of any email)",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Settings",
-   "link_count": 4,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Oil Sample Email Alerts",
-   "link_count": 0,
-   "link_to": "API Wearcheck Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Open Breakdown Email Alerts",
-   "link_count": 0,
-   "link_to": "Plant Breakdown Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Startup and Fatigue spesification",
-   "link_count": 0,
-   "link_to": "Startup and Fatigue spesification",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Engineering Legals Sections",
-   "link_count": 0,
-   "link_to": "Engineering Legals Sections",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Fleet Management",
-   "link_count": 8,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Vehicle Allocation",
-   "link_count": 0,
-   "link_to": "Vehicle Allocation",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Vehicle Licence",
-   "link_count": 0,
-   "link_to": "Vehicle Licence",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Fleet Compliance Overview",
-   "link_count": 0,
-   "link_to": "Fleet Compliance Overview",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Fleet Compliance Dashboard",
-   "link_count": 0,
-   "link_to": "fleet-compliance-dashboard",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Licence Expiration Report",
-   "link_count": 0,
-   "link_to": "Licence Expiration",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Vehicle Licence Expiration",
-   "link_count": 0,
-   "link_to": "vehicle-licence-expiration",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Fleet Management Settings",
-   "link_count": 0,
-   "link_to": "Fleet Management Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asset Movement",
-   "link_count": 0,
-   "link_to": "Asset Movement",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Machine Planning",
-   "link_count": 5,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Service Schedule dashboard",
-   "link_count": 0,
-   "link_to": "service-schedule-dashboard",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Service schedule",
-   "link_count": 0,
-   "link_to": "Service Schedule",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "OEM Booking",
-   "link_count": 0,
-   "link_to": "OEM Booking",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Oil Sample (Capture)",
-   "link_count": 0,
-   "link_to": "Isambane sample input",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Oil Sample Results",
-   "link_count": 0,
-   "link_to": "WearCheck Results",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  }
- ],
- "modified": "2026-09-23 11:03:59.736118",
- "modified_by": "Administrator",
- "module": "Engineering",
- "name": "Engineering",
- "number_cards": [],
- "owner": "Administrator",
- "parent_page": "Engineering",
- "public": 1,
- "quick_lists": [],
- "roles": [
-  {
-   "role": "System Manager"
-  },
-  {
-   "role": "Engineering Manager"
-  },
-  {
-   "role": "Engineering User"
-  }
- ],
- "sequence_id": 44.0,
- "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Weekly A & U Dashboard",
-   "link_to": "weekly-availability-",
-   "type": "Page"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Daily Availability & Utilisation Dashboard",
-   "link_to": "daily-availability-and-utilization-dashboard",
-   "type": "Page"
-  },
-  {
-   "color": "Blue",
-   "doc_view": "List",
-   "label": "Weekly Performance Tool",
-   "link_to": "Production Efficiency",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Green",
-   "doc_view": "",
-   "label": "Fleet Management Dashboard",
-   "link_to": "Fleet Management",
-   "type": "Dashboard"
-  }
- ],
- "title": "Engineering",
- "type": "Workspace"
+  "app": "engineering",
+  "charts": [],
+  "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h1\\\">Engineering</span>\",\"col\":12}},{\"id\":\"sZDBbZCI3L\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">Dashboards</span>\",\"col\":12}},{\"id\":\"LtXdvfLbmE\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly A & U Dashboard\",\"col\":6}},{\"id\":\"aCmzuqPZli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Performance Tool\",\"col\":6}},{\"id\":\"lKxVpGPEZa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Availability & Utilisation Dashboard\",\"col\":6}},{\"id\":\"fleetMgmtShortcut1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Fleet Management Dashboard\",\"col\":6}},{\"id\":\"fleetMgmtSpacer1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ngshvtiyUP\",\"type\":\"card\",\"data\":{\"card_name\":\"Downtime Verification and Reports\",\"col\":6}},{\"id\":\"ff-YLzTyzs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"OeS-8We268\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Capture\",\"col\":6}},{\"id\":\"l27-epjru2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"BJ1IGn-pXU\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Capturing\",\"col\":6}},{\"id\":\"3nTbUdn6sC\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Report\",\"col\":6}},{\"id\":\"U0E_aVRgp2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Y_vUfdikNP\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Management\",\"col\":6}},{\"id\":\"n0zteetS9m\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Planning\",\"col\":6}},{\"id\":\"6lM7a_TdfA\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Dq5KicizMW\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Legals Reports\",\"col\":6}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":6}},{\"id\":\"rZWIfUNJRQ\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"7fnJchMR8X\",\"type\":\"card\",\"data\":{\"card_name\":\"Diesel\",\"col\":6}},{\"id\":\"vsQTdHb-Bj\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":6}},{\"id\":\"fleetMgmtSpacer2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"fleetMgmtCard1\",\"type\":\"card\",\"data\":{\"card_name\":\"Fleet Management\",\"col\":12}}]",
+  "creation": "2026-09-01 06:16:15.374789",
+  "custom_blocks": [],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "tool",
+  "idx": 3,
+  "indicator_color": "",
+  "is_hidden": 0,
+  "label": "Engineering",
+  "links": [
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Avail & Util Report",
+      "link_count": 0,
+      "link_to": "Availability & Utilisation- Monthly",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Availability and Utilisation",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Engineering Legals Report",
+      "link_count": 0,
+      "link_to": "Engineering Legals Report",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Engineering Legals",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Jobcard",
+      "link_count": 0,
+      "link_to": "Mechanical Service Report",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Component Replacement Report",
+      "link_count": 0,
+      "link_to": "Component Replacement Report",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "OEM Booking",
+      "link_count": 0,
+      "link_to": "OEM Booking",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Breakdowns (Capture)",
+      "link_count": 0,
+      "link_to": "Plant Breakdown or Maintenance",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Breakdown Report",
+      "link_count": 0,
+      "link_to": "Availability and utilization Asset timeline",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Breakdown History",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Other Lost Hours (Capture)",
+      "link_count": 0,
+      "link_to": "Daily Lost Hours Recon",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Logsheet Report",
+      "link_count": 0,
+      "link_to": "MSR Report",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Mechanical Service Report",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Repair Log Sheet",
+      "link_count": 0,
+      "link_to": "Repair Log Sheet",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Support Equipment",
+      "link_count": 0,
+      "link_to": "Support Equipment",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Engineering Checklist Register",
+      "link_count": 0,
+      "link_to": "Engineering Checklist Register",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Pre Use Deviation",
+      "link_count": 0,
+      "link_to": "Pre Use Deviation",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Legals",
+      "link_count": 1,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Engineering Legals (Capture)",
+      "link_count": 0,
+      "link_to": "Engineering Legals",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Engineering Legals Reports",
+      "link_count": 1,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Engineering Legals Report",
+      "link_count": 0,
+      "link_to": "Engineering Legals Report",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Engineering Legals",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Machine Management",
+      "link_count": 3,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Asset List",
+      "link_count": 0,
+      "link_to": "Asset",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Asset Movement",
+      "link_count": 0,
+      "link_to": "Asset Movement",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Component and Item Code List",
+      "link_count": 0,
+      "link_to": "Item",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Machine Information Capturing",
+      "link_count": 6,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "MSR",
+      "link_count": 0,
+      "link_to": "Mechanical Service Report",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Component Replacement Report",
+      "link_count": 0,
+      "link_to": "Component Replacement Report",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Mechanical Daily Worksheet",
+      "link_count": 0,
+      "link_to": "Mechanical Daily Worksheet",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Machine Checklist Register",
+      "link_count": 0,
+      "link_to": "Engineering Checklist Register",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "LDV Checklist Register",
+      "link_count": 0,
+      "link_to": "Engineering LDV Checklist Register",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Pre-Use Deviation",
+      "link_count": 0,
+      "link_to": "Pre Use Deviation",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Diesel",
+      "link_count": 2,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Daily Diesel Management",
+      "link_count": 0,
+      "link_to": "Daily Diesel Management",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Daily Diesel Sheet",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Monthly Diesel Recon",
+      "link_count": 0,
+      "link_to": "Monthly Diesel Reconciliation",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Daily Diesel Sheet",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Downtime Verification and Reports",
+      "link_count": 2,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Downtime Verification and Reports",
+      "link_count": 0,
+      "link_to": "Down Time",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Control Room Correction Dashboard",
+      "link_count": 0,
+      "link_to": "Downtime Correction Dashboard",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Availability and Utilisation Capture",
+      "link_count": 4,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Breakdowns (Capture)",
+      "link_count": 0,
+      "link_to": "Plant Breakdown or Maintenance",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Other Lost Hours (Capture)",
+      "link_count": 0,
+      "link_to": "Daily Lost Hours Recon",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Pre-Use Hours (Capture)",
+      "link_count": 0,
+      "link_to": "Pre-Use Hours",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Breakdown Records",
+      "link_count": 0,
+      "link_to": "Breakdown Status History",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Availability and Utilisation Reports",
+      "link_count": 3,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "A & U Summary",
+      "link_count": 0,
+      "link_to": "Availability and Utilisation Month End Report",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Availability and Utilisation Engine",
+      "link_count": 0,
+      "link_to": "Availability and Utilisation Engine",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Breakdown and Standby Machine Report",
+      "link_count": 0,
+      "link_to": "Availability and utilization Asset timeline",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Machine Information Report",
+      "link_count": 5,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Repaired Logsheet Report",
+      "link_count": 0,
+      "link_to": "MSR Report",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Mechanical Service Report",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Pre Use Deviation Dashboard",
+      "link_count": 0,
+      "link_to": "Pre Use Deviation Dashboard",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Pre Use Deviation",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Pre-Use Report",
+      "link_count": 0,
+      "link_to": "Pre-Use Report",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "Pre-Use Hours",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Oil Sample Report",
+      "link_count": 0,
+      "link_to": "Oil Sample",
+      "link_type": "Report",
+      "onboard": 0,
+      "report_ref_doctype": "WearCheck Results",
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Engineering Legals Monthly Summary",
+      "link_count": 0,
+      "link_to": "engineering-legals-monthly-summary-link",
+      "link_type": "Page",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "This is where you can change emails and system related settings. Note that your actions is recorded.(Do not take yourself of any email)",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Settings",
+      "link_count": 4,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Oil Sample Email Alerts",
+      "link_count": 0,
+      "link_to": "API Wearcheck Settings",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Open Breakdown Email Alerts",
+      "link_count": 0,
+      "link_to": "Plant Breakdown Settings",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Startup and Fatigue spesification",
+      "link_count": 0,
+      "link_to": "Startup and Fatigue spesification",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Engineering Legals Sections",
+      "link_count": 0,
+      "link_to": "Engineering Legals Sections",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Fleet Management",
+      "link_count": 8,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Vehicle Allocation",
+      "link_count": 0,
+      "link_to": "Vehicle Allocation",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Vehicle Licence",
+      "link_count": 0,
+      "link_to": "Vehicle Licence",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Fleet Compliance Overview",
+      "link_count": 0,
+      "link_to": "Fleet Compliance Overview",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Fleet Compliance Dashboard",
+      "link_count": 0,
+      "link_to": "fleet-compliance-dashboard",
+      "link_type": "Page",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "Licence Expiration Report",
+      "link_count": 0,
+      "link_to": "Licence Expiration",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Vehicle Licence Expiration",
+      "link_count": 0,
+      "link_to": "vehicle-licence-expiration",
+      "link_type": "Page",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Fleet Management Settings",
+      "link_count": 0,
+      "link_to": "Fleet Management Settings",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Asset Movement",
+      "link_count": 0,
+      "link_to": "Asset Movement",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Machine Planning",
+      "link_count": 6,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Service Schedule dashboard",
+      "link_count": 0,
+      "link_to": "service-schedule-dashboard",
+      "link_type": "Page",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Service schedule",
+      "link_count": 0,
+      "link_to": "Service Schedule",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "OEM Booking",
+      "link_count": 0,
+      "link_to": "OEM Booking",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Oil Sample (Capture)",
+      "link_count": 0,
+      "link_to": "Isambane sample input",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Oil Sample Results",
+      "link_count": 0,
+      "link_to": "WearCheck Results",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Fleet Planning",
+      "link_count": 0,
+      "link_to": "Fleet Planning",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    }
+  ],
+  "modified": "2026-09-22 06:32:26.229615",
+  "modified_by": "Administrator",
+  "module": "Engineering",
+  "name": "Engineering",
+  "number_cards": [],
+  "owner": "Administrator",
+  "parent_page": "Engineering",
+  "public": 1,
+  "quick_lists": [],
+  "roles": [
+    {
+      "role": "System Manager"
+    },
+    {
+      "role": "Engineering Manager"
+    },
+    {
+      "role": "Engineering User"
+    }
+  ],
+  "sequence_id": 44.0,
+  "shortcuts": [
+    {
+      "color": "Grey",
+      "doc_view": "List",
+      "label": "Weekly A & U Dashboard",
+      "link_to": "weekly-availability-",
+      "type": "Page"
+    },
+    {
+      "color": "Grey",
+      "doc_view": "List",
+      "label": "Daily Availability & Utilisation Dashboard",
+      "link_to": "daily-availability-and-utilization-dashboard",
+      "type": "Page"
+    },
+    {
+      "color": "Blue",
+      "doc_view": "List",
+      "label": "Weekly Performance Tool",
+      "link_to": "Production Efficiency",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Green",
+      "doc_view": "",
+      "label": "Fleet Management Dashboard",
+      "link_to": "Fleet Management",
+      "type": "Dashboard"
+    }
+  ],
+  "title": "Engineering",
+  "type": "Workspace"
 }
