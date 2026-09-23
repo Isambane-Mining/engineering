@@ -14,6 +14,9 @@ SITE_MANAGER_EMAILS = {
         "richard@isambane.co.za",
         "werner.french@isambane.co.za",
         "lara@isambane.co.za",
+        "arno@isambane.co.za",
+        "grant.cummings@isambane.co.za",
+        "vusi@isambane.co.za",
     ],
     "Uitgevallen": [
         "charles@excavo.co.za",
@@ -21,9 +24,11 @@ SITE_MANAGER_EMAILS = {
     ],
     "Gwab": [
         "grant@isambane.co.za",
-        "mandla@isambane.co.za",
         "richard@isambane.co.za",
         "lara@isambane.co.za",
+        "arno@isambane.co.za",
+        "grant.cummings@isambane.co.za",
+        "vusi@isambane.co.za",
     ],
     "Bankfontein": [
         "noel@isambane.co.za",
