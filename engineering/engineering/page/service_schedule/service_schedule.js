@@ -62,11 +62,12 @@ class ServiceSchedulePage {
 .ss-info {margin:0 0 10px;color:#5e6874;font-size:12px}
 .ss-table-wrap {overflow:auto;max-height:calc(100vh - 330px);min-height:240px;border:1px solid #dbe1e5;border-radius:8px;background:#fff}
 .ss-table {width:100%;min-width:1320px;border-collapse:separate;border-spacing:0;font-size:12px}
-.ss-table th {position:sticky;top:0;z-index:2;background:#f4f6f8;color:#344054;text-align:left;white-space:nowrap;cursor:pointer;font-weight:600}
-.ss-table th,.ss-table td {padding:9px 10px;border-bottom:1px solid #e8ecf0;vertical-align:middle}
+.ss-table th {position:sticky;top:0;z-index:2;background:#f4f6f8;color:#344054;text-align:left;white-space:normal;line-height:1.25;cursor:pointer;font-weight:600}
+.ss-table th,.ss-table td {padding:8px 8px;border-bottom:1px solid #e8ecf0;vertical-align:middle}
 .ss-table tbody tr:hover {background:#f8fafc}
 .ss-table td.num {text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ss-table td a {font-weight:600}
+.ss-table td:nth-child(2),.ss-table td:nth-child(3) {max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ss-badge {display:inline-block;border-radius:12px;padding:3px 8px;font-weight:600;white-space:nowrap;background:#edf2f7;color:#394b59}
 .ss-badge.overdue {background:#fee2e2;color:#991b1b}
 .ss-badge.due {background:#fecaca;color:#7f1d1d}
@@ -74,6 +75,12 @@ class ServiceSchedulePage {
 .ss-badge.due260 {background:#fef9c3;color:#854d0e}
 .ss-badge.nohistory {background:#e5e7eb;color:#374151}
 .ss-empty {padding:42px 16px;text-align:center;color:#687685}
+@media(max-width:1440px) {
+ .ss-table {min-width:1120px}
+ .ss-table th:nth-child(4),.ss-table td:nth-child(4),
+ .ss-table th:nth-child(5),.ss-table td:nth-child(5),
+ .ss-table th:nth-child(14),.ss-table td:nth-child(14) {display:none}
+}
 @media(max-width:900px) {
  .ss-kpis {grid-template-columns:repeat(2,minmax(0,1fr))}
  .service-schedule-page .layout-main-section {padding:10px}
@@ -116,6 +123,7 @@ class ServiceSchedulePage {
             df: {fieldtype: "Data", fieldname: "plant_search", label: __("Plant search"),
                 placeholder: __("Plant, category, or model"), onchange: () => this.render()}
         });
+        if (this.search.$input) this.search.$input.on("input", () => this.render());
         this.monthInput = this.page.main.find(".ss-month");
         this.monthInput.on("change", () => this.load());
         this.page.set_primary_action(__("Generate / Recalculate"), () => this.generate());
@@ -144,7 +152,7 @@ class ServiceSchedulePage {
         try {
             const response = await frappe.call({method: this.method + "get_service_schedule_context"});
             const schedules = response.message || [];
-            const todayMonth = this.monthValue(new Date().toLocaleString("en", {month: "long", year: "numeric"}));
+            const todayMonth = frappe.datetime.get_today().slice(0, 7);
             const initial = schedules.find(r => this.monthValue(r.month) === todayMonth) || schedules[0];
             if (initial) {
                 this.settingDate = true;
@@ -161,15 +169,23 @@ class ServiceSchedulePage {
     }
 
     async load(requestedDate = null) {
-        if (!this.monthInput || !this.monthInput.val()) return;
+        const token = ++this.requestToken;
         const site = this.site.get_value();
         const month = this.monthLabel();
         if (!site || !month) {
+            this.scheduleName = null;
+            this.rows = [];
+            this.loading = false;
+            this.render();
+            this.page.main.find(".ss-info").text(__("Choose a site and month."));
             this.page.main.find(".ss-table-wrap").html(`<div class="ss-empty">${__("Choose a site and month.")}</div>`);
             return;
         }
-        const token = ++this.requestToken;
         this.loading = true;
+        this.scheduleName = null;
+        this.rows = [];
+        this.page.main.find(".ss-kpis").empty();
+        this.page.main.find(".ss-table-wrap").html(`<div class="ss-empty">${__("Loading saved Service Schedule data...")}</div>`);
         this.page.main.find(".ss-info").text(__("Loading saved Service Schedule data..."));
         try {
             const response = await frappe.call({
@@ -197,6 +213,7 @@ class ServiceSchedulePage {
     }
 
     async generate() {
+        if (this.loading) return;
         const site = this.site.get_value();
         const month = this.monthLabel();
         if (!site || !month) {
@@ -223,7 +240,11 @@ class ServiceSchedulePage {
     }
 
     showError(error) {
+        this.scheduleName = null;
+        this.rows = [];
+        this.page.main.find(".ss-kpis").empty();
         this.page.main.find(".ss-info").text("");
+        this.page.main.find(".ss-table-wrap").html(`<div class="ss-empty">${__("Unable to refresh Service Schedule. Use Refresh to retry.")}</div>`);
         frappe.msgprint({title: __("Service Schedule error"),
             message: this.escape(error.message || __("Check the error log and retry.")),
             indicator: "red"});
@@ -300,7 +321,9 @@ class ServiceSchedulePage {
                 else if (key === "planning_hours_remaining" && row.planning_status === "No Service History")
                     value = "—";
                 else value = this.escape(value);
-                return `<td class="${numeric.has(key) ? "num" : ""}">${value}</td>`;
+                const title = ["asset_category", "model"].includes(key) && row[key] ?
+                    ` title="${this.escape(row[key])}"` : "";
+                return `<td class="${numeric.has(key) ? "num" : ""}"${title}>${value}</td>`;
             }).join("");
             return `<tr>${cells}</tr>`;
         }).join("");
