@@ -1,8 +1,23 @@
+// Covers both the Overall Status vocabulary (Non-Compliant/Attention
+// Required/Not Registered/Compliant) AND the per-item vocabulary used by
+// the Vehicle Licence/Driver Licence/Addendum columns (Valid/On File/
+// Expiring/Incomplete/Expired/Outstanding/Not Applicable) — these three
+// columns were previously falling through to status_chip()'s plain-gray
+// fallback on every row, since only the Overall Status keys were mapped
+// here. Same red/orange/green semantics as fleet_compliance.py's own
+// _STATUS_COLOURS, so a status means the same colour everywhere in Fleet.
 const FCD_STATUS_META = {
 	"Non-Compliant": { bg: "var(--bg-red)", fg: "var(--text-on-red)" },
 	"Attention Required": { bg: "var(--bg-orange)", fg: "var(--text-on-orange)" },
 	"Not Registered": { bg: "var(--bg-gray)", fg: "var(--text-on-gray)" },
 	Compliant: { bg: "var(--bg-green)", fg: "var(--text-on-green)" },
+	Valid: { bg: "var(--bg-green)", fg: "var(--text-on-green)" },
+	"On File": { bg: "var(--bg-green)", fg: "var(--text-on-green)" },
+	Expiring: { bg: "var(--bg-orange)", fg: "var(--text-on-orange)" },
+	Incomplete: { bg: "var(--bg-orange)", fg: "var(--text-on-orange)" },
+	Expired: { bg: "var(--bg-red)", fg: "var(--text-on-red)" },
+	Outstanding: { bg: "var(--bg-red)", fg: "var(--text-on-red)" },
+	"Not Applicable": { bg: "var(--bg-gray)", fg: "var(--text-on-gray)" },
 };
 
 // Per-Asset Allocation/Licence history — lazy-loaded once per Asset and
