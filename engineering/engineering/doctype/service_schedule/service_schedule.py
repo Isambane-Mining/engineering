@@ -19,26 +19,31 @@ def clamp_daily_usage(val, min_val=0.0, max_val=24.0):
 
 @frappe.whitelist()
 def queue_service_schedule_update(schedule_name=None, daily_usage_default=15):
-    """Scheduler/async entrypoint.
+    """Regenerate an explicit schedule, or existing current-month schedules for the daily job."""
+    if schedule_name:
+        names = [schedule_name]
+    else:
+        today = getdate(nowdate())
+        month = f"{calendar.month_name[today.month]} {today.year}"
+        names = frappe.get_all("Service Schedule", filters={"month": month},
+            pluck="name", order_by="name asc")
+    queued = []
+    for name in names:
+        try:
+            frappe.enqueue(
+                "engineering.engineering.doctype.service_schedule.service_schedule.generate_schedule_backend",
+                queue="long", timeout=1800, schedule_name=name,
+                daily_usage_default=clamp_daily_usage(daily_usage_default),
+                job_name=f"service_schedule:{name}",
+            )
+            queued.append(name)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Service Schedule update failed to queue: {name}")
+    if not names:
+        frappe.logger(__name__).info("No existing current-month Service Schedule to update.")
+    return {"status": "queued" if queued else ("failed" if names else "no_current_schedule"),
+            "schedule_names": queued}
 
-    Exists because hooks/scheduler events reference it.
-    If called without schedule_name (as scheduler often does), it does nothing
-    to avoid overwriting user-edited schedules.
-    """
-    if not schedule_name:
-        frappe.logger(__name__).info(
-            "queue_service_schedule_update called without schedule_name; skipping."
-        )
-        return {"status": "skipped", "reason": "no schedule_name"}
-
-    frappe.enqueue(
-        "engineering.engineering.doctype.service_schedule.service_schedule.generate_schedule_backend",
-        queue="long",
-        timeout=1800,
-        schedule_name=schedule_name,
-        daily_usage_default=clamp_daily_usage(daily_usage_default or 15),
-    )
-    return {"status": "queued", "schedule_name": schedule_name}
 
 
 def as_date(d):
@@ -157,90 +162,49 @@ def get_assets_for_site(site):
     )
 
 def batch_get_day_shift_start_hours(asset_list, month_start, month_end):
-    """Return mapping (date_iso, asset_name) -> eng_hrs_start for Day shift."""
+    """Return Day-shift starts; the highest positive duplicate reading wins."""
     if not asset_list:
         return {}
-
-    # Get Day-shift Pre-Use Hours in month
-    pre_use_docs = frappe.get_all(
-        "Pre-Use Hours",
-        filters={
-            "shift_date": ("between", [month_start, month_end]),
-            "shift": ["in", ["Night", "Day"]],
-        },
-        fields=["name", "shift_date", "shift"],
-        order_by="shift_date desc",
-    )
-
-    if not pre_use_docs:
+    parents = frappe.get_all("Pre-Use Hours", filters={
+        "shift_date": ("between", [month_start, month_end]), "shift": "Day"},
+        fields=["name", "shift_date"], order_by="shift_date asc, name asc")
+    if not parents:
         return {}
-
-    parent_names = [d["name"] for d in pre_use_docs]
-
-    # Get child rows
-    child_rows = frappe.get_all(
-        "Pre-use Assets",
-        filters={"parent": ["in", parent_names]},
-        fields=["parent", "asset_name", "eng_hrs_start"],
-    )
-
-    parent_to_date = {d["name"]: getdate(d["shift_date"]) for d in pre_use_docs}
-
+    dates = {p.name: getdate(p.shift_date).isoformat() for p in parents}
+    children = frappe.get_all("Pre-use Assets", filters={
+        "parent": ["in", list(dates)], "asset_name": ["in", asset_list]},
+        fields=["parent", "asset_name", "eng_hrs_start"])
     out = {}
-    for r in child_rows:
-        asset = r.get("asset_name")
-        if not asset or asset not in asset_list:
-            continue
-
-        dt = parent_to_date.get(r.get("parent"))
-        if not dt:
-            continue
-
-        out[(dt.isoformat(), asset)] = float(r.get("eng_hrs_start") or 0)
-
+    for row in children:
+        key = (dates.get(row.parent), row.asset_name)
+        value = float(row.eng_hrs_start or 0)
+        if key[0] and value > 0:
+            out[key] = max(value, out.get(key, 0))
     return out
-    
 
 
 def get_latest_prev_start_hours(asset, month_start):
-    """
-    Rule:
-    Look backwards day by day:
-    - Night shift first
-    - If no Night, use Day
-    """
+    """Use the latest positive Day-shift reading in the preceding 92 days."""
     if not asset or not month_start:
         return 0.0
-
-    cursor = getdate(month_start) - timedelta(days=1)
-    # stop after 3 months back (prevents infinite loop when no history exists)
-    stop_date = getdate(month_start) - timedelta(days=92)
-
-    while True:
-        rows = frappe.db.sql(
-            """
-            SELECT
-                pu.shift,
-                pa.eng_hrs_start
-            FROM `tabPre-Use Hours` pu
-            JOIN `tabPre-use Assets` pa ON pa.parent = pu.name
-            WHERE
-                pa.asset_name = %s
-                AND pu.shift_date = %s
-                AND pa.eng_hrs_start > 0
-            ORDER BY FIELD(pu.shift, 'Night', 'Day')
-            LIMIT 1
-            """,
-            (asset, cursor),
-            as_dict=True,
-        )
-
-        if rows:
-            return float(rows[0].get("eng_hrs_start") or 0)
-
-        cursor = cursor - timedelta(days=1)
-        if cursor < stop_date:
-            return 0.0
+    start = getdate(month_start)
+    rows = frappe.db.sql(
+        """
+        SELECT pa.eng_hrs_start
+        FROM `tabPre-Use Hours` pu
+        JOIN `tabPre-use Assets` pa ON pa.parent = pu.name
+        WHERE pa.asset_name = %s
+          AND pu.shift = 'Day'
+          AND pu.shift_date < %s
+          AND pu.shift_date >= %s
+          AND pa.eng_hrs_start > 0
+        ORDER BY pu.shift_date DESC, pa.eng_hrs_start DESC, pu.name ASC, pa.name ASC
+        LIMIT 1
+        """,
+        (asset, start, start - timedelta(days=92)),
+        as_dict=True,
+    )
+    return float(rows[0].eng_hrs_start or 0) if rows else 0.0
 
 
 def prev_month_label(month_label):
@@ -278,7 +242,6 @@ def get_last_30_day_avg_daily_usage(asset, anchor_date):
 
     parent_names = [d["name"] for d in pre_use_docs]
     parent_to_date = {d["name"]: getdate(d["shift_date"]) for d in pre_use_docs}
-    parent_shift = {d["name"]: d.get("shift") for d in pre_use_docs}
 
     # Pull only this asset's child rows
     child_rows = frappe.get_all(
@@ -377,10 +340,6 @@ def recompute_oem_booking_flags(doc, lookup_start, lookup_end):
     asset_list = sorted({r.fleet_number for r in (doc.service_schedule_child or []) if r.fleet_number})
     oem_map = batch_get_oem_bookings(asset_list, lookup_start, lookup_end) or {}
 
-    # TEMP DEBUG (remove later)
-    frappe.logger(__name__).info(f"[OEM DEBUG] assets={len(asset_list)} oem_hits={len(oem_map)}")
-    frappe.logger(__name__).info(f"[OEM DEBUG] IS0617 hits: {[k for k in oem_map.keys() if k[0]=='IS0617'][:10]}")
-
     for r in (doc.service_schedule_child or []):
         if not r.fleet_number or not r.date:
             continue
@@ -406,9 +365,11 @@ def batch_get_service_reports(asset_list, month_start, month_end):
             "asset": ["in", asset_list],
             "service_breakdown": "Service",
             "service_date": ("<=", month_end),
+            "current_hours": (">", 0),
+            "docstatus": ("!=", 2),
         },
         fields=["name", "asset", "service_date", "current_hours", "service_interval"],
-        order_by="asset asc, service_date asc",
+        order_by="asset asc, service_date asc, modified asc, name asc",
     )
 
     out = {a: {"before": None, "within": []} for a in asset_list}
@@ -445,24 +406,48 @@ def normalize_last_service_interval(last_interval):
 
 
 def interval_due_at_hours(planned_hours):
-    """Return which service interval is due at this planned hour.
-    Picks the largest interval that divides planned_hours.
-    Example: 4000 -> 2000, 3000 -> 1000, 2250 -> 750, 1500 -> 500, 1250 -> 250
-    """
+    """Service interval follows the target-hour cycle."""
+    return interval_from_planned_hours(planned_hours)
+
+
+
+def next_service_target_from_service_hours(last_service_hours):
+    """Return the service threshold after the service represented by the latest MSR."""
     try:
-        h = cint(planned_hours) or 0
+        h = float(last_service_hours or 0)
     except Exception:
-        h = 0
+        h = 0.0
 
     if h <= 0:
-        return 250
+        return 0
 
-    for iv in (2000, 1000, 750, 500, 250):
-        if h % iv == 0:
-            return iv
+    completed_service_threshold = round_to_250(h)
+    return int(completed_service_threshold + 250)
 
-    return 250
 
+def planning_status_for_hours(estimate_hours, planned_hours):
+    """Return persisted Service Planning Summary status and hours remaining."""
+    try:
+        estimate = float(estimate_hours or 0)
+        planned = float(planned_hours or 0)
+    except Exception:
+        return "", 0
+
+    if planned <= 0:
+        return "", 0
+
+    remaining = int(round(planned - estimate))
+
+    if remaining < 0:
+        return "Overdue", remaining
+    if remaining == 0:
+        return "Due", 0
+    if remaining <= 65:
+        return "Due within 65 hours", remaining
+    if remaining <= 260:
+        return "Due within 260 hours", remaining
+
+    return "", remaining
 
 def find_threshold_crossing_date(series, planned_hours):
     """series: list of (date, estimate_hours) sorted asc.
@@ -492,10 +477,49 @@ def find_threshold_crossing_date(series, planned_hours):
         prev_est = est_v
     return None
 
+def recompute_planning_rows(rows, month_start):
+    """Set persisted planning fields and future markers from each day's MSR baseline."""
+    rows = sorted(rows, key=lambda r: getdate(r.date))
+    segments = []
+    for row in rows:
+        baseline = (row.msr_record_name or "", cint(row.hours_previous_service) or 0,
+                    str(row.date_of_previous_service or ""))
+        if not segments or segments[-1][0] != baseline:
+            segments.append((baseline, []))
+        segments[-1][1].append(row)
+
+    for baseline, segment in segments:
+        hours = baseline[1]
+        target = next_service_target_from_service_hours(hours) if hours > 0 else 0
+        targets = (target, target + 250, target + 500) if target else (0, 0, 0)
+        series = [(getdate(r.date), float(r.estimate_hours or 0)) for r in segment]
+        for row in segment:
+            status, remaining = planning_status_for_hours(row.estimate_hours, target)
+            row.planning_planned_hours = target
+            row.planning_status = status if target else "No Service History"
+            row.planning_hours_remaining = remaining if target else 0
+            row.planning_service_interval = _fmt_hours(interval_due_at_hours(target)) if target else ""
+            row.planning_flagged_on = getdate(row.date) if status and target else None
+            for n, planned in enumerate(targets, 1):
+                setattr(row, f"planned_hours_next_service_{n}", planned or None)
+                setattr(row, f"next_service_interval_{n}",
+                        _fmt_hours(interval_due_at_hours(planned)) if planned else "")
+                setattr(row, f"date_of_next_service_{n}", None)
+        for n, planned in enumerate(targets, 1):
+            crossing = find_threshold_crossing_date(series, planned)
+            crossing = adjust_sunday_to_saturday(crossing, month_start=month_start)
+            if crossing:
+                for row in segment:
+                    if getdate(row.date) == crossing:
+                        setattr(row, f"date_of_next_service_{n}", crossing)
+                        break
+
+
 @frappe.whitelist()
 def generate_schedule_backend(schedule_name, daily_usage_default=15):
     """Populate Service Schedule Child exactly as per Task 1 (based on latest DocTypes)."""
     doc = frappe.get_doc("Service Schedule", schedule_name)
+    doc.check_permission("write")
 
     if not doc.month or not doc.site:
         frappe.throw("Please select Month and Site before generating the schedule.")
@@ -520,8 +544,6 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
     doc.set("service_schedule_child", [])
 
     rows_index = {}   # (asset, date_iso) -> row
-    est_series = {a: [] for a in asset_list}
-    seed_by_asset = {}
 
     daily_usage_default = clamp_daily_usage(daily_usage_default or 0)
 
@@ -548,11 +570,6 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
         before_row = (msr_map.get(asset) or {}).get("before")
         within_rows = (msr_map.get(asset) or {}).get("within") or []
         within_rows = sorted(within_rows, key=lambda r: as_date(r.get("service_date")) or month_start)
-        planning_seed = within_rows[-1] if within_rows else before_row
-        seed_by_asset[asset] = {
-            "hours": cint(planning_seed.get("current_hours")) if planning_seed else 0,
-            "interval": (planning_seed.get("service_interval") or "") if planning_seed else "",
-        }
         ptr = 0
         latest_within = None
 
@@ -607,20 +624,27 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
             seed_name = (chosen.get("name") or "") if chosen else ""
             seed_ref = seed_name
 
-            # Only stamp MSR fields on the exact MSR day row (must be within the month)
-            is_msr_day = bool(seed_service_date and getdate(seed_service_date) == getdate(d))
+            # Carry the latest valid completed service forward.
+            # A newer MSR inside the month automatically replaces this baseline
+            # from its service date onward.
+            date_of_previous_service = seed_service_date
+            hours_previous_service = seed_hours
+            last_service_interval = seed_interval
+            msr_reference_number = seed_ref
+            msr_record_name = seed_name
 
-            date_of_previous_service = seed_service_date if is_msr_day else None
-            hours_previous_service = seed_hours if is_msr_day else 0
-            last_service_interval = seed_interval if is_msr_day else ""
-            msr_reference_number = seed_ref if is_msr_day else ""
-            msr_record_name = seed_name if is_msr_day else ""
-
-
-
-
-
-
+            # Persist the authoritative next service target from the latest
+            # completed MSR available as of this specific day.
+            planning_planned_hours = next_service_target_from_service_hours(seed_hours)
+            planning_status, planning_hours_remaining = planning_status_for_hours(
+                estimate_hours,
+                planning_planned_hours,
+            )
+            planning_service_interval = (
+                _fmt_hours(interval_due_at_hours(planning_planned_hours))
+                if planning_planned_hours
+                else ""
+            )
 
             row = doc.append("service_schedule_child", {
                 "date": d,
@@ -637,91 +661,23 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
                 "msr_record_name": msr_record_name,
                 "oem_booking_date": 1 if oem_map.get((asset, d_iso)) else 0,
                 "oem_booking_name": oem_map.get((asset, d_iso)) or "",
+                "planning_status": planning_status,
+                "planning_hours_remaining": planning_hours_remaining,
+                "planning_planned_hours": planning_planned_hours,
+                "planning_service_interval": planning_service_interval,
+                "planning_flagged_on": d if planning_status else None,
 
             })
 
             rows_index[(asset, d_iso)] = row
-            est_series[asset].append((d, estimate_hours))
 
 
 
 
-    # Next service markers (1/2/3). Latest JSON has date_of_next_service_1 and _2, but NOT _3.
     for asset in asset_list:
-
-
-        base_hours = cint((seed_by_asset.get(asset) or {}).get("hours")) or 0
-        if base_hours <= 0:
-            continue
-
-
-        planned1 = round_to_250(base_hours)
-        planned2 = ceiling_to_250(planned1 + 250)
-        planned3 = ceiling_to_250(planned2 + 250)
-
-
-        # Populate planned hours on EVERY row for this asset (child table visibility)
-        for d in date_list:
-            r_all = rows_index.get((asset, d.isoformat()))
-            if not r_all:
-                continue
-
-            r_all.planned_hours_next_service_1 = planned1
-            r_all.planned_hours_next_service_2 = planned2
-            r_all.planned_hours_next_service_3 = planned3
-
-
-            # NEW: populate intervals on every row once estimate reaches planned
-            est = float(r_all.estimate_hours or 0)
-
-            if est >= float(planned1):
-                r_all.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
-            if est >= float(planned2):
-                r_all.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
-            if est >= float(planned3):
-                r_all.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
-
-
-
-        d1 = find_threshold_crossing_date(est_series[asset], planned1)
-        d2 = find_threshold_crossing_date(est_series[asset], planned2)
-        d3 = find_threshold_crossing_date(est_series[asset], planned3)
-
-        d1 = adjust_sunday_to_saturday(d1, month_start=month_start)
-        d2 = adjust_sunday_to_saturday(d2, month_start=month_start)
-        d3 = adjust_sunday_to_saturday(d3, month_start=month_start)
-
-
-
-
-
-
-
-
-        if d1:
-            r = rows_index.get((asset, d1.isoformat()))
-            if r:
-                r.date_of_next_service_1 = d1
-                r.planned_hours_next_service_1 = planned1
-                r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
-
-
-        if d2:
-            r = rows_index.get((asset, d2.isoformat()))
-            if r:
-                r.date_of_next_service_2 = d2
-                r.planned_hours_next_service_2 = planned2
-                r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
-
-
-        if d3:
-            r = rows_index.get((asset, d3.isoformat()))
-            if r:
-                r.date_of_next_service_3 = d3
-                r.planned_hours_next_service_3 = planned3
-                r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
-
-
+        recompute_planning_rows(
+            [rows_index[(asset, d.isoformat())] for d in date_list], month_start
+        )
 
     # OEM Booking flags: current + previous month window
     lookup_start = add_months(month_start, -1)
@@ -735,6 +691,7 @@ def generate_schedule_backend(schedule_name, daily_usage_default=15):
 def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
     """Capture daily usage edits from HTML and recompute estimates + next service markers for that asset."""
     doc = frappe.get_doc("Service Schedule", schedule_name)
+    doc.check_permission("write")
     if not doc.month:
         frappe.throw("Month is required.")
     _, _, month_start, month_end = parse_month_bounds(doc.month)
@@ -746,7 +703,6 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
 
     prev_estimate = None
     prev_start_hours = None
-    series = []
     for r in rows:
         r.daily_estimated_hours_usage = daily_use
         start_hours = float(r.start_hours or 0)
@@ -770,86 +726,8 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
 
         prev_estimate = float(r.estimate_hours or 0.0)
         prev_start_hours = start_hours
-        series.append((getdate(r.date), float(r.estimate_hours or 0.0)))
 
-        # clear markers
-        r.date_of_next_service_1 = None
-        r.planned_hours_next_service_1 = None
-        r.next_service_interval_1 = ""
-
-        r.date_of_next_service_2 = None
-        r.planned_hours_next_service_2 = None
-        r.next_service_interval_2 = ""
-
-        r.date_of_next_service_3 = None
-        r.planned_hours_next_service_3 = None
-        r.next_service_interval_3 = ""
-
-
-    if rows:
-        # Use the FIRST row where hours_previous_service > 0 (rows already sorted by date)
-        base_hours = 0
-        for r0 in rows:
-            bh = cint(r0.hours_previous_service) or 0
-            if bh > 0:
-                base_hours = bh
-                break
-
-        if base_hours > 0:
-
-            planned1 = round_to_250(base_hours)
-            planned2 = ceiling_to_250(planned1 + 250)
-            planned3 = ceiling_to_250(planned2 + 250)
-
-
-            # Populate planned hours on EVERY row for this fleet (child table visibility)
-            for r in rows:
-                r.planned_hours_next_service_1 = planned1
-                r.planned_hours_next_service_2 = planned2
-                r.planned_hours_next_service_3 = planned3
-
-                # NEW: populate intervals on every row once estimate reaches planned
-                est = float(r.estimate_hours or 0)
-
-                if est >= float(planned1):
-                    r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
-                if est >= float(planned2):
-                    r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
-                if est >= float(planned3):
-                    r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
-
-
-            d1 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned1), month_start=month_start)
-            d2 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned2), month_start=month_start)
-            d3 = adjust_sunday_to_saturday(find_threshold_crossing_date(series, planned3), month_start=month_start)
-
-
-
-
-
-
-            if d1:
-                for r in rows:
-                    if getdate(r.date) == d1:
-                        r.date_of_next_service_1 = d1
-                        r.planned_hours_next_service_1 = planned1
-                        r.next_service_interval_1 = f"{interval_from_planned_hours(planned1)} Hours"
-                        break
-            if d2:
-                for r in rows:
-                    if getdate(r.date) == d2:
-                        r.date_of_next_service_2 = d2
-                        r.planned_hours_next_service_2 = planned2
-                        r.next_service_interval_2 = f"{interval_from_planned_hours(planned2)} Hours"
-                        break
-            if d3:
-                for r in rows:
-                    if getdate(r.date) == d3:
-                        r.date_of_next_service_3 = d3
-                        r.planned_hours_next_service_3 = planned3
-                        r.next_service_interval_3 = f"{interval_from_planned_hours(planned3)} Hours"
-
-                        break
+    recompute_planning_rows(rows, month_start)
 
     lookup_start = add_months(month_start, -1)
     recompute_oem_booking_flags(doc, lookup_start, month_end)
@@ -857,3 +735,75 @@ def set_daily_usage_and_recompute(schedule_name, fleet_number, daily_usage):
     doc.save()
     frappe.db.commit()
     return {"ok": True, "rows": len(rows)}
+
+
+def select_schedule_snapshot_date(dates, month_label, today=None, requested=None):
+    """Choose an available snapshot date within the selected schedule."""
+    available = sorted({getdate(d) for d in dates if d})
+    if not available:
+        return None
+    if requested:
+        wanted = getdate(requested)
+        if wanted not in available:
+            frappe.throw("The selected date has no Service Schedule snapshot.")
+        return wanted
+    current = getdate(today or nowdate())
+    _, _, start, end = parse_month_bounds(month_label)
+    if start <= current <= end:
+        return current if current in available else next(
+            (d for d in reversed(available) if d <= current), available[0])
+    return available[-1] if end < current else available[0]
+
+
+@frappe.whitelist()
+def get_service_schedule_context():
+    """List readable monthly schedules for page defaults."""
+    schedules = frappe.get_list("Service Schedule", fields=["name", "site", "month"],
+        order_by="modified desc", limit_page_length=500)
+    return schedules
+
+
+@frappe.whitelist()
+def get_service_schedule_snapshot(site, month, snapshot_date=None):
+    """Return one persisted daily view; calculations remain in the DocType backend."""
+    parse_month_bounds(month)
+    names = frappe.get_all("Service Schedule", filters={"site": site, "month": month},
+        pluck="name", limit_page_length=2)
+    if len(names) > 1:
+        frappe.throw("Multiple Service Schedules exist for this site and month.")
+    if not names:
+        return {"schedule_name": None, "dates": [], "snapshot_date": None, "rows": []}
+    doc = frappe.get_doc("Service Schedule", names[0])
+    doc.check_permission("read")
+    dates = sorted({getdate(r.date) for r in doc.service_schedule_child if r.date})
+    selected = select_schedule_snapshot_date(dates, month, requested=snapshot_date)
+    rows = {}
+    for row in doc.service_schedule_child:
+        if selected and getdate(row.date) == selected and row.fleet_number:
+            rows.setdefault(row.fleet_number, row.as_dict())
+    return {"schedule_name": doc.name,
+            "dates": [d.isoformat() for d in dates],
+            "snapshot_date": selected.isoformat() if selected else None,
+            "rows": [rows[name] for name in sorted(rows)]}
+
+
+@frappe.whitelist()
+def create_or_generate_service_schedule(site, month):
+    """Create a missing monthly document once, then generate its saved child rows."""
+    parse_month_bounds(month)
+    names = frappe.get_all("Service Schedule", filters={"site": site, "month": month},
+        pluck="name", limit_page_length=2)
+    if len(names) > 1:
+        frappe.throw("Multiple Service Schedules exist for this site and month.")
+    if names:
+        doc = frappe.get_doc("Service Schedule", names[0])
+        doc.check_permission("write")
+        name = doc.name
+    else:
+        if not frappe.has_permission("Service Schedule", "create"):
+            frappe.throw("You do not have permission to create a Service Schedule.")
+        doc = frappe.get_doc({"doctype": "Service Schedule", "site": site, "month": month})
+        doc.insert()
+        name = doc.name
+    result = generate_schedule_backend(name)
+    return {"schedule_name": name, **result}

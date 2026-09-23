@@ -1,32 +1,5 @@
 function ss_queue_daily_update(frm) {
-    if (frm.__ss_updating) return;
-    frm.__ss_updating = true;
-
-    frappe.call({
-        method: "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update",
-        args: {
-            schedule_name: frm.doc.name,
-            daily_usage_default: 15
-        },
-        freeze: true,
-        freeze_message: "Queueing Service Schedule Update...",
-        callback: () => {
-            frm.__ss_updating = false;
-
-            frm.reload_doc().then(() => {
-                const dashWrapper = get_dashboard_wrapper(frm);
-                if (dashWrapper) render_service_board(frm);
-                if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
-                    render_due_soon_summary(frm);
-                }
-            });
-
-            frappe.msgprint("Update queued and refreshed.");
-        },
-        error: () => {
-            frm.__ss_updating = false;
-        }
-    });
+    generate_service_schedule(frm);
 }
 
 
@@ -44,7 +17,9 @@ function get_dashboard_wrapper(frm) {
 
 frappe.ui.form.on("Service Schedule", {
     refresh(frm) {
-
+        if (!frm.is_new()) {
+            frm.add_custom_button(__("Open Service Schedule"), () => frappe.set_route("service-schedule-dashboard"));
+        }
 
 // ✅ Force OEM Booking checkbox to reflect doc value in grid list-view
 setTimeout(() => {
@@ -78,12 +53,6 @@ setTimeout(() => {
         // render dashboard if the fields exist on the form
         const dashWrapper = get_dashboard_wrapper(frm);
         if (dashWrapper) {
-            console.log("🧪 render_service_board called", {
-                child_rows: (frm.doc.service_schedule_child || []).length,
-                history_rows: (frm.doc.service_schedule_history || []).length,
-                has_service_schedule_field: !!frm.fields_dict.service_schedule,
-                has_service_schedule_dashboard_field: !!frm.fields_dict.service_schedule_dashboard
-            });
             render_service_board(frm);
         }
 
@@ -132,31 +101,24 @@ function generate_service_schedule(frm) {
 }
 
 
-function run_backend_generation(frm) {
-    frappe.call({
-        method: "engineering.engineering.doctype.service_schedule.service_schedule.generate_schedule_backend",
-        args: { schedule_name: frm.doc.name, daily_usage_default: 15 },
-        freeze: true,
-        freeze_message: "Generating Schedule...",
-        callback: () => {
-            frappe.model.remove_from_locals(frm.doc.doctype, frm.doc.name);
-
-            frm.reload_doc().then(() => {
-                
-
-                const dashWrapper = get_dashboard_wrapper(frm);
-                if (dashWrapper) {
-                    render_service_board(frm);
-                }
-
-                if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
-                    render_due_soon_summary(frm);
-                }
-            });
-        }
-    });
+async function run_backend_generation(frm) {
+    try {
+        const result = await frappe.call({
+            method: "engineering.engineering.doctype.service_schedule.service_schedule.generate_schedule_backend",
+            args: { schedule_name: frm.doc.name, daily_usage_default: 15 },
+            freeze: true,
+            freeze_message: __("Generating Schedule...")
+        });
+        if (!result.message || !result.message.ok) throw new Error(__("Schedule generation did not complete."));
+        frappe.model.remove_from_locals(frm.doc.doctype, frm.doc.name);
+        await frm.reload_doc();
+        render_service_board(frm);
+        render_due_soon_summary(frm);
+    } catch (error) {
+        frappe.msgprint({title: __("Service Schedule generation failed"),
+            message: error.message || __("Check the error log and retry."), indicator: "red"});
+    }
 }
-
 
 
 // ---------------------------------------------------------------------------
@@ -1036,35 +998,7 @@ if (a.service_date) {
 
 // GREEN BORDER: only when an actual MSR exists on this date for this asset
 const msrEvent = (a.msr_events && a.msr_events[dateStr]) ? a.msr_events[dateStr] : null;
-if (a.fleet_number === "IS609" && dateStr === "2025-09-17") {
-    console.log("🧪 IS609 2025-09-17 msrEvent", msrEvent, "all events:", a.msr_events);
-}
 const greenBorderClass = msrEvent ? " ss-green-border" : "";
-
-
-if (a.fleet_number === "IS609") {
-    console.log("🧪 IS609 BORDER CHECK", {
-        dateStr,
-        service_date_raw: a.service_date,
-        serviceDate_normalized: serviceDate,
-        match: (dateStr === serviceDate)
-    });
-}
-
-
-
-
-if (greenBorderClass) {
-    console.log("✅ GREEN BORDER HIT", {
-        fleet: a.fleet_number,
-        dateStr,
-        service_date_raw: a.service_date,
-        serviceDate_normalized: serviceDate,
-        msr_ref: a.msr_reference_number,
-        msr_record_name: a.msr_record_name
-    });
-}
-
 
 
 const msrRef = msrEvent ? msrEvent.msr_reference_number : "";
@@ -1271,55 +1205,25 @@ setTimeout(() => {
     $(this).val(dailyUse);
 
 
-        const cells = $(`.day-cell[data-asset="${asset}"]`)
-            .toArray()
-            .sort((a, b) => String($(a).data("date")).localeCompare(String($(b).data("date"))));
-
-    let prevEst = null;
-    let prevStart = null;
-
-    cells.forEach((elem, idx) => {
-        const cell = $(elem);
-
-        const startText = cell.find(".start-val").text().trim();
-        const startVal = startText ? (parseFloat(startText) || 0) : 0;
-
-        let estVal = 0;
-
-        if (idx === 0) {
-            estVal = startVal; // Day 1
-        } else if ((prevStart ?? 0) > 0) {
-            estVal = (prevStart ?? 0) + dailyUse; // prev day had start_hours
-        } else {
-            estVal = (prevEst ?? 0) + dailyUse;   // continue from prev estimate
-        }
-
-        cell.find(".est-val").text(estVal);
-        prevEst = estVal;
-        prevStart = startVal;
-    });
-
-
         // Persist the edited daily usage to child rows and recompute next-service markers server-side (debounced)
         window._ss_usage_timers = window._ss_usage_timers || {};
         clearTimeout(window._ss_usage_timers[asset]);
         window._ss_usage_timers[asset] = setTimeout(() => {
             frappe.call({
                 method: "engineering.engineering.doctype.service_schedule.service_schedule.set_daily_usage_and_recompute",
-                args: {
-                    schedule_name: frm.doc.name,
-                    fleet_number: asset,
-                    daily_usage: dailyUse
-                },
-                callback: () => {
-                    frm.reload_doc().then(() => {
-                        render_service_board(frm);
-                        if (frm.fields_dict.dashboard_summary && frm.fields_dict.dashboard_summary.$wrapper) {
-                            render_due_soon_summary(frm);
-                        }
-                    });
-                }
-            });
+                args: {schedule_name: frm.doc.name, fleet_number: asset, daily_usage: dailyUse},
+                freeze: true,
+                freeze_message: __("Recalculating Service Schedule...")
+            }).then(async result => {
+                if (!result.message || !result.message.ok) throw new Error(__("Recalculation did not complete."));
+                await frm.reload_doc();
+                render_service_board(frm);
+                render_due_soon_summary(frm);
+            }).catch(error => frappe.msgprint({
+                title: __("Service Schedule recalculation failed"),
+                message: error.message || __("Check the error log and retry."),
+                indicator: "red"
+            }));
         }, 600);
     });
 }, 50);
@@ -1341,226 +1245,180 @@ function render_due_soon_summary(frm) {
         return;
     }
 
-const today = frappe.datetime.get_today();
+    const dates = [...new Set(rows.map(r => String(r.date || "").slice(0, 10)).filter(Boolean))].sort();
+    const today = frappe.datetime.get_today();
+    const month = String(frm.doc.month || "");
+    const todayMonth = frappe.datetime.str_to_obj(today).toLocaleString("en", {month: "long", year: "numeric"});
+    let snapshot = dates[0];
+    if (month === todayMonth) snapshot = dates.includes(today) ? today : (dates.filter(d => d <= today).pop() || dates[0]);
+    else if (dates.length && dates[0] < today) snapshot = dates[dates.length - 1];
 
-// ONLY look at TODAY
-rows = rows.filter(r => String(r.date || "").slice(0, 10) === today);
+    rows = rows.filter(r =>
+        String(r.date || "").slice(0, 10) === snapshot &&
+        String(r.planning_status || "").trim()
+    );
 
-// Helper: get NEXT planned service (the next one still ahead of today's estimate)
-function get_planned(r) {
-    const est = Number(r.estimate_hours || 0);
+    const overdue = rows.filter(r => r.planning_status === "Overdue");
+    const due = rows.filter(r => r.planning_status === "Due");
+    const due65 = rows.filter(r => r.planning_status === "Due within 65 hours");
+    const due260 = rows.filter(r => r.planning_status === "Due within 260 hours");
+    const noHistory = rows.filter(r => r.planning_status === "No Service History");
 
-    const planned_list = [
-        r.planned_hours_next_service_1,
-        r.planned_hours_next_service_2,
-        r.planned_hours_next_service_3
-    ].filter(p => typeof p === "number" && p > est);  // only future targets
-
-    return planned_list.length ? Math.min(...planned_list) : null;
-}
-
-// 65 HOURS BEFORE SERVICE
-const due65 = rows.filter(r => {
-const est = Number(r.estimate_hours);
-const planned = get_planned(r);
-if (isNaN(est) || !planned) return false;
-return est >= (planned - 65) && est < planned;
-});
-
-// 260 HOURS BEFORE CYCLE
-const due260 = rows.filter(r => {
-const est = Number(r.estimate_hours);
-const planned = get_planned(r);
-if (isNaN(est) || !planned) return false;
-return est >= (planned - 260) && est < planned;
-});
-
-
-
-    if (!due65.length && !due260.length) {
-        wrapper.html("<p>No assets close to service.</p>");
+    if (!overdue.length && !due.length && !due65.length && !due260.length && !noHistory.length) {
+        wrapper.html("<p>No assets currently due or close to service.</p>");
         return;
     }
 
-let html = `
+    let html = `
 <style>
-
-
-/* MAIN SECTION HEADINGS (MOST IMPORTANT VISUAL) */
-.ss-summary-title{
-  font-size: 15px;
-  font-weight: 900;
-  padding: 10px 14px;
-  margin: 14px 0 6px 0;
-  border-radius: 10px;
-  background: #e6e6e6 !important;
-  border: 2px solid #000;
-  color: #ff0000;
-  letter-spacing: .3px;
-  text-align: center;
-  display: flex; justify-content: center; align-items: center;
+.ss-summary-title {
+    font-size: 15px;
+    font-weight: 900;
+    padding: 10px 14px;
+    margin: 14px 0 6px 0;
+    border-radius: 10px;
+    background: #e6e6e6 !important;
+    border: 2px solid #000;
+    color: #b91c1c;
+    text-align: center;
 }
-
-
-
-  .ss-table-scroll{
+.ss-table-scroll {
     max-height: 520px;
     overflow: auto;
     border: 1px solid rgba(15,23,42,.12);
     border-radius: 12px;
     background: #fff;
-  }
-
-
-
-
-  .due-summary-table{
+}
+.due-summary-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 11px;
     margin-bottom: 12px;
-    border:1px solid rgba(15,23,42,.10);
-    border-radius:12px;
-    overflow:hidden;
-    background:#fff;
-    box-shadow:0 10px 22px rgba(2,6,23,.06);
-  }
-
-
-
-.due-summary-table th{
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: #dcfce7;              /* light green */
-  font-weight: 900;
-  font-size: 13px;
-  border-bottom: 3px solid #166534; /* dark green */
-  border-right: 2px solid #166534;  /* strong column separators */
-  color: #065f46;
 }
-
-
-  .due-summary-table tr:last-child td{
-    border-bottom:none;
-  }
-
-  .due-summary-table tr:nth-child(even) td{
-    background:#f8fafc;
-  }
-
-
+.due-summary-table th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #dcfce7;
+    font-weight: 900;
+    font-size: 12px;
+    border-bottom: 3px solid #166534;
+    border-right: 2px solid #166534;
+    color: #065f46;
+}
 .due-summary-table th,
-.due-summary-table td{
-  border-bottom:2px solid #6b7280;   /* darker horizontal lines */
-  border-right:2px solid #374151;    /* DARK column separators */
-  padding: 6px 8px;
-  text-align: left;
-  color:#0f172a;
+.due-summary-table td {
+    border-bottom: 2px solid #6b7280;
+    border-right: 2px solid #374151;
+    padding: 6px 8px;
+    text-align: left;
+    color: #0f172a;
 }
-
-
-  .due-summary-table th:last-child,
-  .due-summary-table td:last-child{
+.due-summary-table th:last-child,
+.due-summary-table td:last-child {
     border-right: none;
-  }
-
-/* Bold Date + Plant (fleet number) columns */
-.due-summary-table td.col-date,
-.due-summary-table td.col-plant{
-  font-weight: 800;
 }
-
-  .ss-pill{
-    display:inline-block;
-    padding:2px 8px;
-    border-radius:999px;
-    font-size:10px;
-    font-weight:800;
-    border:1px solid rgba(15,23,42,.10);
-    margin-left:6px;
-    vertical-align:middle;
-  }
-  /* Light row highlights based on interval (tinted from legend colours) */
-/* Interval row highlights (lighter than legend) */
-.due-summary-table tr.ss-row-250  td { background: rgba(76, 110, 245, 0.22) !important; }   /* blue */
-.due-summary-table tr.ss-row-500  td { background: rgba(255, 140, 18, 0.22) !important; }   /* orange */
-.due-summary-table tr.ss-row-750  td { background: rgba(233, 230, 36, 0.26) !important; }   /* yellow */
-.due-summary-table tr.ss-row-1000 td { background: rgba(44, 24, 98, 0.22) !important; }    /* purple */
-.due-summary-table tr.ss-row-2000 td { background: rgba(44, 24, 98, 0.22) !important; }    /* purple */
-
-
-  .due-summary-table tr:hover td { filter: brightness(0.985); }
-
+.due-summary-table td.col-date,
+.due-summary-table td.col-plant,
+.due-summary-table td.col-status {
+    font-weight: 800;
+}
+.due-summary-table tr.ss-row-250 td {
+    background: rgba(76,110,245,.22) !important;
+}
+.due-summary-table tr.ss-row-500 td {
+    background: rgba(255,140,18,.22) !important;
+}
+.due-summary-table tr.ss-row-750 td {
+    background: rgba(233,230,36,.26) !important;
+}
+.due-summary-table tr.ss-row-1000 td,
+.due-summary-table tr.ss-row-2000 td {
+    background: rgba(44,24,98,.22) !important;
+}
+.due-summary-table tr.ss-overdue td {
+    background: #fee2e2 !important;
+    font-weight: 800;
+}
+.due-summary-table tr.ss-due td {
+    background: #fecaca !important;
+    font-weight: 800;
+}
 </style>
 <div class="ss-summary-wrap">
 `;
 
+    if (overdue.length) {
+        html += `<div class="ss-summary-title">OVERDUE SERVICE</div>`;
+        html += build_summary_table(overdue);
+    }
+
+    if (due.length) {
+        html += `<div class="ss-summary-title">SERVICE DUE NOW</div>`;
+        html += build_summary_table(due);
+    }
 
     if (due65.length) {
-        html += `<div class="ss-summary-title">65 hours before service</div>`;
-        html += build_summary_table(
-    Object.values(
-        Object.fromEntries(due65.map(r => [r.fleet_number, r]))
-    )
-);
+        html += `<div class="ss-summary-title">Within 65 hours of service</div>`;
+        html += build_summary_table(due65);
     }
 
     if (due260.length) {
-        html += `<div class="ss-summary-title">260 hours before cycle</div>`;
-        html += build_summary_table(
-    Object.values(
-        Object.fromEntries(due260.map(r => [r.fleet_number, r]))
-    )
-);
+        html += `<div class="ss-summary-title">66-260 hours before service</div>`;
+        html += build_summary_table(due260);
+    }
+
+    if (noHistory.length) {
+        html += `<div class="ss-summary-title">NO SERVICE HISTORY</div>`;
+        html += build_summary_table(noHistory);
     }
 
     html += `</div>`;
-wrapper.html(html);
+    wrapper.html(html);
 }
 
 
 function build_summary_table(rows) {
-
-    const today = frappe.datetime.get_today();
+    const uniqueRows = Object.values(
+        Object.fromEntries(rows.map(r => [r.fleet_number, r]))
+    );
 
     let html = `<div class="ss-table-scroll"><table class="due-summary-table">
         <tr>
-                <th>Date</th><th>Interval</th><th>Plant</th>
-                <th>Type</th><th>Model</th><th>Planned</th>
-
+            <th>Date</th>
+            <th>Status</th>
+            <th>Hours Remaining</th>
+            <th>Interval</th>
+            <th>Plant</th>
+            <th>Type</th>
+            <th>Model</th>
+            <th>Estimated Hours</th>
+            <th>Planned Service Hours</th>
         </tr>`;
-            
 
-    rows.forEach(r => {
+    uniqueRows.forEach(r => {
+        const d = String(r.date || "").slice(0, 10);
+        const status = r.planning_status || "";
+        const remaining = Number(r.planning_hours_remaining || 0);
+        const planned = Number(r.planning_planned_hours || 0);
+        const estimate = Number(r.estimate_hours || 0);
+        const interval = r.planning_service_interval || "";
+        const iv = interval ? String(parseInt(interval, 10)) : "";
 
+        let rowClass = iv ? `ss-row-${iv}` : "";
+        if (status === "Overdue") rowClass += " ss-overdue";
+        if (status === "Due") rowClass += " ss-due";
 
-                const d = String(r.date || "").slice(0,10);
-        const isToday = (d === today);
-
- 
-
-const planned =
-    r.planned_hours_next_service_1 ??
-    r.planned_hours_next_service_2 ??
-    r.planned_hours_next_service_3 ?? "";
-
-const interval =
-    r.next_service_interval_3 ??
-    r.next_service_interval_2 ??
-    r.next_service_interval_1 ?? "";
-
-const iv = interval ? String(parseInt(interval, 10)) : "";
-const rowClass = iv ? `ss-row-${iv}` : "";
-
-
-html += `<tr class="${rowClass}">
+        html += `<tr class="${rowClass}">
             <td class="col-date">${d}</td>
+            <td class="col-status">${status}</td>
+            <td>${remaining}</td>
             <td>${interval}</td>
-            <td class="col-plant">${r.fleet_number}</td>
-            <td>${r.asset_category}</td>
-            <td>${r.model}</td>
+            <td class="col-plant">${r.fleet_number || ""}</td>
+            <td>${r.asset_category || ""}</td>
+            <td>${r.model || ""}</td>
+            <td>${estimate}</td>
             <td>${planned}</td>
         </tr>`;
     });
