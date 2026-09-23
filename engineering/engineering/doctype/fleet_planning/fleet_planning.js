@@ -30,9 +30,19 @@ frappe.ui.form.on("Fleet Planning", {
 			// (server-side) does the actual import; saving is what makes
 			// that fire. Guarded so a save that's already in flight (or
 			// that failed) doesn't get retried on every refresh.
+			//
+			// Frozen for the duration: frm.save() captures frm.doc at the
+			// moment it's called and sends that snapshot — if a field (the
+			// only one visible before the board renders is Effective Date)
+			// were edited while that request is still in flight, the
+			// response landing afterward re-syncs frm.doc from what was
+			// actually sent, silently reverting the in-flight edit. Freezing
+			// closes that window entirely rather than leaving a race for a
+			// fast typist or a slow connection to hit.
 			if (!frm.__fleet_plan_auto_saving) {
 				frm.__fleet_plan_auto_saving = true;
-				frm.save();
+				frappe.dom.freeze(__("Loading the current fleet…"));
+				frm.save().finally(() => frappe.dom.unfreeze());
 			}
 
 			return;
