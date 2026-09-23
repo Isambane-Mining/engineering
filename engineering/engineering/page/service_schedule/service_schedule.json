@@ -1,0 +1,15 @@
+{
+ "content": null,
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "calendar",
+ "module": "Engineering",
+ "name": "service-schedule",
+ "page_name": "service-schedule",
+ "roles": [],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Service Schedule"
+}
