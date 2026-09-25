@@ -6,4 +6,10 @@ from frappe.model.document import Document
 
 
 class OEMBooking(Document):
-	pass
+
+    def on_update(self):
+        from engineering.controllers.notifications import (
+            oem_booking_on_update,
+        )
+
+        oem_booking_on_update(self, "on_update")

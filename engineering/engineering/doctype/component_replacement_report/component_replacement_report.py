@@ -6,4 +6,10 @@ from frappe.model.document import Document
 
 
 class ComponentReplacementReport(Document):
-	pass
+
+    def on_update(self):
+        from engineering.controllers.isambane_sample_input import (
+            component_replacement_report_on_update,
+        )
+
+        component_replacement_report_on_update(self, "on_update")

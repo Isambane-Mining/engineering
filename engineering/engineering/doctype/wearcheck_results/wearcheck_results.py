@@ -6,4 +6,10 @@ from frappe.model.document import Document
 
 
 class WearCheckResults(Document):
-	pass
+
+    def on_update(self):
+        from engineering.controllers.notifications import (
+            wearcheck_results_on_update,
+        )
+
+        wearcheck_results_on_update(self, "on_update")

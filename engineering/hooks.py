@@ -141,24 +141,6 @@ doc_events = {
     "WhatsApp Message": {
         "after_insert": "engineering.controllers.whatsapp_breakdown_import.whatsapp_message_after_insert",
     },
-    "Plant Breakdown or Maintenance": {
-        "on_update": "engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance.on_update",
-    },
-    "Engineering Legals": {
-        "after_insert": "engineering.engineering.doctype.engineering_legals.engineering_legals.sync_engineering_legals_from_doc",
-        "on_update": "engineering.engineering.doctype.engineering_legals.engineering_legals.sync_engineering_legals_from_doc",
-        "on_trash": "engineering.engineering.doctype.engineering_legals.engineering_legals.on_trash",
-    },
-    "OEM Booking": {
-        "on_update": "engineering.controllers.notifications.oem_booking_on_update",
-    },
-    "WearCheck Results": {
-        "after_insert": "engineering.controllers.notifications.wearcheck_results_after_insert",
-        "on_update": "engineering.controllers.notifications.wearcheck_results_on_update",
-    },
-    "Component Replacement Report": {
-        "on_update": "engineering.controllers.isambane_sample_input.component_replacement_report_on_update"
-    },
     "Asset Movement": {
         # Asset Movement's own on_submit/on_cancel already updates
         # Asset.location first — this just carries that across onto the
