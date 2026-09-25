@@ -10,11 +10,6 @@ from frappe.model.document import Document
 from frappe.utils import now, getdate, cint
 
 
-# Drive Team that will own all Engineering Legals links.
-# This must match the Drive Team "Title" exactly.
-ENGINEERING_DRIVE_TEAM_TITLE = "Engineering Legals"
-
-
 NEW_SHAREPOINT_ROOT = "Isambane Mining"
 
 NEW_SHAREPOINT_SITE_MAPPING = {
@@ -95,9 +90,6 @@ class EngineeringLegals(Document):
 
     def on_update(self):
         sync_engineering_legals_from_doc(self, "on_update")
-
-    def on_trash(self):
-        _engineering_legals_on_trash(self, "on_trash")
 
     def validate(self):
         """
@@ -181,26 +173,6 @@ class EngineeringLegals(Document):
         elif section == "Earth Leakage Testing":
             self.expiry_date = add_months(self.start_date, 3)
 
-        # NEW LEGAL SECTIONS EXPIRY RULES - START
-        elif section in (
-            "Brake Tester Calibration Certificate",
-            "Brake Test Authorisations",
-            "Multi-meter Calibration Certificate",
-            "Authorised LV Person",
-            "Pressure Vessels",
-        ):
-            # Yearly validity
-            self.expiry_date = add_months(self.start_date, 12)
-
-        elif section == "CoC for Containers, Offices, Workshops":
-            # Monthly validity
-            self.expiry_date = add_months(self.start_date, 1)
-
-        elif section == "Earth Leakage Testing":
-            # Quarterly validity
-            self.expiry_date = add_months(self.start_date, 3)
-        # NEW LEGAL SECTIONS EXPIRY RULES - END
-
         elif section == "Lifting Equipment":
             if not self.lifting_type:
                 frappe.throw("Lifting Type (Inspection/Certificate) is required for this Section.")
@@ -239,8 +211,6 @@ class EngineeringLegals(Document):
             frappe.throw(f"Unknown Section: {section}")
 
 
-
-
         # Clear irrelevant fields so nothing stale gets saved (imports/API too)
         if section not in ("Brake Test", "PDS"):
             self.vehicle_type = None
@@ -254,8 +224,6 @@ class EngineeringLegals(Document):
         # -----------------------------
         # HSEC integration requirements
         # -----------------------------
-        section = (self.sections or "").strip()
-
         # Always populate external qualification code from Sections
         self.hsec_qualification_id_external = section or None
 
@@ -301,47 +269,6 @@ def _get_engineering_legals_path_parts(doc: Document):
         "section": section,
         "asset": asset,
     }
-
-
-
-
-
-
-
-def remove_drive_links_for_engineering_legals(doc: Document):
-    """
-    Deactivate Drive File link(s) created for this doc attachment.
-    Safer than deleting: sets is_active=0.
-    """
-
-    if "drive" not in frappe.get_installed_apps():
-        return
-
-    file_url = getattr(doc, "attach_paper", None)
-    if not file_url:
-        return
-
-    # Match the exact same URL format you used when creating the link
-    public_url = file_url.replace("/private/files/", "/files/")
-    absolute_url = frappe.utils.get_url(public_url)
-
-    team = _get_default_drive_team()
-
-    # Deactivate any matching Drive link rows (avoid brittle folder lookups)
-    frappe.db.sql(
-        """
-        UPDATE `tabDrive File`
-        SET is_active = 0
-        WHERE team = %s
-          AND is_link = 1
-          AND is_active = 1
-          AND path = %s
-        """,
-        (team, absolute_url),
-    )
-
-    frappe.db.commit()
-
 
 
 def move_engineering_legal_file_to_folder(doc: Document):
@@ -433,17 +360,6 @@ def _safe_sharepoint_status_update(docname: str, values: dict):
             )
 
 
-def _clear_sharepoint_sync_status(docname: str):
-    _safe_sharepoint_status_update(
-        docname,
-        {
-            "sharepoint_synced": 0,
-            "sharepoint_synced_at": None,
-            "sharepoint_sync_error": None,
-        },
-    )
-
-
 def _mark_sharepoint_sync_success(docname: str):
     _safe_sharepoint_status_update(
         docname,
@@ -464,7 +380,6 @@ def _mark_sharepoint_sync_failure(docname: str, error_message: str):
             "sharepoint_sync_error": (error_message or "")[:1400],
         },
     )
-
 
 
 def _sanitize_sharepoint_part(value: str) -> str:
@@ -750,8 +665,6 @@ def upload_engineering_legals_to_sharepoint(doc: Document, source_file_doc: Opti
         )
 
 
-
-
 def ensure_file_folder_tree(path: str) -> str:
     """
     Ensure that a nested folder path like
@@ -799,283 +712,17 @@ def ensure_file_folder_tree(path: str) -> str:
     return parent_name
 
 
-# ----------------------------------------------------------------------
-# Frappe Drive integration
-# ----------------------------------------------------------------------
-
-
-def create_drive_link_for_engineering_legals(doc: Document):
-    """
-    Create / update a Drive File *link* for this Engineering Legals document.
-
-       Drive folder structure:
-        Home / Engineering Legals / <Site> / <Section> / <Fleet Number> /
-
-
-    Inside that folder we create a Drive File with:
-        is_group = 0 (file)
-        is_link  = 1 (link entity)
-        path     = File.file_url (ERPNext file URL)
-    """
-
-    # If Drive app is not installed, do nothing
-    if "drive" not in frappe.get_installed_apps():
-        return
-
-    # No attachment? Nothing to sync.
-    file_url = getattr(doc, "attach_paper", None)
-    if not file_url:
-        return
-
-    # Always work with the PUBLIC url form for Drive
-    public_url = file_url.replace("/private/files/", "/files/")
-
-    # Find the File record for this attachment (should already use /files/ after move)
-    file_row = frappe.db.get_value(
-        "File",
-        {"file_url": public_url},
-        ["name", "file_name", "file_size", "file_type", "file_url"],
-        as_dict=True,
-    )
-    if not file_row:
-        return
-
-    team = _get_default_drive_team()
-    home = _get_drive_home_folder(team)
-
-    # Build folder path: Engineering Legals / <Site> / <Month> / <Date> / <Section> / <Asset>
-    parts = _get_engineering_legals_path_parts(doc)
-
-    root_title = "Engineering Legals"
-    root_folder = _get_or_create_drive_folder(root_title, home, team)
-    site_folder = _get_or_create_drive_folder(parts["site"], root_folder, team)
-    month_folder = _get_or_create_drive_folder(parts["month"], site_folder, team)
-    date_folder = _get_or_create_drive_folder(parts["date"], month_folder, team)
-    section_folder = _get_or_create_drive_folder(parts["section"], date_folder, team)
-    asset_folder = _get_or_create_drive_folder(parts["asset"], section_folder, team)
-
-
-    # Avoid creating duplicate links for the same file & folder
-    public_url = file_row.file_url.replace("/private/files/", "/files/")
-    # Drive links work best with an ABSOLUTE URL
-    absolute_url = frappe.utils.get_url(public_url)
-
-
-
-    existing = frappe.db.exists(
-        "Drive File",
-        {
-            "team": team,
-            "parent_entity": asset_folder,
-            "is_link": 1,
-            "path": absolute_url,
-            "is_active": 1,
-        },
-    )
-
-    if existing:
-        return
-
-
-    # Finally, create the Drive File link (always using PUBLIC url)
-    public_url = file_row.file_url.replace("/private/files/", "/files/")
-
-    link_doc = frappe.get_doc(
-        {
-            "doctype": "Drive File",
-            "title": file_row.file_name or "Attachment",
-            "team": team,
-            "parent_entity": asset_folder,
-            "is_group": 0,   # file
-            "is_link": 1,    # link entity
-            "is_active": 1,
-            "is_private": 0,  # visible to team
-            "path": absolute_url,  # ABSOLUTE url so Drive can open it
-            "file_size": file_row.file_size or 0,
-
-            # Better MIME detection (File.file_type is often blank / not a real MIME)
-            "mime_type": (mimetypes.guess_type(file_row.file_name or "")[0] or (file_row.file_type or "")),
-        }
-    )
-
-
-
-    link_doc.insert(ignore_permissions=True)
-
-
-def _get_default_drive_team() -> str:
-    """
-    Always use the specific Drive Team configured for Engineering Legals.
-
-    We look it up by Drive Team *Title* so we don't accidentally use
-    someone else's personal team.
-    """
-    team = frappe.db.get_value(
-        "Drive Team",
-        {"title": ENGINEERING_DRIVE_TEAM_TITLE},
-        "name",
-    )
-
-    if not team:
-        frappe.throw(
-            f"Drive Team '{ENGINEERING_DRIVE_TEAM_TITLE}' not found. "
-            "Please create it in Drive > Drive Team or update ENGINEERING_DRIVE_TEAM_TITLE "
-            "in engineering_legals.py."
-        )
-
-    return team
-
-
-
-def _get_drive_home_folder(team: str) -> str:
-    """
-    Get the 'Home' folder for this team in Drive.
-    """
-    home = frappe.db.get_value(
-        "Drive File",
-        {
-            "title": "Home",
-            "is_group": 1,
-            "team": team,
-            "is_active": 1,
-        },
-        "name",
-    )
-    if home:
-        return home
-
-    # Fallback: create a Home folder if missing
-    home_doc = frappe.get_doc(
-        {
-            "doctype": "Drive File",
-            "title": "Home",
-            "parent_entity": None,
-            "is_group": 1,
-            "is_link": 0,
-            "is_active": 1,
-            "team": team,
-            "owner": frappe.session.user,
-            "is_private": 0,
-        }
-    )
-    home_doc.insert(ignore_permissions=True)
-    return home_doc.name
-
-
-def _get_or_create_drive_folder(title: str, parent_entity: Optional[str], team: str) -> str:
-    """
-    Find a Drive folder (Drive File with is_group=1) by title under parent_entity.
-    If missing, create it and return its name.
-    """
-    existing = frappe.db.get_value(
-        "Drive File",
-        {
-            "title": title,
-            "parent_entity": parent_entity,
-            "is_group": 1,
-            "is_active": 1,
-            "team": team,
-        },
-        "name",
-    )
-    if existing:
-        return existing
-
-    folder = frappe.get_doc(
-        {
-            "doctype": "Drive File",
-            "title": title,
-            "parent_entity": parent_entity,
-            "is_group": 1,
-            "is_link": 0,
-            "is_active": 1,
-            "team": team,
-            "owner": frappe.session.user,
-            "is_private": 0,
-        }
-    )
-    folder.insert(ignore_permissions=True)
-    return folder.name
-
-# -------------------------------------------------------------------
-# Module-level doc_event hooks (required if hooks.py points to
-# engineering.engineering.doctype.engineering_legals.engineering_legals.on_update)
-# -------------------------------------------------------------------
-
-def sync_engineering_legals_from_file(file_doc, method=None):
-    try:
-        if getattr(file_doc, "is_folder", 0):
-            return
-
-        if getattr(file_doc, "attached_to_doctype", None) != "Engineering Legals":
-            return
-
-        attached_name = getattr(file_doc, "attached_to_name", None)
-        if not attached_name:
-            return
-
-        if str(attached_name).startswith("new-engineering-legals-"):
-            return
-
-        if not frappe.db.exists("Engineering Legals", attached_name):
-            return
-
-        _clear_sharepoint_sync_status(attached_name)
-
-        doc = frappe.get_doc("Engineering Legals", attached_name)
-
-        if getattr(file_doc, "file_url", None) and doc.attach_paper != file_doc.file_url:
-            doc.db_set("attach_paper", file_doc.file_url, update_modified=False)
-            doc.reload()
-
-        upload_engineering_legals_to_sharepoint(doc, source_file_doc=file_doc)
-        move_engineering_legal_file_to_folder(doc)
-        _mark_sharepoint_sync_success(attached_name)
-
-    except Exception:
-        attached_name = getattr(file_doc, "attached_to_name", None)
-        if attached_name and frappe.db.exists("Engineering Legals", attached_name):
-            _mark_sharepoint_sync_failure(attached_name, frappe.get_traceback())
-
-        frappe.log_error(
-            title="Engineering Legals file-trigger sync failed",
-            message=frappe.get_traceback(),
-        )
-
-        if getattr(file_doc, "attached_to_doctype", None) != "Engineering Legals":
-            return
-
-        attached_name = getattr(file_doc, "attached_to_name", None)
-        if not attached_name:
-            return
-
-        if str(attached_name).startswith("new-engineering-legals-"):
-            return
-
-        if not frappe.db.exists("Engineering Legals", attached_name):
-            return
-
-        doc = frappe.get_doc("Engineering Legals", attached_name)
-
-        if getattr(file_doc, "file_url", None) and doc.attach_paper != file_doc.file_url:
-            doc.db_set("attach_paper", file_doc.file_url, update_modified=False)
-            doc.reload()
-
-        upload_engineering_legals_to_sharepoint(doc, source_file_doc=file_doc)
-        move_engineering_legal_file_to_folder(doc)
-
-    except Exception:
-        frappe.log_error(
-            title="Engineering Legals file-trigger sync failed",
-            message=frappe.get_traceback(),
-        )
-
 def sync_engineering_legals_from_doc(doc, method=None):
     try:
         if not getattr(doc, "attach_paper", None):
             return
 
-        _clear_sharepoint_sync_status(doc.name)
+        # Reset within the save's own transaction. _safe_sharepoint_status_update
+        # commits, which would persist a half-finished insert if a later hook fails.
+        doc.db_set(
+            {"sharepoint_synced": 0, "sharepoint_synced_at": None, "sharepoint_sync_error": None},
+            update_modified=False,
+        )
 
         frappe.enqueue(
             "engineering.engineering.doctype.engineering_legals.engineering_legals.run_engineering_legals_sharepoint_sync",
@@ -1090,8 +737,6 @@ def sync_engineering_legals_from_doc(doc, method=None):
             title="Engineering Legals doc-trigger enqueue failed",
             message=frappe.get_traceback(),
         )
-
-
 
 
 def run_engineering_legals_sharepoint_sync(docname: str):
@@ -1149,11 +794,6 @@ def run_engineering_legals_sharepoint_sync(docname: str):
         )
 
 
-
-
-
-
-
 def queue_unsynced_engineering_legals():
     rows = frappe.get_all(
         "Engineering Legals",
@@ -1175,12 +815,3 @@ def queue_unsynced_engineering_legals():
             enqueue_after_commit=False,
             docname=name,
         )
-
-
-
-
-
-
-
-def _engineering_legals_on_trash(doc, method=None):
-    pass
