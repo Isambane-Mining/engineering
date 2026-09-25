@@ -5,14 +5,13 @@ frappe.ui.form.on('Engineering Legals', {
     apply_hsec_rules(frm);
     set_expiry_date(frm);
     add_eng_legals_report_button(frm);
+    update_fleet_number_requirement(frm);
   },
 
   site(frm) {
     frm.set_value('fleet_number', null);
     apply_asset_filter(frm);
   },
-
-
 
   sections(frm) {
     frm.set_value('vehicle_type', null);
@@ -31,9 +30,8 @@ frappe.ui.form.on('Engineering Legals', {
     apply_section_rules(frm);
     apply_hsec_rules(frm);
     set_expiry_date(frm);
+    update_fleet_number_requirement(frm);
   },
-
-
 
   vehicle_type(frm) {
     set_expiry_date(frm);
@@ -51,7 +49,6 @@ frappe.ui.form.on('Engineering Legals', {
     set_expiry_date(frm);
   },
 
-
   hsec_send(frm) {
     apply_hsec_rules(frm);
   },
@@ -67,23 +64,6 @@ frappe.ui.form.on('Engineering Legals', {
     const r = await frappe.db.get_value("File", { file_url: url }, "name");
     if (!r || !r.message || !r.message.name) {
       frappe.throw("File is still uploading. Wait a few seconds, then Save again.");
-    }
-  }
-});
-
-
-// Block save until the uploaded file actually exists as a File record.
-// Prevents "Error Attaching File" race condition on slow uploads.
-frappe.ui.form.on("Engineering Legals", {
-  validate: async function (frm) {
-    const url = (frm.doc.attach_paper || "").trim();
-    if (!url) return;
-
-    // If user typed/pasted a path, it might not exist yet
-    const r = await frappe.db.get_value("File", { file_url: url }, "name");
-
-    if (!r || !r.message || !r.message.name) {
-      frappe.throw("Attachment is still uploading (or not saved). Please wait a few seconds, then Save again.");
     }
   }
 });
@@ -135,8 +115,6 @@ function apply_hsec_rules(frm) {
   frm.toggle_display('hsec_qualification_id_external', send);
   frm.toggle_display('hsec_inserted_at', send);
 }
-
-
 
 
 function set_expiry_date(frm) {
@@ -235,25 +213,10 @@ function add_eng_legals_report_button(frm) {
       params.set("site", frm.doc.site);
     }
 
-    const url = `https://www.isambane.co.za/desk/query-report/Engineering%20Legals%20Report?${params.toString()}`;
+    const url = `/desk/query-report/Engineering%20Legals%20Report?${params.toString()}`;
     window.open(url, "_blank");
   });
 }
-
-// New legal section expiry rules are handled by set_expiry_date(frm).
-
-
-
-// FLEET NUMBER REQUIREMENT RULE - START
-frappe.ui.form.on("Engineering Legals", {
-    refresh(frm) {
-        update_fleet_number_requirement(frm);
-    },
-
-    sections(frm) {
-        update_fleet_number_requirement(frm);
-    },
-});
 
 function update_fleet_number_requirement(frm) {
     const section = (frm.doc.sections || "").trim();
@@ -279,4 +242,3 @@ function update_fleet_number_requirement(frm) {
 
     frm.refresh_field("fleet_number");
 }
-// FLEET NUMBER REQUIREMENT RULE - END

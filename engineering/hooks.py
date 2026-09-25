@@ -42,9 +42,6 @@ fixtures = [
     {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
     {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "RDT", "Excavator", "LDV"]]]},
     {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]},
-    # Driver's licence competencies (Employee Induction is owned by the ir app,
-    # but these 6 licence codes back Vehicle Allocation, so they are fixtured
-    # here rather than in ir).
     {"dt": "Employee Induction", "filters": [["name", "in", [
         "Drivers Licence - Code B",
         "Drivers Licence - Code EB",
@@ -53,9 +50,6 @@ fixtures = [
         "Drivers Licence - Code C1",
         "Drivers Licence - Code EC1",
     ]]]},
-    # Company Vehicle Undertaking record type (Employee File Record is owned
-    # by the ir app; this backs the addendum-on-file check on Vehicle
-    # Allocation, read from Employee.ir_employee_records).
     {"dt": "Employee File Record", "filters": [["name", "in", ["Company Vehicle Undertaking"]]]},
 ]
 
@@ -69,20 +63,14 @@ website_route_rules = [
 ]
 
 
-# ---------------------------------------------------------------------
-# Doctype-specific client JS
-# ---------------------------------------------------------------------
-doctype_js = {
-    "Plant Breakdown": "engineering/doctype/plant_breakdown/plant_breakdown.js",
-    "Engineering Control Panel": "engineering/doctype/engineering_control_panel/engineering_control_panel.js",
-    "Service Schedule": "engineering/engineering/doctype/service_schedule/service_schedule.js",
-    "Engineering Legals": "engineering/engineering/doctype/engineering_legals/engineering_legals.js",
-    "Daily Downtime Summary": "engineering/engineering/doctype/daily_downtime_summary/daily_downtime_summary.js",
-}
-
 app_include_css = [
     "/assets/engineering/css/engineering.css"
 ]
+
+# Breakdown History global public List View
+doctype_list_js = {
+    "Breakdown History": "public/js/breakdown_history_list.js",
+}
 
 # ---------------------------------------------------------------------
 # Scheduled jobs
@@ -92,6 +80,15 @@ scheduler_events = {
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
         "engineering.controllers.importer.run_scheduled_wearcheck_sync",
+    ],
+    "daily": [
+        # Engineering Legals monthly SharePoint folders
+        "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders",
+        "engineering.controllers.fleet_notifications.send_terminated_driver_alert_gate",
+        "engineering.controllers.fleet_notifications.send_temporary_loan_digest_gate",
+    ],
+    "weekly": [
+        "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate",
     ],
     "cron": {
         "0 6 * * *": [
@@ -120,7 +117,7 @@ scheduler_events = {
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
         ],
         # ==========================================================
-        # NEW — SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
+        # SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
         # ==========================================================
         "0 1 * * *": [
             "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update"
@@ -142,63 +139,7 @@ doc_events = {
         "after_insert": "engineering.controllers.whatsapp_breakdown_import.whatsapp_message_after_insert",
     },
     "Asset Movement": {
-        # Asset Movement's own on_submit/on_cancel already updates
-        # Asset.location first — this just carries that across onto the
-        # current Vehicle Licence for each moved Asset, so licensing
-        # doesn't go stale relative to where the vehicle actually is.
         "on_submit": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",
         "on_cancel": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",
     },
-
 }
-
-# ---------------------------------------------------------------------
-# Whitelisted method overrides
-# ---------------------------------------------------------------------
-override_whitelisted_methods = {
-}
-
-# Engineering Legals monthly SharePoint folders
-scheduler_events = globals().get("scheduler_events", {})
-
-scheduler_events.setdefault("daily", [])
-
-if "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders" not in scheduler_events["daily"]:
-    scheduler_events["daily"].append(
-        "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders"
-    )
-
-# ==========================================================
-# FLEET MANAGEMENT (Vehicle Allocation / Vehicle Licence) — weekly compliance
-# digest, plus two daily alerts (terminated/pending-termination drivers,
-# temporary loans). Compliance/expiry status is computed live (virtual
-# fields, never stored), so there is nothing to recalculate on a schedule —
-# each gate below just checks its own enable flag on Fleet Management
-# Settings and, if on, sends with freshly computed values. Registered
-# directly against Frappe's own native "weekly"/"daily" scheduler buckets
-# (Weekly = Sundays 00:00 server time, Daily = 00:00 server time) rather
-# than a custom day/hour field — Frappe's Scheduled Job Type already
-# guarantees each of these runs at most once per its period.
-# ==========================================================
-scheduler_events.setdefault("weekly", [])
-
-if "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate" not in scheduler_events["weekly"]:
-    scheduler_events["weekly"].append(
-        "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate"
-    )
-
-for _fleet_job in (
-    "engineering.controllers.fleet_notifications.send_terminated_driver_alert_gate",
-    "engineering.controllers.fleet_notifications.send_temporary_loan_digest_gate",
-):
-    if _fleet_job not in scheduler_events["daily"]:
-        scheduler_events["daily"].append(_fleet_job)
-
-
-# Breakdown History global public List View
-doctype_list_js = dict(
-    globals().get("doctype_list_js", {}),
-    **{
-        "Breakdown History": "public/js/breakdown_history_list.js"
-    }
-)
