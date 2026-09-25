@@ -9,6 +9,11 @@ from frappe.utils import get_datetime
 
 class PlantBreakdownorMaintenance(Document):
 
+    def on_update(self):
+        """Keep Breakdown History synchronized after every save."""
+        _sync_breakdown_history_on_update(self)
+
+
     # --- PBOM SIGNATURE ROLE PERMISSION START ---
     SIGNATURE_FIELD_ROLES = {
         "information_officer_signature": ["Information Officer", "System Manager"],
@@ -234,7 +239,7 @@ class PlantBreakdownorMaintenance(Document):
 # GLOBAL HOOK
 # ---------------------------------------------------------------
 
-def on_update(doc, method):
+def _sync_breakdown_history_on_update(doc, method=None):
     """Always ensure Breakdown History stays updated after saving."""
 
     # Set Open/Closed

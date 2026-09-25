@@ -92,6 +92,13 @@ NEW_SHAREPOINT_SECTION_MAPPING = {
 
 class EngineeringLegals(Document):
     """Controller for Engineering Legals DocType."""
+
+    def on_update(self):
+        sync_engineering_legals_from_doc(self, "on_update")
+
+    def on_trash(self):
+        _engineering_legals_on_trash(self, "on_trash")
+
     def validate(self):
         """
         Server-side source of truth.
@@ -1175,8 +1182,5 @@ def queue_unsynced_engineering_legals():
 
 
 
-def on_update(doc, method=None):
-    sync_engineering_legals_from_doc(doc, method)
-
-def on_trash(doc, method=None):
+def _engineering_legals_on_trash(doc, method=None):
     pass
