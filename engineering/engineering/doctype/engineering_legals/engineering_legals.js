@@ -51,20 +51,6 @@ frappe.ui.form.on('Engineering Legals', {
 
   hsec_send(frm) {
     apply_hsec_rules(frm);
-  },
-
-  // Stop Save until the upload created a real File row (prevents FileNotFoundError)
-  validate: async function (frm) {
-    const url = (frm.doc.attach_paper || "").trim();
-
-    if (!url) {
-      frappe.throw("Attach Paper is required.");
-    }
-
-    const r = await frappe.db.get_value("File", { file_url: url }, "name");
-    if (!r || !r.message || !r.message.name) {
-      frappe.throw("File is still uploading. Wait a few seconds, then Save again.");
-    }
   }
 });
 
