@@ -69,6 +69,12 @@ class DailyAvailabilityAndUtilizationDashboardPage {
                     filter: brightness(0.9);
                 }
 
+                /* Tiny bars keep their exact value in the native hover tooltip.
+                   Hiding the cramped label avoids clipping and adjacent-bar overlap. */
+                .daily-availability-page .isd-bar.util[data-utilisation-small="true"] > span {
+                    display: none !important;
+                }
+
                 .daily-downtime-list {
                     display: grid;
                     grid-template-columns: repeat(2, minmax(260px, 1fr));
