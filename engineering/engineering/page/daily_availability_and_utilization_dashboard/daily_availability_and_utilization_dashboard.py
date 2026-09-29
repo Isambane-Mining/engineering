@@ -2551,33 +2551,83 @@ def build_chart_html(
                 else fmt_percent(ut)
             )
 
+            def graph_label_style(value):
+                if value is None:
+                    return (
+                        "display:none;"
+                    )
+
+                numeric_value = max(
+                    0.0,
+                    min(
+                        100.0,
+                        float(value),
+                    ),
+                )
+
+                # Short bars cannot safely contain a rotated label.
+                # Put those labels horizontally just above the bar
+                # so values close to 0% remain fully visible.
+                if numeric_value < 22:
+                    return (
+                        "position:absolute;"
+                        "bottom:100%;"
+                        "left:50%;"
+                        "transform:translateX(-50%);"
+                        "margin-bottom:3px;"
+                        "z-index:50;"
+                        "display:inline-block;"
+                        "font-family:Arial,sans-serif;"
+                        "font-size:10px;"
+                        "font-weight:900;"
+                        "line-height:1;"
+                        "letter-spacing:0;"
+                        "text-align:center;"
+                        "color:#000000;"
+                        "text-shadow:none;"
+                        "white-space:nowrap;"
+                        "pointer-events:none;"
+                    )
+
+                return (
+                    "position:absolute;"
+                    "top:18px;"
+                    "left:50%;"
+                    "transform:translate(-50%,-50%) rotate(-90deg);"
+                    "transform-origin:center center;"
+                    "z-index:50;"
+                    "display:inline-block;"
+                    "font-family:Arial,sans-serif;"
+                    "font-size:10px;"
+                    "font-weight:900;"
+                    "line-height:1;"
+                    "letter-spacing:0;"
+                    "text-align:center;"
+                    "color:#000000;"
+                    "text-shadow:none;"
+                    "white-space:nowrap;"
+                    "pointer-events:none;"
+                )
+
+            av_label_style = graph_label_style(
+                av
+            )
+
+            ut_label_style = graph_label_style(
+                ut
+            )
+
             bars.append(
                 f"<div class='{av_class} "
                 f"daily-availability-clickable-bar' "
                 f"data-machine='{machine}' "
-                f"title='Click to view {machine} "
-                f"downtime details' "
+                f"title='{machine} Availability: "
+                f"{av_graph_label or 'No data'} - "
+                f"Click to view downtime details' "
                 f"style='height:{height(av)}px;"
                 f"position:relative;"
                 f"overflow:visible;'>"
-                f"<span style='"
-                f"position:absolute;"
-                f"top:18px;"
-                f"left:50%;"
-                f"transform:translate(-50%,-50%) rotate(-90deg);"
-                f"transform-origin:center center;"
-                f"z-index:50;"
-                f"display:inline-block;"
-                f"font-family:Arial,sans-serif;"
-                f"font-size:10px;"
-                f"font-weight:900;"
-                f"line-height:1;"
-                f"letter-spacing:0;"
-                f"text-align:center;"
-                f"color:#000000;"
-                f"text-shadow:none;"
-                f"white-space:nowrap;"
-                f"pointer-events:none;'>"
+                f"<span style='{av_label_style}'>"
                 f"{av_graph_label}"
                 f"</span>"
                 f"</div>"
@@ -2587,29 +2637,13 @@ def build_chart_html(
                 f"<div class='{ut_class} "
                 f"daily-availability-clickable-bar' "
                 f"data-machine='{machine}' "
-                f"title='Click to view {machine} "
-                f"downtime details' "
+                f"title='{machine} Utilisation: "
+                f"{ut_graph_label or 'No data'} - "
+                f"Click to view downtime details' "
                 f"style='height:{height(ut)}px;"
                 f"position:relative;"
                 f"overflow:visible;'>"
-                f"<span style='"
-                f"position:absolute;"
-                f"top:18px;"
-                f"left:50%;"
-                f"transform:translate(-50%,-50%) rotate(-90deg);"
-                f"transform-origin:center center;"
-                f"z-index:50;"
-                f"display:inline-block;"
-                f"font-family:Arial,sans-serif;"
-                f"font-size:10px;"
-                f"font-weight:900;"
-                f"line-height:1;"
-                f"letter-spacing:0;"
-                f"text-align:center;"
-                f"color:#000000;"
-                f"text-shadow:none;"
-                f"white-space:nowrap;"
-                f"pointer-events:none;'>"
+                f"<span style='{ut_label_style}'>"
                 f"{ut_graph_label}"
                 f"</span>"
                 f"</div>"
