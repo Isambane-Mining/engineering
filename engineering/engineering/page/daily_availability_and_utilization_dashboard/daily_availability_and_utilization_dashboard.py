@@ -2684,10 +2684,16 @@ def build_chart_html(
             bars.append(
                 f"<div class='{ut_class} daily-availability-clickable-bar' "
                 f"data-machine='{machine}' "
-                f"data-utilisation-small='{str(ut is not None and flt(ut) < 22).lower()}' "
-                f"title='{esc(tooltip)}' "
-                f"style='height:{util_height}px;position:relative;overflow:visible;'>"
-                f"{segment}<span style='{ut_label_style}'>{ut_graph_label}</span></div>"
+                f"title='{machine} Utilisation: "
+                f"{ut_graph_label or 'No data'} - "
+                f"Click to view downtime details' "
+                f"style='height:{height(ut)}px;"
+                f"position:relative;"
+                f"overflow:visible;'>"
+                f"<span style='{ut_label_style}'>"
+                f"{ut_graph_label}"
+                f"</span>"
+                f"</div>"
             )
 
             labels.append(
@@ -2720,7 +2726,6 @@ def build_chart_html(
     </div>
 
     {average_legend_html}
-    {short_haul_legend}
 
     <div
         class="{pdf_chart_class}"
