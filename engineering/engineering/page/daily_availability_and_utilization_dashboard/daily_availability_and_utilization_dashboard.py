@@ -2038,7 +2038,12 @@ def build_selected_summary_chart_html(summary_type, location, source_rows, avgs,
     if summary_type == "Monthly Summary":
         return build_monthly_summary_chart_html(avgs, machine_scope)
 
-    return build_chart_html(machine_series, machine_scope, spare_swing_asset_map)
+    return build_chart_html(
+        machine_series,
+        machine_scope,
+        spare_swing_asset_map,
+        source_rows,
+    )
 
 
 def build_daily_summary_chart_html(location, start_date, end_date, machine_scope="Production + Swing/Spare Machines", au_target_filter="100% A & U"):
@@ -2288,8 +2293,16 @@ def build_chart_html(
     machine_series,
     machine_scope="Production + Swing/Spare Machines",
     spare_swing_asset_map=None,
+    source_rows=None,
 ):
     spare_swing_asset_map = spare_swing_asset_map or {}
+
+    (
+        production_avgs,
+        spare_avgs,
+    ) = build_scope_averages_from_source_rows(
+        source_rows or []
+    )
     machine_scope = (
         machine_scope
         or "Production + Swing/Spare Machines"
@@ -2316,10 +2329,24 @@ def build_chart_html(
         category,
         items,
         section_scope,
+        section_avgs,
         spare_section=False,
     ):
         title = UI_TITLES.get(category, category)
         items = items or []
+
+        category_avgs = (
+            (section_avgs or {}).get(category)
+            or {}
+        )
+
+        average_availability = (
+            category_avgs.get("avail")
+        )
+
+        average_utilisation = (
+            category_avgs.get("util")
+        )
 
         section_class = "isd-chart-section"
         section_style = ""
@@ -2385,6 +2412,107 @@ def build_chart_html(
 
         bars = []
         labels = []
+
+        def average_line(value, colour, label):
+            if value is None:
+                return ""
+
+            value = max(
+                0.0,
+                min(
+                    100.0,
+                    float(value),
+                ),
+            )
+
+            bottom_px = (
+                value / 100.0
+            ) * 220.0
+
+            return (
+                "<div "
+                "class='isd-category-average-line' "
+                f"title='{esc(label)}: {fmt_percent(value)}' "
+                "style='"
+                "position:absolute;"
+                "left:0;"
+                "right:0;"
+                f"bottom:{bottom_px:.1f}px;"
+                f"border-top:2px dashed {colour};"
+                "z-index:20;"
+                "pointer-events:none;"
+                "'>"
+                "</div>"
+            )
+
+        average_lines_html = (
+            average_line(
+                average_availability,
+                "#1a73e8",
+                "Availability Average",
+            )
+            +
+            average_line(
+                average_utilisation,
+                "#d93025",
+                "Utilisation Average",
+            )
+        )
+
+        average_legend_html = f"""
+        <div
+            class="isd-category-average-legend"
+            style="
+                display:flex;
+                gap:18px;
+                flex-wrap:wrap;
+                align-items:center;
+                justify-content:center;
+                padding:6px 10px;
+                border-bottom:1px solid #e5e7eb;
+                background:#ffffff;
+                font-size:11px;
+                font-weight:800;
+                color:#111827;
+            "
+        >
+            <span
+                style="
+                    display:inline-flex;
+                    align-items:center;
+                    gap:6px;
+                "
+            >
+                <span
+                    style="
+                        display:inline-block;
+                        width:28px;
+                        border-top:2px dashed #1a73e8;
+                    "
+                ></span>
+                Availability Avg:
+                {fmt_percent(average_availability)}
+            </span>
+
+            <span
+                style="
+                    display:inline-flex;
+                    align-items:center;
+                    gap:6px;
+                "
+            >
+                <span
+                    style="
+                        display:inline-block;
+                        width:28px;
+                        border-top:2px dashed #d93025;
+                    "
+                ></span>
+                Utilisation Avg:
+                {fmt_percent(average_utilisation)}
+            </span>
+        </div>
+        """
 
         for item in items:
             machine_raw = str(
@@ -2507,6 +2635,8 @@ def build_chart_html(
         - {esc(section_scope)}
     </div>
 
+    {average_legend_html}
+
     <div
         class="{pdf_chart_class}"
         style="min-width:{min_width}px;"
@@ -2529,6 +2659,7 @@ def build_chart_html(
             class="isd-chart-grid"
             style="grid-template-columns:{grid_template};"
         >
+            {average_lines_html}
             {''.join(bars)}
         </div>
 
@@ -2575,6 +2706,7 @@ def build_chart_html(
                     category,
                     production_items,
                     "PRODUCTION MACHINES",
+                    production_avgs,
                     spare_section=False,
                 )
             )
@@ -2584,6 +2716,7 @@ def build_chart_html(
                     category,
                     spare_items,
                     "SWING/SPARE MACHINES",
+                    spare_avgs,
                     spare_section=True,
                 )
             )
@@ -2594,6 +2727,7 @@ def build_chart_html(
                     category,
                     category_items,
                     "SWING/SPARE MACHINES",
+                    spare_avgs,
                     spare_section=True,
                 )
             )
@@ -2604,6 +2738,7 @@ def build_chart_html(
                     category,
                     category_items,
                     "PRODUCTION MACHINES",
+                    production_avgs,
                     spare_section=False,
                 )
             )
