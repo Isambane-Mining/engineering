@@ -15,6 +15,11 @@ from engineering.engineering.page.daily_availability_and_utilization_dashboard.o
     should_show_spare_average_section,
 )
 
+from engineering.engineering.page.daily_availability_and_utilization_dashboard.short_haul import (
+    fetch_short_haul_hours,
+    short_haul_percentage,
+)
+
 
 _ = frappe._
 
@@ -762,7 +767,8 @@ def execute(filters=None):
     spare_swing_asset_map = get_engine_spare_swing_asset_map(source_rows)
 
     machine_series = build_machine_series_from_source_rows(
-        source_rows
+        source_rows,
+        short_haul_hours=fetch_short_haul_hours(source_rows, location, start_date, end_date),
     )
 
     avgs = build_summary_averages_from_source_rows(
@@ -1075,7 +1081,7 @@ def build_summary_averages_from_source_rows(rows):
     return out
 
 
-def build_machine_series_from_source_rows(rows):
+def build_machine_series_from_source_rows(rows, short_haul_hours=None):
     """Build one period summary per machine using Engine summary logic."""
 
     grouped = {
@@ -1157,6 +1163,11 @@ def build_machine_series_from_source_rows(rows):
                 category
             ].append({
                 "machine": machine,
+                "short_haul_hours": (short_haul_hours or {}).get(machine, 0),
+                "short_haul_percentage": short_haul_percentage(
+                    (short_haul_hours or {}).get(machine, 0),
+                    flt(summary.get("utilisation_available_hours")),
+                ),
                 "avail": (
                     summary.get(
                         "availability_percentage"
@@ -2633,20 +2644,50 @@ def build_chart_html(
                 f"</div>"
             )
 
+            short_hours = flt(item.get("short_haul_hours"))
+            short_percent = item.get("short_haul_percentage")
+            stack = short_hours > 0 and short_percent is not None and ut is not None
+            tooltip = (
+                f"{machine_raw} Utilisation: {ut_graph_label or 'No data'} - "
+                "Click to view downtime details"
+            )
+            segment = ""
+            util_height = height(ut)
+            if short_hours > 0:
+                combined = flt(ut) + flt(short_percent) if stack else None
+                tooltip = (
+                    f"Machine: {machine_raw}\n"
+                    f"Actual Utilisation: {f'{ut:.1f}%' if ut is not None else 'No data'}\n"
+                    f"Short Haul Lost Hours: {short_hours:.2f} h\n"
+                    f"Short Haul: {f'{short_percent:.1f}%' if short_percent is not None else 'N/A'}\n"
+                    f"Combined visual potential: {f'{combined:.1f}%' if combined is not None else 'N/A'}\n"
+                    "Blue shows lost opportunity, not actual utilisation."
+                )
+                if not stack:
+                    tooltip += "\nNo stack: utilisation or available hours unavailable."
+            if stack:
+                actual_visual = max(0.0, min(100.0, flt(ut)))
+                blue_visual = max(0.0, min(flt(short_percent), 100.0 - actual_visual))
+                util_height = height(actual_visual + blue_visual)
+                segment = (
+                    "<div class='isd-short-haul-segment' "
+                    "style='position:absolute;left:0;right:0;top:0;"
+                    f"height:{blue_visual * 2.2:.3f}px;background:#2563eb;"
+                    "pointer-events:none;'></div>"
+                )
+                # Keep the actual label inside its own grey component.
+                ut_label_style = (
+                    "display:none;" if actual_visual < 22 else
+                    graph_label_style(ut) + f"top:{util_height - actual_visual * 1.1:.3f}px;"
+                )
+
             bars.append(
-                f"<div class='{ut_class} "
-                f"daily-availability-clickable-bar' "
+                f"<div class='{ut_class} daily-availability-clickable-bar' "
                 f"data-machine='{machine}' "
-                f"title='{machine} Utilisation: "
-                f"{ut_graph_label or 'No data'} - "
-                f"Click to view downtime details' "
-                f"style='height:{height(ut)}px;"
-                f"position:relative;"
-                f"overflow:visible;'>"
-                f"<span style='{ut_label_style}'>"
-                f"{ut_graph_label}"
-                f"</span>"
-                f"</div>"
+                f"data-utilisation-small='{str(ut is not None and flt(ut) < 22).lower()}' "
+                f"title='{esc(tooltip)}' "
+                f"style='height:{util_height}px;position:relative;overflow:visible;'>"
+                f"{segment}<span style='{ut_label_style}'>{ut_graph_label}</span></div>"
             )
 
             labels.append(
@@ -2657,6 +2698,15 @@ def build_chart_html(
                 f"{machine}"
                 f"</span>"
                 f"</div>"
+            )
+
+        short_haul_legend = ""
+        if any(flt(item.get("short_haul_hours")) > 0 for item in items):
+            short_haul_legend = (
+                "<div style='padding:6px 10px;font-size:12px;text-align:center;'>"
+                "<span style='color:var(--eng-grey,#6b6b6b);'>■</span> Utilisation &nbsp; "
+                "<span style='color:#2563eb;'>■</span> Short Haul Reduced Fleet Lost Hours"
+                "<br>Blue indicates lost opportunity, not actual utilisation.</div>"
             )
 
         return f'''
@@ -2670,6 +2720,7 @@ def build_chart_html(
     </div>
 
     {average_legend_html}
+    {short_haul_legend}
 
     <div
         class="{pdf_chart_class}"
