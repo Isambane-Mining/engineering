@@ -7,6 +7,7 @@
   "effective_date",
   "plan_assets",
   "plan_drivers",
+  "extra_locations",
   "planning_board_html",
   "amended_from"
  ],
@@ -37,6 +38,14 @@
    "options": "Fleet Planning Driver"
   },
   {
+   "description": "Location rows explicitly added as an empty drop target (Add Location button on the board) even before any Asset is planned there — managed entirely through the board below, not edited directly.",
+   "fieldname": "extra_locations",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Extra Locations (data)",
+   "options": "Fleet Planning Location"
+  },
+  {
    "description": "Drag a card to move an Asset to a new Location; use the search boxes to add an Asset to the board or a Driver to a card.",
    "fieldname": "planning_board_html",
    "fieldtype": "HTML",
@@ -56,7 +65,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-23 09:16:03.601998",
+ "modified": "2026-09-29 16:48:06.305935",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Planning",
