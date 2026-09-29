@@ -15,6 +15,11 @@ from engineering.engineering.page.daily_availability_and_utilization_dashboard.o
     should_show_spare_average_section,
 )
 
+from engineering.engineering.page.daily_availability_and_utilization_dashboard.short_haul import (
+    fetch_short_haul_hours,
+    short_haul_percentage,
+)
+
 
 _ = frappe._
 
@@ -762,7 +767,8 @@ def execute(filters=None):
     spare_swing_asset_map = get_engine_spare_swing_asset_map(source_rows)
 
     machine_series = build_machine_series_from_source_rows(
-        source_rows
+        source_rows,
+        short_haul_hours=fetch_short_haul_hours(source_rows, location, start_date, end_date),
     )
 
     avgs = build_summary_averages_from_source_rows(
@@ -1075,7 +1081,7 @@ def build_summary_averages_from_source_rows(rows):
     return out
 
 
-def build_machine_series_from_source_rows(rows):
+def build_machine_series_from_source_rows(rows, short_haul_hours=None):
     """Build one period summary per machine using Engine summary logic."""
 
     grouped = {
@@ -1157,6 +1163,11 @@ def build_machine_series_from_source_rows(rows):
                 category
             ].append({
                 "machine": machine,
+                "short_haul_hours": (short_haul_hours or {}).get(machine, 0),
+                "short_haul_percentage": short_haul_percentage(
+                    (short_haul_hours or {}).get(machine, 0),
+                    flt(summary.get("utilisation_available_hours")),
+                ),
                 "avail": (
                     summary.get(
                         "availability_percentage"
@@ -2038,7 +2049,12 @@ def build_selected_summary_chart_html(summary_type, location, source_rows, avgs,
     if summary_type == "Monthly Summary":
         return build_monthly_summary_chart_html(avgs, machine_scope)
 
-    return build_chart_html(machine_series, machine_scope, spare_swing_asset_map)
+    return build_chart_html(
+        machine_series,
+        machine_scope,
+        spare_swing_asset_map,
+        source_rows,
+    )
 
 
 def build_daily_summary_chart_html(location, start_date, end_date, machine_scope="Production + Swing/Spare Machines", au_target_filter="100% A & U"):
@@ -2288,8 +2304,16 @@ def build_chart_html(
     machine_series,
     machine_scope="Production + Swing/Spare Machines",
     spare_swing_asset_map=None,
+    source_rows=None,
 ):
     spare_swing_asset_map = spare_swing_asset_map or {}
+
+    (
+        production_avgs,
+        spare_avgs,
+    ) = build_scope_averages_from_source_rows(
+        source_rows or []
+    )
     machine_scope = (
         machine_scope
         or "Production + Swing/Spare Machines"
@@ -2316,10 +2340,24 @@ def build_chart_html(
         category,
         items,
         section_scope,
+        section_avgs,
         spare_section=False,
     ):
         title = UI_TITLES.get(category, category)
         items = items or []
+
+        category_avgs = (
+            (section_avgs or {}).get(category)
+            or {}
+        )
+
+        average_availability = (
+            category_avgs.get("avail")
+        )
+
+        average_utilisation = (
+            category_avgs.get("util")
+        )
 
         section_class = "isd-chart-section"
         section_style = ""
@@ -2386,6 +2424,107 @@ def build_chart_html(
         bars = []
         labels = []
 
+        def average_line(value, colour, label):
+            if value is None:
+                return ""
+
+            value = max(
+                0.0,
+                min(
+                    100.0,
+                    float(value),
+                ),
+            )
+
+            bottom_px = (
+                value / 100.0
+            ) * 220.0
+
+            return (
+                "<div "
+                "class='isd-category-average-line' "
+                f"title='{esc(label)}: {fmt_percent(value)}' "
+                "style='"
+                "position:absolute;"
+                "left:0;"
+                "right:0;"
+                f"bottom:{bottom_px:.1f}px;"
+                f"border-top:2px dashed {colour};"
+                "z-index:20;"
+                "pointer-events:none;"
+                "'>"
+                "</div>"
+            )
+
+        average_lines_html = (
+            average_line(
+                average_availability,
+                "#1a73e8",
+                "Availability Average",
+            )
+            +
+            average_line(
+                average_utilisation,
+                "#d93025",
+                "Utilisation Average",
+            )
+        )
+
+        average_legend_html = f"""
+        <div
+            class="isd-category-average-legend"
+            style="
+                display:flex;
+                gap:18px;
+                flex-wrap:wrap;
+                align-items:center;
+                justify-content:center;
+                padding:6px 10px;
+                border-bottom:1px solid #e5e7eb;
+                background:#ffffff;
+                font-size:11px;
+                font-weight:800;
+                color:#111827;
+            "
+        >
+            <span
+                style="
+                    display:inline-flex;
+                    align-items:center;
+                    gap:6px;
+                "
+            >
+                <span
+                    style="
+                        display:inline-block;
+                        width:28px;
+                        border-top:2px dashed #1a73e8;
+                    "
+                ></span>
+                Availability Avg:
+                {fmt_percent(average_availability)}
+            </span>
+
+            <span
+                style="
+                    display:inline-flex;
+                    align-items:center;
+                    gap:6px;
+                "
+            >
+                <span
+                    style="
+                        display:inline-block;
+                        width:28px;
+                        border-top:2px dashed #d93025;
+                    "
+                ></span>
+                Utilisation Avg:
+                {fmt_percent(average_utilisation)}
+            </span>
+        </div>
+        """
+
         for item in items:
             machine_raw = str(
                 item.get("machine") or ""
@@ -2423,65 +2562,135 @@ def build_chart_html(
                 else fmt_percent(ut)
             )
 
+            def graph_label_style(value):
+                if value is None:
+                    return (
+                        "display:none;"
+                    )
+
+                numeric_value = max(
+                    0.0,
+                    min(
+                        100.0,
+                        float(value),
+                    ),
+                )
+
+                # Short bars cannot safely contain a rotated label.
+                # Put those labels horizontally just above the bar
+                # so values close to 0% remain fully visible.
+                if numeric_value < 22:
+                    return (
+                        "position:absolute;"
+                        "bottom:100%;"
+                        "left:50%;"
+                        "transform:translateX(-50%);"
+                        "margin-bottom:3px;"
+                        "z-index:50;"
+                        "display:inline-block;"
+                        "font-family:Arial,sans-serif;"
+                        "font-size:10px;"
+                        "font-weight:900;"
+                        "line-height:1;"
+                        "letter-spacing:0;"
+                        "text-align:center;"
+                        "color:#000000;"
+                        "text-shadow:none;"
+                        "white-space:nowrap;"
+                        "pointer-events:none;"
+                    )
+
+                return (
+                    "position:absolute;"
+                    "top:18px;"
+                    "left:50%;"
+                    "transform:translate(-50%,-50%) rotate(-90deg);"
+                    "transform-origin:center center;"
+                    "z-index:50;"
+                    "display:inline-block;"
+                    "font-family:Arial,sans-serif;"
+                    "font-size:10px;"
+                    "font-weight:900;"
+                    "line-height:1;"
+                    "letter-spacing:0;"
+                    "text-align:center;"
+                    "color:#000000;"
+                    "text-shadow:none;"
+                    "white-space:nowrap;"
+                    "pointer-events:none;"
+                )
+
+            av_label_style = graph_label_style(
+                av
+            )
+
+            ut_label_style = graph_label_style(
+                ut
+            )
+
             bars.append(
                 f"<div class='{av_class} "
                 f"daily-availability-clickable-bar' "
                 f"data-machine='{machine}' "
-                f"title='Click to view {machine} "
-                f"downtime details' "
+                f"title='{machine} Availability: "
+                f"{av_graph_label or 'No data'} - "
+                f"Click to view downtime details' "
                 f"style='height:{height(av)}px;"
                 f"position:relative;"
                 f"overflow:visible;'>"
-                f"<span style='"
-                f"position:absolute;"
-                f"top:18px;"
-                f"left:50%;"
-                f"transform:translate(-50%,-50%) rotate(-90deg);"
-                f"transform-origin:center center;"
-                f"z-index:50;"
-                f"display:inline-block;"
-                f"font-family:Arial,sans-serif;"
-                f"font-size:10px;"
-                f"font-weight:900;"
-                f"line-height:1;"
-                f"letter-spacing:0;"
-                f"text-align:center;"
-                f"color:#000000;"
-                f"text-shadow:none;"
-                f"white-space:nowrap;"
-                f"pointer-events:none;'>"
+                f"<span style='{av_label_style}'>"
                 f"{av_graph_label}"
                 f"</span>"
                 f"</div>"
             )
 
+            short_hours = flt(item.get("short_haul_hours"))
+            short_percent = item.get("short_haul_percentage")
+            stack = short_hours > 0 and short_percent is not None and ut is not None
+            tooltip = (
+                f"{machine_raw} Utilisation: {ut_graph_label or 'No data'} - "
+                "Click to view downtime details"
+            )
+            segment = ""
+            util_height = height(ut)
+            if short_hours > 0:
+                combined = flt(ut) + flt(short_percent) if stack else None
+                tooltip = (
+                    f"Machine: {machine_raw}\n"
+                    f"Actual Utilisation: {f'{ut:.1f}%' if ut is not None else 'No data'}\n"
+                    f"Short Haul Lost Hours: {short_hours:.2f} h\n"
+                    f"Short Haul: {f'{short_percent:.1f}%' if short_percent is not None else 'N/A'}\n"
+                    f"Combined visual potential: {f'{combined:.1f}%' if combined is not None else 'N/A'}\n"
+                    "Blue shows lost opportunity, not actual utilisation."
+                )
+                if not stack:
+                    tooltip += "\nNo stack: utilisation or available hours unavailable."
+            if stack:
+                actual_visual = max(0.0, min(100.0, flt(ut)))
+                blue_visual = max(0.0, min(flt(short_percent), 100.0 - actual_visual))
+                util_height = height(actual_visual + blue_visual)
+                segment = (
+                    "<div class='isd-short-haul-segment' "
+                    "style='position:absolute;left:0;right:0;top:0;"
+                    f"height:{blue_visual * 2.2:.3f}px;background:#2563eb;"
+                    "pointer-events:none;'></div>"
+                )
+                # Keep the actual label inside its own grey component.
+                ut_label_style = (
+                    "display:none;" if actual_visual < 22 else
+                    graph_label_style(ut) + f"top:{util_height - actual_visual * 1.1:.3f}px;"
+                )
+
             bars.append(
-                f"<div class='{ut_class} "
-                f"daily-availability-clickable-bar' "
+                f"<div class='{ut_class} daily-availability-clickable-bar' "
                 f"data-machine='{machine}' "
-                f"title='Click to view {machine} "
-                f"downtime details' "
+                f"title='{machine} Utilisation: "
+                f"{ut_graph_label or 'No data'} - "
+                f"Click to view downtime details' "
                 f"style='height:{height(ut)}px;"
                 f"position:relative;"
                 f"overflow:visible;'>"
-                f"<span style='"
-                f"position:absolute;"
-                f"top:18px;"
-                f"left:50%;"
-                f"transform:translate(-50%,-50%) rotate(-90deg);"
-                f"transform-origin:center center;"
-                f"z-index:50;"
-                f"display:inline-block;"
-                f"font-family:Arial,sans-serif;"
-                f"font-size:10px;"
-                f"font-weight:900;"
-                f"line-height:1;"
-                f"letter-spacing:0;"
-                f"text-align:center;"
-                f"color:#000000;"
-                f"text-shadow:none;"
-                f"white-space:nowrap;"
-                f"pointer-events:none;'>"
+                f"<span style='{ut_label_style}'>"
                 f"{ut_graph_label}"
                 f"</span>"
                 f"</div>"
@@ -2497,6 +2706,15 @@ def build_chart_html(
                 f"</div>"
             )
 
+        short_haul_legend = ""
+        if any(flt(item.get("short_haul_hours")) > 0 for item in items):
+            short_haul_legend = (
+                "<div style='padding:6px 10px;font-size:12px;text-align:center;'>"
+                "<span style='color:var(--eng-grey,#6b6b6b);'>■</span> Utilisation &nbsp; "
+                "<span style='color:#2563eb;'>■</span> Short Haul Reduced Fleet Lost Hours"
+                "<br>Blue indicates lost opportunity, not actual utilisation.</div>"
+            )
+
         return f'''
 <div class="{section_class}" style="{section_style}">
     <div
@@ -2506,6 +2724,8 @@ def build_chart_html(
         {esc(title)} AVAILABILITY &amp; UTILISATION
         - {esc(section_scope)}
     </div>
+
+    {average_legend_html}
 
     <div
         class="{pdf_chart_class}"
@@ -2529,6 +2749,7 @@ def build_chart_html(
             class="isd-chart-grid"
             style="grid-template-columns:{grid_template};"
         >
+            {average_lines_html}
             {''.join(bars)}
         </div>
 
@@ -2575,6 +2796,7 @@ def build_chart_html(
                     category,
                     production_items,
                     "PRODUCTION MACHINES",
+                    production_avgs,
                     spare_section=False,
                 )
             )
@@ -2584,6 +2806,7 @@ def build_chart_html(
                     category,
                     spare_items,
                     "SWING/SPARE MACHINES",
+                    spare_avgs,
                     spare_section=True,
                 )
             )
@@ -2594,6 +2817,7 @@ def build_chart_html(
                     category,
                     category_items,
                     "SWING/SPARE MACHINES",
+                    spare_avgs,
                     spare_section=True,
                 )
             )
@@ -2604,6 +2828,7 @@ def build_chart_html(
                     category,
                     category_items,
                     "PRODUCTION MACHINES",
+                    production_avgs,
                     spare_section=False,
                 )
             )
