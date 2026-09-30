@@ -108,6 +108,7 @@ function setup_board(frm) {
 	const $wrapper = field.$wrapper;
 	let asset_search_timer = null;
 	let driver_search_timer = null;
+	let location_search_timer = null;
 
 	// --- Add an Asset to the board ---
 	$wrapper.on("input", "[data-fleet-plan-asset-search]", function () {
@@ -131,6 +132,38 @@ function setup_board(frm) {
 				},
 			});
 		}, 250);
+	});
+
+	// --- Add an empty Location row (a drop target for a Location with no
+	// currently-allocated qualifying vehicle, which otherwise never gets a
+	// row at all since rows are normally derived from where cards already
+	// are) ---
+	$wrapper.on("input", "[data-fleet-plan-location-search]", function () {
+		const $input = $(this);
+		const $results = $wrapper.find("[data-fleet-plan-location-results]");
+		const txt = $input.val();
+
+		clearTimeout(location_search_timer);
+
+		if (!txt) {
+			$results.hide().empty();
+			return;
+		}
+
+		location_search_timer = setTimeout(() => {
+			frappe.call({
+				method: "frappe.desk.search.search_link",
+				args: { doctype: "Location", txt, reference_doctype: "Fleet Planning Location" },
+				callback(r) {
+					render_location_search_results(frm, $wrapper, r.message || []);
+				},
+			});
+		}, 250);
+	});
+
+	$wrapper.on("click", "[data-fleet-plan-location-remove]", function (e) {
+		e.stopPropagation();
+		remove_extra_location(frm, $(this).attr("data-fleet-plan-location-remove"));
 	});
 
 	$wrapper.on("click", "[data-fleet-plan-card-remove]", function (e) {
@@ -210,6 +243,7 @@ function setup_board(frm) {
 		if (!$(e.target).closest($wrapper).length) {
 			$wrapper.find("[data-fleet-plan-asset-results]").hide();
 			$wrapper.find("[data-fleet-plan-driver-results]").hide();
+			$wrapper.find("[data-fleet-plan-location-results]").hide();
 		}
 	});
 }
@@ -274,6 +308,62 @@ function render_driver_search_results(frm, $wrapper, asset, matches) {
 		$wrapper.find(`[data-fleet-plan-driver-search="${css_escape(asset)}"]`).val("");
 		$results.hide().empty();
 	});
+}
+
+function render_location_search_results(frm, $wrapper, matches) {
+	const $results = $wrapper.find("[data-fleet-plan-location-results]");
+	const existing_extra = (frm.doc.extra_locations || []).map((row) => row.location);
+	const existing_with_cards = (frm.doc.plan_assets || []).map((row) => row.location).filter(Boolean);
+	const existing = existing_extra.concat(existing_with_cards);
+	const filtered = matches.filter((m) => !existing.includes(m.value));
+	const esc = frappe.utils.escape_html;
+
+	if (!filtered.length) {
+		$results.html(`<div class="fleet-plan-search-empty">${__("No matches")}</div>`).show();
+		return;
+	}
+
+	$results
+		.html(
+			filtered
+				.map((m) => `<div class="fleet-plan-search-result" data-value="${esc(m.value)}">${esc(m.value)}</div>`)
+				.join("")
+		)
+		.show();
+
+	$results.find(".fleet-plan-search-result").on("click", function () {
+		add_extra_location(frm, $(this).attr("data-value"));
+		$wrapper.find("[data-fleet-plan-location-search]").val("");
+		$results.hide().empty();
+	});
+}
+
+function add_extra_location(frm, location) {
+	if (
+		!location ||
+		(frm.doc.extra_locations || []).some((r) => r.location === location) ||
+		(frm.doc.plan_assets || []).some((r) => r.location === location)
+	) {
+		return;
+	}
+
+	const row = frappe.model.add_child(frm.doc, "Fleet Planning Location", "extra_locations");
+	row.location = location;
+	frm.dirty();
+	render_board(frm);
+}
+
+function remove_extra_location(frm, location) {
+	const row = (frm.doc.extra_locations || []).find((r) => r.location === location);
+
+	if (!row) {
+		return;
+	}
+
+	frappe.model.clear_doc("Fleet Planning Location", row.name);
+	frm.doc.extra_locations = (frm.doc.extra_locations || []).filter((r) => r.location !== location);
+	frm.dirty();
+	render_board(frm);
 }
 
 function add_plan_asset(frm, asset, asset_name, item_name) {
@@ -358,7 +448,8 @@ function move_plan_asset(frm, asset, location) {
 
 const BOARD_STYLE = `
 <style>
-  .fleet-plan-toolbar { position: relative; margin-bottom: 14px; max-width: 420px; }
+  .fleet-plan-toolbar-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .fleet-plan-toolbar { position: relative; flex: 1 1 280px; max-width: 420px; }
   .fleet-plan-toolbar input {
     width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px;
   }
@@ -367,16 +458,19 @@ const BOARD_STYLE = `
   }
   .fleet-plan-search-empty { color: var(--text-muted); cursor: default; }
   .fleet-plan-search-result:hover { background: var(--fg-hover-color); }
-  [data-fleet-plan-asset-results], [data-fleet-plan-driver-results] {
+  [data-fleet-plan-asset-results], [data-fleet-plan-driver-results], [data-fleet-plan-location-results] {
     display: none; position: absolute; z-index: 50; left: 0; right: 0; top: 100%;
     background: var(--fg-color); border: 1px solid var(--border-color); border-radius: 6px;
     max-height: 220px; overflow-y: auto; box-shadow: var(--shadow-md);
   }
   .fleet-plan-row { border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
   .fleet-plan-row-header {
+    display: flex; align-items: center; justify-content: space-between;
     padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
     color: var(--text-muted); background: var(--control-bg); border-bottom: 1px solid var(--border-color);
   }
+  .fleet-plan-row-remove { cursor: pointer; font-size: 13px; text-transform: none; letter-spacing: normal; }
+  .fleet-plan-row-remove:hover { color: var(--text-color); }
   .fleet-plan-row-cards {
     display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; min-height: 56px; background: var(--card-bg, transparent);
   }
@@ -426,7 +520,9 @@ function render_board(frm) {
 		drivers_by_asset[row.asset].push(row);
 	});
 
-	const locations = Object.keys(rows_by_location).sort((a, b) => {
+	const extra_locations = (frm.doc.extra_locations || []).map((row) => row.location);
+	const location_set = new Set([...Object.keys(rows_by_location), ...extra_locations]);
+	const locations = Array.from(location_set).sort((a, b) => {
 		if (a === "" || b === "") {
 			return a === "" ? -1 : 1;
 		}
@@ -489,9 +585,18 @@ function render_board(frm) {
 				})
 				.join("");
 
+			// A manually-added empty Location row (extra_locations) can be
+			// removed again while it's still empty — once a card lands there
+			// it's just a normal row like any other (its own plan_assets rows
+			// already imply the Location, so nothing to "remove").
+			const removable = editable && cards.length === 0 && location && extra_locations.includes(location);
+			const row_remove_html = removable
+				? `<span class="fleet-plan-row-remove" data-fleet-plan-location-remove="${esc(location)}">&times;</span>`
+				: "";
+
 			return `
 				<div class="fleet-plan-row">
-					<div class="fleet-plan-row-header">${esc(label)} (${cards.length})</div>
+					<div class="fleet-plan-row-header">${esc(label)} (${cards.length})${row_remove_html}</div>
 					<div class="fleet-plan-row-cards" data-fleet-plan-row-cards="${esc(location)}">${cards_html}</div>
 				</div>`;
 		})
@@ -499,9 +604,15 @@ function render_board(frm) {
 
 	const toolbar_html =
 		frm.doc.docstatus === 0
-			? `<div class="fleet-plan-toolbar">
-				<input type="text" placeholder="${__("Add an Asset to the board…")}" data-fleet-plan-asset-search>
-				<div data-fleet-plan-asset-results></div>
+			? `<div class="fleet-plan-toolbar-row">
+				<div class="fleet-plan-toolbar">
+					<input type="text" placeholder="${__("Add an Asset to the board…")}" data-fleet-plan-asset-search>
+					<div data-fleet-plan-asset-results></div>
+				</div>
+				<div class="fleet-plan-toolbar">
+					<input type="text" placeholder="${__("Add a Location row…")}" data-fleet-plan-location-search>
+					<div data-fleet-plan-location-results></div>
+				</div>
 			</div>`
 			: "";
 
