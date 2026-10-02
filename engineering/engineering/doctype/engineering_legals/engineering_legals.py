@@ -204,7 +204,14 @@ class EngineeringLegals(Document):
             self.start_date = None
             self.expiry_date = None
 
-        elif section in ("Machine Service Records", "Service Schedule", "Wearcheck"):
+        elif section in (
+            "Machine Service Records",
+            "Service Schedule",
+            "Wearcheck",
+            "Equipment Technical Information",
+            "Maintenance Inspections",
+            "PDS Installation",
+        ):
             self.expiry_date = None
 
         else:
