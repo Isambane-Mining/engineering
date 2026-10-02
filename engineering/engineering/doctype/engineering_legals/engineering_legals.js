@@ -111,7 +111,10 @@ function set_expiry_date(frm) {
     'Machine Service Records',
     'Service Schedule',
     'Wearcheck',
-    'Brake Wear Measurements'
+    'Brake Wear Measurements',
+    'Equipment Technical Information',
+    'Maintenance Inspections',
+    'PDS Installation'
   ]);
 
   if (NO_EXPIRY.has(section)) {
