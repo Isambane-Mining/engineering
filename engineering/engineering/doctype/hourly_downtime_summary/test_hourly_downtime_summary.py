@@ -91,7 +91,10 @@ class TestHourlyDowntimeSummary(TestCase):
 
 		fake_frappe = SimpleNamespace(
 			get_doc=capture_doc,
-			db=SimpleNamespace(commit=MagicMock()),
+			db=SimpleNamespace(
+                                exists=MagicMock(return_value=None),
+                                commit=MagicMock(),
+                        ),
 		)
 
 		with patch.object(hourly_summary, "frappe", fake_frappe):
@@ -108,3 +111,136 @@ class TestHourlyDowntimeSummary(TestCase):
 		)
 		self.assertEqual(captured_doc["report_date"], date(2026, 9, 1))
 		self.assertEqual(captured_doc["hour_slot"], "00:00-01:00")
+
+
+class TestHourlyDowntimeRecovery(TestCase):
+        @patch.object(hourly_summary, "now_datetime")
+        @patch.object(hourly_summary, "create_hourly_downtime_summary")
+        def test_scheduler_checks_missing_hours_oldest_to_newest(
+                self, mock_create, mock_now
+        ):
+                mock_now.return_value = datetime(2026, 10, 2, 11, 17)
+                mock_create.return_value = None
+
+                hourly_summary.create_all_hourly_downtime_summaries(
+                        lookback_hours=3
+                )
+
+                starts = [
+                        call.kwargs["completed_hour_start"]
+                        for call in mock_create.call_args_list
+                        if call.args[0] == "Koppie"
+                ]
+
+                self.assertEqual(
+                        starts,
+                        [
+                                datetime(2026, 10, 2, 8, 0),
+                                datetime(2026, 10, 2, 9, 0),
+                                datetime(2026, 10, 2, 10, 0),
+                        ],
+                )
+
+        @patch(
+                "engineering.engineering.report.hourly_downtime_report."
+                "hourly_downtime_report.execute"
+        )
+        def test_existing_summary_is_skipped(self, mock_execute):
+                fake_frappe = SimpleNamespace(
+                        db=SimpleNamespace(
+                                exists=MagicMock(return_value="HDS-EXISTING"),
+                        ),
+                )
+
+                with patch.object(hourly_summary, "frappe", fake_frappe):
+                        result = hourly_summary.create_hourly_downtime_summary(
+                                "Koppie",
+                                completed_hour_start=datetime(
+                                        2026, 10, 2, 9, 0
+                                ),
+                        )
+
+                self.assertIsNone(result)
+                mock_execute.assert_not_called()
+
+        @patch(
+                "engineering.engineering.report.hourly_downtime_report."
+                "hourly_downtime_report.execute"
+        )
+        def test_missing_historical_hour_is_created(self, mock_execute):
+                mock_execute.return_value = ([], [])
+                inserted = _InsertedSummary()
+                captured_doc = {}
+
+                def capture_doc(values):
+                        captured_doc.update(values)
+                        return inserted
+
+                fake_frappe = SimpleNamespace(
+                        get_doc=capture_doc,
+                        db=SimpleNamespace(
+                                exists=MagicMock(return_value=None),
+                                commit=MagicMock(),
+                        ),
+                )
+
+                with patch.object(hourly_summary, "frappe", fake_frappe):
+                        result = hourly_summary.create_hourly_downtime_summary(
+                                "Koppie",
+                                completed_hour_start=datetime(
+                                        2026, 10, 2, 9, 0
+                                ),
+                        )
+
+                self.assertEqual(result, "HDS-TEST")
+                self.assertEqual(captured_doc["report_date"], date(2026, 10, 2))
+                self.assertEqual(captured_doc["hour_slot"], "09:00-10:00")
+                self.assertEqual(
+                        mock_execute.call_args.args[0],
+                        {
+                                "report_date": "2026-10-02",
+                                "hour_slot": "09:00-10:00",
+                                "site": "Koppie",
+                        },
+                )
+
+        def test_explicit_early_morning_hour_preserves_shift_date(self):
+                report_date, hour_slot, period_date = (
+                        hourly_summary.get_completed_hour_slot(
+                                datetime(2026, 10, 2, 2, 0)
+                        )
+                )
+
+                self.assertEqual(report_date, date(2026, 10, 1))
+                self.assertEqual(period_date, date(2026, 10, 2))
+                self.assertEqual(hour_slot, "02:00-03:00")
+
+        @patch.object(hourly_summary, "now_datetime")
+        @patch.object(hourly_summary, "create_hourly_downtime_summary")
+        def test_one_site_failure_does_not_stop_recovery(
+                self, mock_create, mock_now
+        ):
+                mock_now.return_value = datetime(2026, 10, 2, 11, 17)
+
+                def create(site, completed_hour_start=None):
+                        if site == "Koppie":
+                                raise RuntimeError("test failure")
+                        return f"HDS-{site}"
+
+                mock_create.side_effect = create
+
+                fake_frappe = SimpleNamespace(
+                        get_traceback=MagicMock(return_value="trace"),
+                        log_error=MagicMock(),
+                )
+
+                with patch.object(hourly_summary, "frappe", fake_frappe):
+                        created = (
+                                hourly_summary.create_all_hourly_downtime_summaries(
+                                        lookback_hours=1
+                                )
+                        )
+
+                self.assertEqual(len(mock_create.call_args_list), len(hourly_summary.SITE_CHANNELS))
+                self.assertEqual(len(created), len(hourly_summary.SITE_CHANNELS) - 1)
+                fake_frappe.log_error.assert_called_once()

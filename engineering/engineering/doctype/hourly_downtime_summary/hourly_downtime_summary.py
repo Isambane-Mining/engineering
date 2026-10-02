@@ -24,19 +24,25 @@ class HourlyDowntimeSummary(Document):
             self.summary_message = self.summary_message.strip()
 
 
-def get_completed_hour_slot():
-    now = now_datetime()
+def get_completed_hour_slot(completed_hour_start=None):
+    if completed_hour_start is None:
+        current_hour_start = now_datetime().replace(
+            minute=0, second=0, microsecond=0
+        )
+        completed_hour_start = current_hour_start - timedelta(hours=1)
+    else:
+        completed_hour_start = completed_hour_start.replace(
+            minute=0, second=0, microsecond=0
+        )
+        current_hour_start = completed_hour_start + timedelta(hours=1)
 
-    current_hour_start = now.replace(minute=0, second=0, microsecond=0)
-    previous_hour_start = current_hour_start - timedelta(hours=1)
-
-    period_date = previous_hour_start.date()
+    period_date = completed_hour_start.date()
     report_date = period_date
 
-    if previous_hour_start.hour < 6:
+    if completed_hour_start.hour < 6:
         report_date -= timedelta(days=1)
 
-    start_text = previous_hour_start.strftime("%H:00")
+    start_text = completed_hour_start.strftime("%H:00")
     end_text = (
         "24:00"
         if current_hour_start.hour == 0
@@ -50,22 +56,48 @@ def create_koppie_hourly_downtime_summary():
     return create_hourly_downtime_summary("Koppie")
 
 
-def create_all_hourly_downtime_summaries():
+def create_all_hourly_downtime_summaries(lookback_hours=24):
     created = []
+    current_hour_start = now_datetime().replace(
+        minute=0, second=0, microsecond=0
+    )
 
-    for site in SITE_CHANNELS:
-        try:
-            created.append(create_hourly_downtime_summary(site))
-        except Exception:
-            frappe.log_error(
-                frappe.get_traceback(),
-                f"Hourly Downtime Summary failed for {site}"
-            )
+    # Oldest to newest so a scheduler outage is repaired chronologically.
+    for hours_ago in range(lookback_hours, 0, -1):
+        completed_hour_start = current_hour_start - timedelta(hours=hours_ago)
+
+        for site in SITE_CHANNELS:
+            try:
+                result = create_hourly_downtime_summary(
+                    site,
+                    completed_hour_start=completed_hour_start,
+                )
+                if result:
+                    created.append(result)
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    f"Hourly Downtime Summary failed for {site}"
+                )
 
     return created
 
-def create_hourly_downtime_summary(site):
-    report_date, hour_slot, period_date = get_completed_hour_slot()
+
+def create_hourly_downtime_summary(site, completed_hour_start=None):
+    report_date, hour_slot, period_date = get_completed_hour_slot(
+        completed_hour_start
+    )
+
+    existing = frappe.db.exists(
+        "Hourly Downtime Summary",
+        {
+            "site": site,
+            "report_date": report_date,
+            "hour_slot": hour_slot,
+        },
+    )
+    if existing:
+        return None
     channel_id = SITE_CHANNELS.get(site)
 
     if not channel_id:
