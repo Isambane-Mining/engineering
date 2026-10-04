@@ -1,6 +1,8 @@
 # availability_and_utilisation.py
 # Drop-in replacement (safe import, worker-safe, no Pre-Use changes required)
 
+import logging
+
 import frappe
 from frappe.utils import (
     flt,
@@ -147,6 +149,34 @@ def get_shift_timings(shift_system, shift, shift_date):
 
     return shift_start, shift_end
 
+
+
+def _shift_length_hours(shift_system) -> float:
+    """Max hours one shift can last: 8 for 3x8Hour, otherwise 12 (2x12Hour / unknown)."""
+    return 8.0 if (shift_system or "").strip().lower() == "3x8hour" else 12.0
+
+
+def _working_hours_from_engine_hours(doc):
+    """
+    Working hours = end - start engine hours, rejected when impossible.
+
+    A missing start reading (captured as 0) turns end - start into the whole hour
+    meter (e.g. 0 -> 6414 = 6414h in one shift). Anything above the shift length
+    is treated as bad Pre-Use data: working hours are set to 0 and a message is
+    returned so the caller can report it as an error. Returns (hours, problem).
+    """
+    if doc.shift_start_hours is None or doc.shift_end_hours is None:
+        return 0, None
+
+    hours = max(0, flt(doc.shift_end_hours) - flt(doc.shift_start_hours))
+    max_hours = _shift_length_hours(doc.shift_system)
+    if hours > max_hours:
+        return 0, (
+            f"engine hours {doc.shift_start_hours} -> {doc.shift_end_hours} give {hours:g}h, "
+            f"more than the {max_hours:g}h shift; working hours set to 0. "
+            f"Fix the start/end reading on Pre-Use Hours {doc.pre_use_link} for Plant No={doc.asset_name}"
+        )
+    return hours, None
 
 
 def _overlap_hours(a_start, a_end, b_start, b_end) -> float:
@@ -636,16 +666,20 @@ class AvailabilityandUtilisation(Document):
                 if getattr(matched_row, "pre_use_avail_status", None) is not None:
                     doc.pre_use_avail_status = matched_row.pre_use_avail_status
 
-                if doc.shift_start_hours is not None and doc.shift_end_hours is not None:
-                    doc.shift_working_hours = max(0, doc.shift_end_hours - doc.shift_start_hours)
-                else:
-                    doc.shift_working_hours = 0
-
                 # Ensure link is set too
                 doc.pre_use_link = pre_use_doc.name
+
+                doc.shift_working_hours, hours_problem = _working_hours_from_engine_hours(doc)
                 doc.save(ignore_permissions=True)
 
                 append_log(doc.name, f"Phase 5: Pre-Use Hours applied for doc={doc.name} from {pre_use_doc.name}")
+                if hours_problem:
+                    err_msg = (
+                        f"Phase 5 Error for doc={doc.name}, asset_name={doc.asset_name}, "
+                        f"item_name={doc.item_name}: {hours_problem}"
+                    )
+                    append_log(doc.name, err_msg)
+                    error_records.append(err_msg)
 
             except Exception as e:
                 asset_name, item_name = _get_doc_asset_item_name(doc_name)
@@ -968,19 +1002,29 @@ class AvailabilityandUtilisation(Document):
                 error_records.append(err_msg)
 
         # =============================================================================
-        # Phase 9: Combined Log (Split into 10 parts)
+        # Phase 9: Per-record log
+        # Progress goes to logs/availability_utilisation.log; only records that hit a
+        # "Phase N Error" are written to Error Log, so real failures aren't buried.
         # =============================================================================
-        record_keys = list(record_logs.keys())
-        total_logs = len(record_keys)
-        max_logs_per_entry = max(1, total_logs // 10)
+        au_logger = frappe.logger("availability_utilisation", allow_site=True, max_size=5_000_000, file_count=5)
+        au_logger.setLevel(logging.INFO)  # frappe defaults to ERROR in production, which drops progress lines
+        error_keys = []
+        for key, messages in record_logs.items():
+            line = f"{key}: " + " | ".join(messages)
+            if any(" Error" in m for m in messages):
+                error_keys.append(key)
+                au_logger.warning(line)
+            else:
+                au_logger.info(line)
 
-        for i in range(0, total_logs, max_logs_per_entry):
-            batch_keys = record_keys[i : i + max_logs_per_entry]
-            batch_messages = []
-            for key in batch_keys:
-                batch_messages.append(f"{key}: " + " | ".join(record_logs[key]))
-
-            frappe.log_error("\n".join(batch_messages), f"Phase Update Log - Batch {i // max_logs_per_entry + 1}")
+        max_logs_per_entry = 200
+        for i in range(0, len(error_keys), max_logs_per_entry):
+            batch_keys = error_keys[i : i + max_logs_per_entry]
+            batch_messages = [f"{key}: " + " | ".join(record_logs[key]) for key in batch_keys]
+            frappe.log_error(
+                title=f"Phase Update Log - Errors {i // max_logs_per_entry + 1}",
+                message="\n".join(batch_messages),
+            )
 
         # =============================================================================
         # Phase 10: Summary Log
@@ -996,9 +1040,10 @@ class AvailabilityandUtilisation(Document):
             f"duration {duration}. "
         )
         if error_records:
-            success_message += f"Errors encountered: {len(error_records)}. Check log batches for details."
-
-        frappe.log_error(message=success_message, title="Availability & Utilisation - Process Completion")
+            success_message += f"Errors encountered: {len(error_records)}. Check 'Phase Update Log - Errors' for details."
+            frappe.log_error(message=success_message, title="Availability & Utilisation - Process Completion")
+        else:
+            au_logger.info(success_message)
         return success_message
 
 
@@ -1054,12 +1099,11 @@ def sync_single_au(au_name: str):
     doc.shift_end_hours = matched_row.eng_hrs_end
     doc.pre_use_avail_status = matched_row.pre_use_avail_status
 
-    if doc.shift_start_hours is not None and doc.shift_end_hours is not None:
-        doc.shift_working_hours = max(0, doc.shift_end_hours - doc.shift_start_hours)
-    else:
-        doc.shift_working_hours = 0
+    doc.shift_working_hours, hours_problem = _working_hours_from_engine_hours(doc)
 
     doc.save(ignore_permissions=True)
+    if hours_problem:
+        return f"Synced AU={doc.name} from Pre-Use={pre_use_doc.name} with error: {hours_problem}"
     return f"Synced AU={doc.name} from Pre-Use={pre_use_doc.name} (Plant No={target_plant_no})"
 
 
