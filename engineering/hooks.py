@@ -36,11 +36,16 @@ add_to_apps_screen = [
     }
 ]
 
+# Asset Categories (Dozer, ADT, RDT, Excavator, LDV) are not a fixture: they
+# need company-specific accounts. They are created against the site's default
+# company by engineering.setup.asset_categories instead.
+after_install = "engineering.setup.asset_categories.ensure_asset_categories"
+after_migrate = "engineering.setup.asset_categories.ensure_asset_categories"
+
 fixtures = [
     {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User", "Information Officer", "Mechanic", "Engineering Foreman", "Engineering Plant Manager", "Parts Driver", "Engineering Area Manager"]]]},
     {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User", "Information Officer", "Mechanic", "Engineering Foreman", "Engineering Plant Manager", "Parts Driver", "Engineering Area Manager"]]]},
     {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
-    {"dt": "Asset Category", "filters": [["name", "in", ["Dozer", "ADT", "RDT", "Excavator", "LDV"]]]},
     {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]},
     {"dt": "Employee Induction", "filters": [["name", "in", [
         "Drivers Licence - Code B",
