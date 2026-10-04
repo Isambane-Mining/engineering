@@ -9,6 +9,13 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import now, getdate, cint
 
+from engineering.engineering.doctype.engineering_legals_sharepoint_config.engineering_legals_sharepoint_config import (
+    describe_graph_error,
+    get_graph_access_token,
+    get_sharepoint_config,
+    record_sharepoint_status,
+)
+
 
 NEW_SHAREPOINT_ROOT = "Isambane Mining"
 
@@ -400,44 +407,6 @@ def _sanitize_sharepoint_part(value: str) -> str:
     return value.strip().rstrip(".") or "Unknown"
 
 
-def _get_sharepoint_settings() -> dict:
-    settings = {
-        "tenant_id": frappe.conf.get("ms_graph_tenant_id"),
-        "client_id": frappe.conf.get("ms_graph_client_id"),
-        "client_secret": frappe.conf.get("ms_graph_client_secret"),
-        "hostname": frappe.conf.get("sharepoint_hostname"),
-        "site_path": frappe.conf.get("sharepoint_site_path"),
-        "drive_name": frappe.conf.get("sharepoint_drive_name") or "Documents",
-        "root_folder": frappe.conf.get("sharepoint_root_folder") or "Engineering Legals",
-    }
-
-    missing = [k for k, v in settings.items() if not v and k not in ("drive_name", "root_folder")]
-    if missing:
-        frappe.throw("Missing SharePoint/Graph settings in site_config: " + ", ".join(missing))
-
-    return settings
-
-
-def _get_graph_access_token(settings: dict) -> str:
-    token_url = f"https://login.microsoftonline.com/{settings['tenant_id']}/oauth2/v2.0/token"
-
-    response = requests.post(
-        token_url,
-        data={
-            "client_id": settings["client_id"],
-            "client_secret": settings["client_secret"],
-            "scope": "https://graph.microsoft.com/.default",
-            "grant_type": "client_credentials",
-        },
-        timeout=30,
-    )
-
-    if not response.ok:
-        frappe.throw(f"Graph token request failed: {response.status_code} - {response.text}")
-
-    return response.json()["access_token"]
-
-
 def _graph_request(method: str, url: str, token: str, **kwargs):
     headers = kwargs.pop("headers", {}) or {}
     headers["Authorization"] = f"Bearer {token}"
@@ -457,7 +426,7 @@ def _graph_request(method: str, url: str, token: str, **kwargs):
                     "text": response.text,
                 }
 
-        frappe.throw(f"Graph request failed: {response.status_code} - {response.text}")
+        frappe.throw("Graph request failed: " + describe_graph_error(response))
 
     if response.text:
         content_type = response.headers.get("Content-Type", "")
@@ -611,8 +580,8 @@ def upload_engineering_legals_to_sharepoint(doc: Document, source_file_doc: Opti
     else:
         data = content
 
-    settings = _get_sharepoint_settings()
-    token = _get_graph_access_token(settings)
+    settings = get_sharepoint_config()
+    token = get_graph_access_token("Engineering Legals upload")
     site_id = _get_sharepoint_site_id(settings, token)
     drive_id = _get_sharepoint_drive_id(settings, site_id, token)
 
@@ -784,6 +753,7 @@ def run_engineering_legals_sharepoint_sync(docname: str):
 
         upload_engineering_legals_to_sharepoint(doc, source_file_doc=file_doc)
         _mark_sharepoint_sync_success(docname)
+        record_sharepoint_status(f"Engineering Legals {docname}")
 
         try:
             move_engineering_legal_file_to_folder(doc)
@@ -793,8 +763,9 @@ def run_engineering_legals_sharepoint_sync(docname: str):
                 message=frappe.get_traceback(),
             )
 
-    except Exception:
+    except Exception as e:
         _mark_sharepoint_sync_failure(docname, frappe.get_traceback())
+        record_sharepoint_status(f"Engineering Legals {docname}", error=str(e) or type(e).__name__)
         frappe.log_error(
             title="Engineering Legals background SharePoint sync failed",
             message=frappe.get_traceback(),

@@ -7,6 +7,12 @@ from urllib.parse import quote
 import frappe
 import requests
 
+from engineering.engineering.doctype.engineering_legals_sharepoint_config.engineering_legals_sharepoint_config import (
+    get_graph_access_token,
+    get_sharepoint_config,
+    raise_for_graph_error,
+)
+
 
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 NEW_ROOT_FOLDER = "Isambane Mining"
@@ -40,61 +46,6 @@ MAINTENANCE_SUBFOLDER_MAPPING = {
 }
 
 
-def _get_configuration():
-    tenant_id = frappe.conf.get("ms_graph_tenant_id")
-    client_id = frappe.conf.get("ms_graph_client_id")
-    client_secret = frappe.conf.get("ms_graph_client_secret")
-
-    hostname = (
-        frappe.conf.get("sharepoint_hostname") or ""
-    ).strip()
-
-    site_path = (
-        frappe.conf.get("sharepoint_site_path") or ""
-    ).strip("/")
-
-    drive_name = (
-        frappe.conf.get("sharepoint_drive_name") or "Documents"
-    ).strip()
-
-    hostname = (
-        hostname
-        .replace("https://", "")
-        .replace("http://", "")
-        .rstrip("/")
-    )
-
-    required = {
-        "ms_graph_tenant_id": tenant_id,
-        "ms_graph_client_id": client_id,
-        "ms_graph_client_secret": client_secret,
-        "sharepoint_hostname": hostname,
-        "sharepoint_site_path": site_path,
-        "sharepoint_drive_name": drive_name,
-    }
-
-    missing = []
-
-    for key, value in required.items():
-        if not value:
-            missing.append(key)
-
-    if missing:
-        frappe.throw(
-            "Missing SharePoint configuration: "
-            + ", ".join(missing)
-        )
-
-    return {
-        "tenant_id": tenant_id,
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "hostname": hostname,
-        "site_path": site_path,
-        "drive_name": drive_name,
-    }
-
-
 class SharePointClient:
     def __init__(self, config):
         self.config = config
@@ -106,28 +57,13 @@ class SharePointClient:
         self.refresh_token()
         self.load_site_and_drive()
 
+    def __repr__(self):
+        # Keep the bearer token in self.headers out of tracebacks.
+        return f"<SharePointClient drive_id={self.drive_id}>"
+
     def refresh_token(self):
-        response = requests.post(
-            (
-                "https://login.microsoftonline.com/"
-                f"{self.config['tenant_id']}/oauth2/v2.0/token"
-            ),
-            data={
-                "client_id": self.config["client_id"],
-                "client_secret": self.config["client_secret"],
-                "scope": "https://graph.microsoft.com/.default",
-                "grant_type": "client_credentials",
-            },
-            timeout=30,
-        )
-
-        response.raise_for_status()
-
         self.headers = {
-            "Authorization": (
-                "Bearer "
-                + response.json()["access_token"]
-            ),
+            "Authorization": "Bearer " + get_graph_access_token("Old-to-new folder copy"),
             "Content-Type": "application/json",
         }
 
@@ -162,7 +98,7 @@ class SharePointClient:
             ),
         )
 
-        response.raise_for_status()
+        raise_for_graph_error(response)
         self.site = response.json()
 
         response = self.request(
@@ -170,7 +106,7 @@ class SharePointClient:
             f"{GRAPH_BASE_URL}/sites/{self.site['id']}/drives",
         )
 
-        response.raise_for_status()
+        raise_for_graph_error(response)
 
         for drive in response.json().get("value", []):
             drive_name = (drive.get("name") or "").strip()
@@ -203,7 +139,7 @@ class SharePointClient:
         if response.status_code == 404:
             return None
 
-        response.raise_for_status()
+        raise_for_graph_error(response)
         return response.json()
 
     def list_children(self, item_id):
@@ -215,7 +151,7 @@ class SharePointClient:
 
         while url:
             response = self.request("GET", url)
-            response.raise_for_status()
+            raise_for_graph_error(response)
 
             data = response.json()
             items.extend(data.get("value", []))
@@ -279,7 +215,7 @@ class SharePointClient:
             if existing:
                 return existing
 
-        response.raise_for_status()
+        raise_for_graph_error(response)
         return response.json()
 
     def copy_item(self, item_id, destination_folder_id):
@@ -301,7 +237,7 @@ class SharePointClient:
         )
 
         if response.status_code not in (200, 201, 202):
-            response.raise_for_status()
+            raise_for_graph_error(response)
 
         return response.headers.get("Location")
 
@@ -560,7 +496,7 @@ def copy_old_documents_to_new(
     year = int(year)
 
     client = SharePointClient(
-        _get_configuration()
+        get_sharepoint_config()
     )
 
     results = {

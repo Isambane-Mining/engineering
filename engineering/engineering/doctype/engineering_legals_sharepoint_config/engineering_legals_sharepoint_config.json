@@ -1,0 +1,190 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 12:00:00",
+ "description": "Microsoft Graph / SharePoint credentials used by every Engineering Legals SharePoint sync.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "azure_section",
+  "tenant_id",
+  "client_id",
+  "column_break_azure",
+  "client_secret",
+  "client_secret_expires_on",
+  "sharepoint_section",
+  "hostname",
+  "site_path",
+  "column_break_sharepoint",
+  "drive_name",
+  "status_section",
+  "last_status",
+  "last_status_on",
+  "last_status_source",
+  "last_success_on",
+  "column_break_status",
+  "last_error_on",
+  "last_error_source",
+  "last_error",
+  "help_section",
+  "renewal_help"
+ ],
+ "fields": [
+  {
+   "fieldname": "azure_section",
+   "fieldtype": "Section Break",
+   "label": "Azure App Registration"
+  },
+  {
+   "description": "Directory (tenant) ID of the Azure App Registration.",
+   "fieldname": "tenant_id",
+   "fieldtype": "Data",
+   "label": "Tenant ID",
+   "reqd": 1
+  },
+  {
+   "description": "Application (client) ID of the Azure App Registration.",
+   "fieldname": "client_id",
+   "fieldtype": "Data",
+   "label": "Client ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_azure",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The secret <b>Value</b> (not the Secret ID) from Certificates &amp; secrets. Stored encrypted.",
+   "fieldname": "client_secret",
+   "fieldtype": "Password",
+   "label": "Client Secret",
+   "length": 255,
+   "reqd": 1
+  },
+  {
+   "description": "Copy the \"Expires\" date shown next to the secret in Azure. Used to warn before SharePoint sync stops working.",
+   "fieldname": "client_secret_expires_on",
+   "fieldtype": "Date",
+   "label": "Client Secret Expires On"
+  },
+  {
+   "fieldname": "sharepoint_section",
+   "fieldtype": "Section Break",
+   "label": "SharePoint Site"
+  },
+  {
+   "description": "e.g. isambane.sharepoint.com",
+   "fieldname": "hostname",
+   "fieldtype": "Data",
+   "label": "Hostname",
+   "reqd": 1
+  },
+  {
+   "description": "e.g. sites/Isambanelegals",
+   "fieldname": "site_path",
+   "fieldtype": "Data",
+   "label": "Site Path",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_sharepoint",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Documents",
+   "description": "Document library name on the SharePoint site.",
+   "fieldname": "drive_name",
+   "fieldtype": "Data",
+   "label": "Document Library",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Last Sync Status"
+  },
+  {
+   "fieldname": "last_status",
+   "fieldtype": "Select",
+   "label": "Last Result",
+   "options": "\nSuccess\nError",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_status_on",
+   "fieldtype": "Datetime",
+   "label": "Last Result On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_status_source",
+   "fieldtype": "Data",
+   "label": "Last Result From",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_success_on",
+   "fieldtype": "Datetime",
+   "label": "Last Success On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_error_on",
+   "fieldtype": "Datetime",
+   "label": "Last Error On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error_source",
+   "fieldtype": "Data",
+   "label": "Last Error From",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Long Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "help_section",
+   "fieldtype": "Section Break",
+   "label": "Renewing the Client Secret"
+  },
+  {
+   "fieldname": "renewal_help",
+   "fieldtype": "HTML",
+   "label": "Renewal Help",
+   "options": "<div class=\"text-muted\" style=\"line-height:1.6\">\n<p>Azure client secrets expire (6, 12 or 24 months, chosen when the secret is created). When it expires, Microsoft rejects every token request with <code>AADSTS7000222</code> and <b>all</b> Engineering Legals SharePoint syncs stop: per-record uploads, the monthly folder job and the monthly frequency sync.</p>\n<ol>\n<li>Azure portal &rarr; <b>App registrations</b> &rarr; the app whose Application (client) ID matches <b>Client ID</b> above.</li>\n<li><b>Certificates &amp; secrets</b> &rarr; <b>New client secret</b>. Pick an expiry and note it.</li>\n<li>Copy the secret <b>Value</b> immediately (Azure only shows it once) into <b>Client Secret</b> above, and set <b>Client Secret Expires On</b>.</li>\n<li>Save, then click <b>Test Connection</b>.</li>\n<li>Delete the old secret in Azure once the test succeeds.</li>\n</ol>\n<p>Records that failed to sync are retried automatically every night at 02:00 (up to 200 per night, oldest first).</p>\n</div>"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-04 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Engineering Legals SharePoint Config",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
