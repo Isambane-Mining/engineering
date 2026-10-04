@@ -13,14 +13,18 @@ from engineering.engineering.report.engineering_legals_monthly_summary.engineeri
     execute as execute_monthly_summary,
 )
 
+from engineering.engineering.doctype.engineering_legals_sharepoint_config.engineering_legals_sharepoint_config import (
+    get_graph_access_token,
+    get_sharepoint_config,
+    raise_for_graph_error,
+    record_sharepoint_status,
+)
 from engineering.engineering.doctype.engineering_legals.engineering_legals import (
     NEW_SHAREPOINT_ROOT,
     NEW_SHAREPOINT_SECTION_MAPPING,
     NEW_SHAREPOINT_SITE_MAPPING,
     _ensure_sharepoint_folder,
-    _get_graph_access_token,
     _get_sharepoint_drive_id,
-    _get_sharepoint_settings,
     _get_sharepoint_site_id,
     _graph_request,
     _sanitize_sharepoint_part,
@@ -200,7 +204,7 @@ def _sharepoint_item_exists(
     if response.status_code == 401:
         return False
 
-    response.raise_for_status()
+    raise_for_graph_error(response)
     return True
 
 
@@ -357,8 +361,8 @@ def sync_active_legals_for_month(
     token = None
 
     if not dry_run:
-        settings = _get_sharepoint_settings()
-        token = _get_graph_access_token(settings)
+        settings = get_sharepoint_config()
+        token = get_graph_access_token("Monthly frequency sync")
 
         site_id = _get_sharepoint_site_id(
             settings,
@@ -666,6 +670,25 @@ def run_current_month_frequency_sync():
     Runs for the current month and synchronizes the exact records
     represented by the Engineering Legals Monthly Summary.
     """
-    return sync_active_legals_for_month(
-        dry_run=False,
-    )
+    source = "Monthly frequency sync"
+
+    try:
+        results = sync_active_legals_for_month(
+            dry_run=False,
+        )
+    except Exception as e:
+        record_sharepoint_status(source, error=str(e) or type(e).__name__)
+        raise
+
+    if results["failed"]:
+        record_sharepoint_status(
+            source,
+            error=(
+                f"{results['failed']} record(s) failed to upload for {results['month']}. "
+                "See Error Log for details."
+            ),
+        )
+    else:
+        record_sharepoint_status(source)
+
+    return results

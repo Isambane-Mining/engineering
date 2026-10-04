@@ -6,6 +6,13 @@ from urllib.parse import quote
 import frappe
 import requests
 
+from engineering.engineering.doctype.engineering_legals_sharepoint_config.engineering_legals_sharepoint_config import (
+    get_graph_access_token,
+    get_sharepoint_config,
+    raise_for_graph_error,
+    record_sharepoint_status,
+)
+
 
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 
@@ -30,61 +37,6 @@ SUBFOLDERS = [
 ]
 
 
-def _get_configuration():
-    tenant_id = frappe.conf.get("ms_graph_tenant_id")
-    client_id = frappe.conf.get("ms_graph_client_id")
-    client_secret = frappe.conf.get("ms_graph_client_secret")
-
-    hostname = (
-        frappe.conf.get("sharepoint_hostname") or ""
-    ).strip()
-
-    site_path = (
-        frappe.conf.get("sharepoint_site_path") or ""
-    ).strip("/")
-
-    drive_name = (
-        frappe.conf.get("sharepoint_drive_name") or "Documents"
-    ).strip()
-
-    hostname = (
-        hostname
-        .replace("https://", "")
-        .replace("http://", "")
-        .rstrip("/")
-    )
-
-    required = {
-        "ms_graph_tenant_id": tenant_id,
-        "ms_graph_client_id": client_id,
-        "ms_graph_client_secret": client_secret,
-        "sharepoint_hostname": hostname,
-        "sharepoint_site_path": site_path,
-        "sharepoint_drive_name": drive_name,
-    }
-
-    missing = []
-
-    for key, value in required.items():
-        if not value:
-            missing.append(key)
-
-    if missing:
-        frappe.throw(
-            "Missing SharePoint configuration: "
-            + ", ".join(missing)
-        )
-
-    return {
-        "tenant_id": tenant_id,
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "hostname": hostname,
-        "site_path": site_path,
-        "drive_name": drive_name,
-    }
-
-
 class SharePointClient:
     def __init__(self, config):
         self.config = config
@@ -96,32 +48,13 @@ class SharePointClient:
         self.refresh_token()
         self._load_site_and_drive()
 
+    def __repr__(self):
+        # Keep the bearer token in self.headers out of tracebacks.
+        return f"<SharePointClient drive_id={self.drive_id}>"
+
     def refresh_token(self):
-        response = requests.post(
-            (
-                "https://login.microsoftonline.com/"
-                f"{self.config['tenant_id']}/oauth2/v2.0/token"
-            ),
-            data={
-                "client_id": self.config["client_id"],
-                "client_secret": self.config["client_secret"],
-                "scope": "https://graph.microsoft.com/.default",
-                "grant_type": "client_credentials",
-            },
-            timeout=30,
-        )
-
-        response.raise_for_status()
-
-        access_token = response.json().get("access_token")
-
-        if not access_token:
-            frappe.throw(
-                "Microsoft Graph did not return an access token."
-            )
-
         self.headers = {
-            "Authorization": "Bearer " + access_token,
+            "Authorization": "Bearer " + get_graph_access_token("Monthly folder job"),
             "Content-Type": "application/json",
         }
 
@@ -156,7 +89,7 @@ class SharePointClient:
             ),
         )
 
-        response.raise_for_status()
+        raise_for_graph_error(response)
         self.sharepoint_site = response.json()
 
         response = self.request(
@@ -167,7 +100,7 @@ class SharePointClient:
             ),
         )
 
-        response.raise_for_status()
+        raise_for_graph_error(response)
 
         drives = response.json().get("value", [])
 
@@ -210,7 +143,7 @@ class SharePointClient:
         if response.status_code == 404:
             return None
 
-        response.raise_for_status()
+        raise_for_graph_error(response)
         return response.json()
 
     def ensure_folder(self, parent_path, folder_name):
@@ -279,7 +212,7 @@ class SharePointClient:
                 "SharePoint folder conflict: " + full_path
             )
 
-        response.raise_for_status()
+        raise_for_graph_error(response)
 
         return {
             "status": "created",
@@ -358,7 +291,7 @@ def ensure_month_folders(
         )
     )
 
-    config = _get_configuration()
+    config = get_sharepoint_config()
     client = SharePointClient(config)
 
     created_paths = []
@@ -472,8 +405,11 @@ def create_current_month_sharepoint_folders():
     Existing SharePoint folders and files are not overwritten.
     """
 
+    source = "Monthly folder job"
+
     try:
         result = ensure_month_folders()
+        record_sharepoint_status(source)
 
         frappe.logger("engineering_legals").info(
             "Scheduled SharePoint folder task completed. "
@@ -482,7 +418,8 @@ def create_current_month_sharepoint_folders():
             f"Existing={result['existing_count']}"
         )
 
-    except Exception:
+    except Exception as e:
+        record_sharepoint_status(source, error=str(e) or type(e).__name__)
         frappe.log_error(
             title=(
                 "Engineering Legals SharePoint "
