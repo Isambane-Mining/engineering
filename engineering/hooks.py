@@ -95,6 +95,11 @@ scheduler_events = {
     "weekly": [
         "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate",
     ],
+    # Long queue (1500s timeout instead of 300s): the on-the-hour run that
+    # coincides with the 6-hourly bench backup was being killed at 300s.
+    "hourly_long": [
+        "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_all_hourly_downtime_summaries",
+    ],
     "cron": {
         "0 6 * * *": [
             "engineering.api.deviation_email.send_open_deviation_emails",
@@ -103,9 +108,6 @@ scheduler_events = {
         ],
         "0 18 * * *": [
             "engineering.engineering.report.down_time.down_time.send_daily_downtime_day_shift"
-        ],
-        "0 * * * *": [
-            "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_all_hourly_downtime_summaries"
         ],
         # ==========================================================
         # OPEN BREAKDOWN DIGEST + A&U DAILY RUN
