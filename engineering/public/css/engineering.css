@@ -1231,16 +1231,23 @@
 .ahp-event-last .ahp-event-item strong {color:#a56128;}
 .ahp-message {padding:25px;background:#fff;border:1px solid #dce6e9;border-radius:15px;text-align:center;color:#667d89;}
 .ahp-footer {margin:16px 2px 0;font-size:12px;color:#69808b;line-height:1.5;}
-.ahp-exc-section {margin-top:27px;}
-.ahp-exc-wrap {background:#fff;border:1px solid #dce6e9;border-radius:16px;overflow:hidden;box-shadow:0 5px 17px rgba(21,52,70,.04);}
-.ahp-exc-table {width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;}
-.ahp-exc-table th {background:#173f53;color:#fff;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:13px 16px;}
-.ahp-exc-table td {padding:13px 16px;border-bottom:1px solid #e6eef0;color:#284b5e;font-variant-numeric:tabular-nums;}
-.ahp-exc-table tr:last-child td {border-bottom:0;}
-.ahp-exc-table tbody tr:nth-child(even) {background:#f7fafb;}
-.ahp-exc-table .ahp-exc-name {font-weight:800;color:#173f53;}
+.ahp-exc-section {margin:0 0 18px;}
+.ahp-exc-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.ahp-exc-card {background:#fff;border:1px solid #dce6e9;border-radius:14px;padding:12px 14px;
+    box-shadow:0 4px 14px rgba(21,52,70,.035);min-width:0;}
+.ahp-exc-name {font-size:14px;font-weight:800;color:#173f53;margin-bottom:9px;}
+.ahp-exc-metrics {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.ahp-exc-metric {min-width:0;border-radius:10px;padding:9px 10px;background:#f7fafb;}
+.ahp-exc-metric span {display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+    font-weight:800;color:#68808a;margin-bottom:3px;}
+.ahp-exc-metric strong {display:block;font-size:20px;line-height:1.1;font-weight:800;
+    font-variant-numeric:tabular-nums;}
+.ahp-exc-metric small {display:block;font-size:10px;color:#78909b;margin-top:3px;
+    font-variant-numeric:tabular-nums;}
+.ahp-exc-metric.first strong {color:#176f72;}
+.ahp-exc-metric.last strong {color:#a56128;}
 @media(min-width:1600px){.ahp-hours {grid-template-columns:repeat(6,minmax(0,1fr));}}
-@media(max-width:1100px){.ahp-hours {grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:1100px){.ahp-hours {grid-template-columns:repeat(3,minmax(0,1fr));}.ahp-exc-grid {grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:800px){.ahp-hours {grid-template-columns:repeat(2,minmax(0,1fr));}
     .ahp-summary {grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:580px){.ahp-shell {padding:5px 5px 30px;}.ahp-header {display:block;}
@@ -1249,12 +1256,9 @@
     .ahp-download {width:100%;margin-top:10px;}.ahp-hours {grid-template-columns:1fr;gap:9px;}
     .ahp-hour-values {padding:13px 9px;}.ahp-summary-card {padding:13px;}
     .ahp-kpi-value {font-size:29px;}.ahp-section-head {align-items:baseline;}
-    .ahp-exc-wrap {background:transparent;border:0;box-shadow:none;overflow:visible;}
-    .ahp-exc-table,.ahp-exc-table tbody,.ahp-exc-table tr,.ahp-exc-table td {display:block;width:100%;}
-    .ahp-exc-table thead {display:none;}
-    .ahp-exc-table tr {background:#fff;border:1px solid #dce6e9;border-radius:14px;margin-bottom:9px;overflow:hidden;}
-    .ahp-exc-table tbody tr:nth-child(even) {background:#fff;}
-    .ahp-exc-table td {display:flex;justify-content:space-between;gap:12px;padding:9px 13px;border-bottom:1px solid #edf2f4;text-align:right;}
-    .ahp-exc-table td:before {content:attr(data-label);color:#667d89;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;text-align:left;}
-    .ahp-exc-table td:last-child {border-bottom:0;}}
+    .ahp-exc-grid {grid-template-columns:1fr;}
+    .ahp-exc-card {padding:11px 12px;}
+    .ahp-exc-metrics {gap:8px;}
+    .ahp-exc-metric {padding:8px 9px;}
+    .ahp-exc-metric strong {font-size:18px;}}
 /* End ADT Hourly Productivity */
