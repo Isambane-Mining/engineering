@@ -1178,9 +1178,10 @@
 /* End Service Schedule Dashboard */
 
 /* ADT Hourly Productivity */
-.adt-hourly-productivity-page .layout-main-section {background:#f2f6f7;}
+.adt-hourly-productivity-page .layout-main-section {background:#f2f6f7;max-width:none;}
+.adt-hourly-productivity-page .page-content {max-width:none;}
 .adt-hourly-productivity-page .page-head {background:#f2f6f7;}
-.ahp-shell {max-width:1500px;margin:auto;padding:10px 12px 42px;color:#163446;}
+.ahp-shell {max-width:1800px;margin:auto;padding:10px 12px 42px;color:#163446;}
 .ahp-header {display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:5px 0 15px;}
 .ahp-eyebrow {font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#237e81;}
 .ahp-title {font-size:clamp(25px,4vw,36px);font-weight:800;letter-spacing:-.035em;line-height:1.1;margin:5px 0 3px;}
@@ -1221,8 +1222,24 @@
 .ahp-hour-value.available strong {color:#13866e;}
 .ahp-hour-value.utilised strong {color:#2875a9;}
 .ahp-hour-value.loads strong {color:#b66c22;}
+.ahp-hour-events {border-top:1px solid #e5eef0;padding:10px 14px 13px;display:grid;gap:10px;}
+.ahp-event-group {min-width:0;}
+.ahp-event-title {font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#55717f;margin-bottom:5px;}
+.ahp-event-item {display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;line-height:1.5;}
+.ahp-event-item span {overflow-wrap:anywhere;color:#305669;font-weight:700;}
+.ahp-event-item strong {white-space:nowrap;font-variant-numeric:tabular-nums;color:#176f72;}
+.ahp-event-last .ahp-event-item strong {color:#a56128;}
 .ahp-message {padding:25px;background:#fff;border:1px solid #dce6e9;border-radius:15px;text-align:center;color:#667d89;}
 .ahp-footer {margin:16px 2px 0;font-size:12px;color:#69808b;line-height:1.5;}
+.ahp-exc-section {margin-top:27px;}
+.ahp-exc-wrap {background:#fff;border:1px solid #dce6e9;border-radius:16px;overflow:hidden;box-shadow:0 5px 17px rgba(21,52,70,.04);}
+.ahp-exc-table {width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;}
+.ahp-exc-table th {background:#173f53;color:#fff;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:13px 16px;}
+.ahp-exc-table td {padding:13px 16px;border-bottom:1px solid #e6eef0;color:#284b5e;font-variant-numeric:tabular-nums;}
+.ahp-exc-table tr:last-child td {border-bottom:0;}
+.ahp-exc-table tbody tr:nth-child(even) {background:#f7fafb;}
+.ahp-exc-table .ahp-exc-name {font-weight:800;color:#173f53;}
+@media(min-width:1600px){.ahp-hours {grid-template-columns:repeat(6,minmax(0,1fr));}}
 @media(max-width:1100px){.ahp-hours {grid-template-columns:repeat(3,minmax(0,1fr));}}
 @media(max-width:800px){.ahp-hours {grid-template-columns:repeat(2,minmax(0,1fr));}
     .ahp-summary {grid-template-columns:repeat(2,minmax(0,1fr));}}
@@ -1231,5 +1248,13 @@
     .ahp-site {grid-column:1 / -1;}.ahp-refresh {grid-column:1 / -1;}
     .ahp-download {width:100%;margin-top:10px;}.ahp-hours {grid-template-columns:1fr;gap:9px;}
     .ahp-hour-values {padding:13px 9px;}.ahp-summary-card {padding:13px;}
-    .ahp-kpi-value {font-size:29px;}.ahp-section-head {align-items:baseline;}}
+    .ahp-kpi-value {font-size:29px;}.ahp-section-head {align-items:baseline;}
+    .ahp-exc-wrap {background:transparent;border:0;box-shadow:none;overflow:visible;}
+    .ahp-exc-table,.ahp-exc-table tbody,.ahp-exc-table tr,.ahp-exc-table td {display:block;width:100%;}
+    .ahp-exc-table thead {display:none;}
+    .ahp-exc-table tr {background:#fff;border:1px solid #dce6e9;border-radius:14px;margin-bottom:9px;overflow:hidden;}
+    .ahp-exc-table tbody tr:nth-child(even) {background:#fff;}
+    .ahp-exc-table td {display:flex;justify-content:space-between;gap:12px;padding:9px 13px;border-bottom:1px solid #edf2f4;text-align:right;}
+    .ahp-exc-table td:before {content:attr(data-label);color:#667d89;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;text-align:left;}
+    .ahp-exc-table td:last-child {border-bottom:0;}}
 /* End ADT Hourly Productivity */

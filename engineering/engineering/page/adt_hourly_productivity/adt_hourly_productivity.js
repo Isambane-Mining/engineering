@@ -30,6 +30,7 @@ class ADTHourlyProductivityPage {
             <div class="ahp-summary"></div>
             <div class="ahp-section-head"><h2>${__("Hourly performance")}</h2><span>${__("12 hourly periods")}</span></div>
             <div class="ahp-hours"></div><div class="ahp-footer"></div>
+            <section class="ahp-exc-section" aria-label="${__("Excavator First / Last Load Performance")}"></section>
         </div>`);
         this.site = frappe.ui.form.make_control({
             parent: this.page.main.find(".ahp-site"), render_input: true,
@@ -72,6 +73,7 @@ class ADTHourlyProductivityPage {
         this.page.main.find(".ahp-summary").empty();
         this.page.main.find(".ahp-hours").html(`<div class="ahp-message">${this.escape(value)}</div>`);
         this.page.main.find(".ahp-footer").empty();
+        this.page.main.find(".ahp-exc-section").empty();
         this.page.main.find(".ahp-download").prop("disabled", true);
     }
 
@@ -122,9 +124,45 @@ class ADTHourlyProductivityPage {
               <div class="ahp-hour-value available"><strong>${Number(hour.available).toFixed(2)}</strong><span>${__("Available")}</span></div>
               <div class="ahp-hour-value utilised"><strong>${this.escape(hour.utilised)}</strong><span>${__("Utilised")}</span></div>
               <div class="ahp-hour-value loads"><strong>${this.escape(hour.loads)}</strong><span>${__("Loads")}</span></div>
-            </div></article>`).join(""));
+            </div>${this.renderEvents(hour)}</article>`).join(""));
         this.page.main.find(".ahp-footer").text(__("Available ADTs are weighted by available minutes in each hour. An ADT is utilised once it records at least one load in that hour."));
+        this.renderExcavators(data.excavators || []);
         this.page.main.find(".ahp-download").prop("disabled", false);
+    }
+
+    renderEvents(hour) {
+        const groups = [
+            [__("First Loads"), hour.first_load_events || [], "first"],
+            [__("Last Loads"), hour.last_load_events || [], "last"]
+        ];
+        const content = groups.filter(([, events]) => events.length).map(([title, events, kind]) => `
+            <div class="ahp-event-group ahp-event-${kind}">
+              <div class="ahp-event-title">${this.escape(title)}</div>
+              ${events.map(event => `<div class="ahp-event-item"><span>${this.escape(event.excavator)}</span>
+                <strong>${this.escape(event.time)}</strong></div>`).join("")}
+            </div>`).join("");
+        return content ? `<div class="ahp-hour-events">${content}</div>` : "";
+    }
+
+    renderExcavators(excavators) {
+        const section = this.page.main.find(".ahp-exc-section");
+        const title = `<div class="ahp-section-head"><h2>${__("Excavator First / Last Load Performance")}</h2>
+            <span>${this.escape(excavators.length)} ${__("excavators")}</span></div>`;
+        if (!excavators.length) {
+            section.html(`${title}<div class="ahp-message">${__("No excavators recorded for this shift.")}</div>`);
+            return;
+        }
+        section.html(`${title}<div class="ahp-exc-wrap"><table class="ahp-exc-table">
+            <thead><tr><th>${__("Excavator")}</th><th>${__("First Load Time")}</th>
+            <th>${__("First Load Hour")}</th><th>${__("Last Load Time")}</th>
+            <th>${__("Last Load Hour")}</th></tr></thead><tbody>
+            ${excavators.map(row => `<tr>
+              <td data-label="${__("Excavator")}" class="ahp-exc-name">${this.escape(row.excavator)}</td>
+              <td data-label="${__("First Load Time")}">${this.escape(row.first_load_time || "-")}</td>
+              <td data-label="${__("First Load Hour")}">${this.escape(row.first_load_hour || "-")}</td>
+              <td data-label="${__("Last Load Time")}">${this.escape(row.last_load_time || "-")}</td>
+              <td data-label="${__("Last Load Hour")}">${this.escape(row.last_load_hour || "-")}</td>
+            </tr>`).join("")}</tbody></table></div>`);
     }
 
     download() {
