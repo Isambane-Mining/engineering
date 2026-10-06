@@ -38,6 +38,8 @@ def get_columns():
 		{"fieldname": "addendum_status", "label": "Addendum", "fieldtype": "Data", "width": 100},
 		{"fieldname": "vehicle_licence_status", "label": "Vehicle Licence", "fieldtype": "Data", "width": 110},
 		{"fieldname": "vehicle_licence_valid_to", "label": "Vehicle Licence Valid To", "fieldtype": "Date", "width": 140},
+		{"fieldname": "fleet_card_status", "label": "Fleet Card", "fieldtype": "Data", "width": 110},
+		{"fieldname": "fleet_card_valid_to", "label": "Fleet Card Valid To", "fieldtype": "Date", "width": 140},
 		{"fieldname": "overall_status", "label": "Overall Status", "fieldtype": "Data", "width": 130},
 	]
 

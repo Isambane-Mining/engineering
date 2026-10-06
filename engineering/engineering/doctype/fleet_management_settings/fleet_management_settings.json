@@ -14,6 +14,8 @@
   "included_suppliers",
   "included_customers_section",
   "included_customers",
+  "bank_mapping_tab",
+  "bank_account_map",
   "notification_rules_tab",
   "expiring_threshold_days",
   "column_break_settings_1",
@@ -81,6 +83,18 @@
    "fieldtype": "Table",
    "label": "Included Customers",
    "options": "Fleet Included Customer"
+  },
+  {
+   "fieldname": "bank_mapping_tab",
+   "fieldtype": "Tab Break",
+   "label": "Bank Mapping"
+  },
+  {
+   "description": "Maps a bank name exactly as it appears on an imported statement to the actual Bank record it refers to — lets the future Fleet Card Transaction importer resolve a statement's bank without hardcoding bank names in code. Only two banks are in use today, but this keeps adding a new one a configuration change, not a code change.",
+   "fieldname": "bank_account_map",
+   "fieldtype": "Table",
+   "label": "Map Bank Accounts",
+   "options": "Fleet Card Bank Map"
   },
   {
    "fieldname": "notification_rules_tab",
@@ -168,7 +182,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-18 10:09:23.266778",
+ "modified": "2026-10-06 09:59:53.717931",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Management Settings",

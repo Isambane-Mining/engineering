@@ -1,0 +1,227 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "By script",
+ "creation": "2026-10-06 08:17:25.239708",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_dpsy",
+  "general_information",
+  "fleet_number",
+  "model",
+  "registration_number",
+  "column_break_ktpe",
+  "bank",
+  "card_number",
+  "card_limit",
+  "section_break_caps",
+  "covers_fuel",
+  "covers_toll",
+  "column_break_caps",
+  "covers_oil",
+  "section_break_rdrs",
+  "issue_date",
+  "expiry_date",
+  "column_break_status_1",
+  "status",
+  "days_left",
+  "attach",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_dpsy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "general_information",
+   "fieldtype": "Column Break",
+   "label": "General Information"
+  },
+  {
+   "description": "The single vehicle this card is issued against. A card being replaced or reissued is a wholly new Fleet Card record for the same Asset, never an edit to this one (same convention as Vehicle Licence).",
+   "fieldname": "fleet_number",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Fleet Number",
+   "options": "Asset",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "fleet_number.item_code",
+   "fieldname": "model",
+   "fieldtype": "Read Only",
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "registration_number",
+   "fieldtype": "Data",
+   "label": "Registration Number"
+  },
+  {
+   "fieldname": "column_break_ktpe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Bank",
+   "options": "Bank"
+  },
+  {
+   "fieldname": "card_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Card Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "card_limit",
+   "fieldtype": "Currency",
+   "label": "Card Limit"
+  },
+  {
+   "fieldname": "section_break_caps",
+   "fieldtype": "Section Break",
+   "label": "Card Capabilities"
+  },
+  {
+   "default": "1",
+   "fieldname": "covers_fuel",
+   "fieldtype": "Check",
+   "label": "Covers Fuel"
+  },
+  {
+   "fieldname": "covers_toll",
+   "fieldtype": "Check",
+   "label": "Covers Toll"
+  },
+  {
+   "fieldname": "column_break_caps",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "covers_oil",
+   "fieldtype": "Check",
+   "label": "Covers Oil"
+  },
+  {
+   "fieldname": "section_break_rdrs",
+   "fieldtype": "Section Break",
+   "label": "Card Validity"
+  },
+  {
+   "fieldname": "issue_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Issue Date"
+  },
+  {
+   "description": "Captured directly from the card/statement — unlike Vehicle Licence's 12-month statutory disc cycle, a fleet card's validity period varies by issuing bank and isn't derived from Issue Date.",
+   "fieldname": "expiry_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Expiry Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Computed live from Expiry Date (and, for a submitted card, whether a newer one for this Asset has since been submitted). Never stored.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "is_virtual": 1,
+   "label": "Status",
+   "options": "Active\nExpiring\nExpired\nSuperseded\nCancelled",
+   "read_only": 1
+  },
+  {
+   "description": "Days remaining until expiry, as of today. Computed live, never stored.",
+   "fieldname": "days_left",
+   "fieldtype": "Int",
+   "is_virtual": 1,
+   "label": "Days Left",
+   "read_only": 1
+  },
+  {
+   "fieldname": "attach",
+   "fieldtype": "Attach",
+   "label": "Attach Documents"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Fleet Card",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-06 09:49:29.796981",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Card",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Fleet Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}

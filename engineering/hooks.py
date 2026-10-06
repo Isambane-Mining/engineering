@@ -85,6 +85,7 @@ scheduler_events = {
         "engineering.controllers.notifications.send_open_breakdowns_digest_hourly_gate",
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
         "engineering.controllers.importer.run_scheduled_wearcheck_sync",
+        "engineering.controllers.fleet_card_import.recover_stalled_imports",
     ],
     "daily": [
         # Engineering Legals monthly SharePoint folders

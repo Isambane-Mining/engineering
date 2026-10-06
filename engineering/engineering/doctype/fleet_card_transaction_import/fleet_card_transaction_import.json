@@ -1,0 +1,202 @@
+{
+ "actions": [],
+ "autoname": "FCTI-.######",
+ "creation": "2026-10-06 10:35:05.018521",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "file",
+  "column_break_status",
+  "status",
+  "detected_format",
+  "counts_section",
+  "total_rows",
+  "column_break_counts",
+  "resolvable_count",
+  "unresolved_count",
+  "unmatched_cards",
+  "issues_section",
+  "issues",
+  "log_section",
+  "import_log",
+  "created_transactions",
+  "stall_recovery_attempts",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "description": "Either a NedBank NedFleet \"Vehicle Audit Trail\" statement or a Standard Bank \"Extended Vehicle Transaction Report\" — the format is detected automatically from the file's own content (see Detected Format below). Locked once this import is submitted.",
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "in_list_view": 1,
+   "label": "Statement File",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Not Parsed",
+   "description": "Not Parsed: no file attached yet. Missing Information: file parsed, and either nothing or only some of it resolves to a known Fleet Card. Pending Import: everything resolves, ready for Start Import. Importing: the background job is running. Partially Imported: the background job finished, but some rows were still unresolved — resolve the remaining Issues (pick a Fleet Card for each) and Start Import again. Completed: fully resolved and submitted. Error: the last import attempt failed — see Import Log for why.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Not Parsed\nMissing Information\nPending Import\nImporting\nPartially Imported\nCompleted\nError",
+   "read_only": 1
+  },
+  {
+   "description": "Which known statement shape the attached file was recognised as — see engineering.controllers.fleet_card_import_parsers.sniff_format(). Blank until the file is parsed.",
+   "fieldname": "detected_format",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Detected Format",
+   "options": "\nNedBank\nStandard Bank",
+   "read_only": 1
+  },
+  {
+   "fieldname": "counts_section",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "total_rows",
+   "fieldtype": "Int",
+   "label": "Total Rows in File",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_counts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "How many rows in the file resolve to a known Fleet Card right now. Start Import only ever refuses when this is zero — otherwise it imports whatever's ready and leaves the rest in Issues below for a later pass.",
+   "fieldname": "resolvable_count",
+   "fieldtype": "Int",
+   "label": "Rows Ready Now",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unresolved_count",
+   "fieldtype": "Int",
+   "label": "Unresolved Cards",
+   "read_only": 1
+  },
+  {
+   "description": "Card numbers/registrations in this file that couldn't be matched to a Fleet Card. Resolve each one in the Issues table below to clear this.",
+   "fieldname": "unmatched_cards",
+   "fieldtype": "Small Text",
+   "label": "Unmatched Cards",
+   "read_only": 1
+  },
+  {
+   "fieldname": "issues_section",
+   "fieldtype": "Section Break",
+   "label": "Issues"
+  },
+  {
+   "description": "Every card in the file that couldn't be matched to a Fleet Card. Pick the Fleet Card for each row and save — this only affects re-running Start Import on this document, it is not written back to the Fleet Card itself. Submitting is blocked while any issue remains unresolved.",
+   "fieldname": "issues",
+   "fieldtype": "Table",
+   "label": "Issues",
+   "options": "Fleet Card Transaction Import Issue"
+  },
+  {
+   "fieldname": "log_section",
+   "fieldtype": "Section Break",
+   "label": "Import Log"
+  },
+  {
+   "fieldname": "import_log",
+   "fieldtype": "Code",
+   "label": "Import Log",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_transactions",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Created Transactions",
+   "no_copy": 1,
+   "options": "Fleet Card Transaction Import Created Transaction",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "How many times the stalled-import watchdog has automatically re-queued this document in a row — reset to 0 by any deliberate, human-triggered Start Import. Reaching the retry cap flips this to \"Error\" instead of queuing it again.",
+   "fieldname": "stall_recovery_attempts",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Stall Recovery Attempts",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Fleet Card Transaction Import",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-06 10:35:05.018521",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Card Transaction Import",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Fleet Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}
