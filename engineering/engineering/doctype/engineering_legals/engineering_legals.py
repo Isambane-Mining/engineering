@@ -413,6 +413,25 @@ def _graph_request(method: str, url: str, token: str, **kwargs):
 
     response = requests.request(method, url, headers=headers, timeout=60, **kwargs)
 
+    # Microsoft Graph access tokens can expire while a scheduled job is
+    # processing. Refresh once on HTTP 401 and retry the same request.
+    #
+    # Do not automatically retry 403 responses because those may indicate
+    # a genuine permissions/configuration problem rather than token expiry.
+    if response.status_code == 401:
+        refreshed_token = get_graph_access_token(
+            "Engineering Legals automatic 401 retry"
+        )
+        headers["Authorization"] = f"Bearer {refreshed_token}"
+
+        response = requests.request(
+            method,
+            url,
+            headers=headers,
+            timeout=60,
+            **kwargs,
+        )
+
     if not response.ok:
 
         # SharePoint item/folder already exists.
@@ -778,7 +797,7 @@ def queue_unsynced_engineering_legals():
         filters={
             "attach_paper": ["is", "set"],
             "sharepoint_synced": 0,
-            "docstatus": ["<", 2],
+            "docstatus": 1,
         },
         pluck="name",
         order_by="modified asc",
