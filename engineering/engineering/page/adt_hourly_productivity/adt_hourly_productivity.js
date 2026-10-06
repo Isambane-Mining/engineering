@@ -28,9 +28,9 @@ class ADTHourlyProductivityPage {
             <div class="ahp-filters"><div class="ahp-site"></div><div class="ahp-date"></div>
             <div class="ahp-shift"></div><button type="button" class="ahp-refresh">${__("Refresh")}</button></div>
             <div class="ahp-summary"></div>
+            <section class="ahp-exc-section" aria-label="${__("Excavator First / Last Load Performance")}"></section>
             <div class="ahp-section-head"><h2>${__("Hourly performance")}</h2><span>${__("12 hourly periods")}</span></div>
             <div class="ahp-hours"></div><div class="ahp-footer"></div>
-            <section class="ahp-exc-section" aria-label="${__("Excavator First / Last Load Performance")}"></section>
         </div>`);
         this.site = frappe.ui.form.make_control({
             parent: this.page.main.find(".ahp-site"), render_input: true,
@@ -152,17 +152,23 @@ class ADTHourlyProductivityPage {
             section.html(`${title}<div class="ahp-message">${__("No excavators recorded for this shift.")}</div>`);
             return;
         }
-        section.html(`${title}<div class="ahp-exc-wrap"><table class="ahp-exc-table">
-            <thead><tr><th>${__("Excavator")}</th><th>${__("First Load Time")}</th>
-            <th>${__("First Load Hour")}</th><th>${__("Last Load Time")}</th>
-            <th>${__("Last Load Hour")}</th></tr></thead><tbody>
-            ${excavators.map(row => `<tr>
-              <td data-label="${__("Excavator")}" class="ahp-exc-name">${this.escape(row.excavator)}</td>
-              <td data-label="${__("First Load Time")}">${this.escape(row.first_load_time || "-")}</td>
-              <td data-label="${__("First Load Hour")}">${this.escape(row.first_load_hour || "-")}</td>
-              <td data-label="${__("Last Load Time")}">${this.escape(row.last_load_time || "-")}</td>
-              <td data-label="${__("Last Load Hour")}">${this.escape(row.last_load_hour || "-")}</td>
-            </tr>`).join("")}</tbody></table></div>`);
+        section.html(`${title}<div class="ahp-exc-grid">
+            ${excavators.map(row => `<article class="ahp-exc-card">
+              <div class="ahp-exc-name">${this.escape(row.excavator)}</div>
+              <div class="ahp-exc-metrics">
+                <div class="ahp-exc-metric first">
+                  <span>${__("First Load")}</span>
+                  <strong>${this.escape(row.first_load_time || "-")}</strong>
+                  <small>${this.escape(row.first_load_hour || "-")}</small>
+                </div>
+                <div class="ahp-exc-metric last">
+                  <span>${__("Last Load")}</span>
+                  <strong>${this.escape(row.last_load_time || "-")}</strong>
+                  <small>${this.escape(row.last_load_hour || "-")}</small>
+                </div>
+              </div>
+            </article>`).join("")}
+        </div>`);
     }
 
     download() {
