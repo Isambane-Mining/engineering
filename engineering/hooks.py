@@ -95,6 +95,11 @@ scheduler_events = {
     "weekly": [
         "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate",
     ],
+    "daily_long": [
+        # Retry submitted Engineering Legals that previously failed
+        # to sync to SharePoint.
+        "engineering.engineering.doctype.engineering_legals.engineering_legals.queue_unsynced_engineering_legals",
+    ],
     # Long queue (1500s timeout instead of 300s): the on-the-hour run that
     # coincides with the 6-hourly bench backup was being killed at 300s.
     "hourly_long": [
@@ -128,9 +133,6 @@ scheduler_events = {
         # ==========================================================
         "0 1 * * *": [
             "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update"
-        ],
-        "0 2 * * *": [
-            "engineering.engineering.doctype.engineering_legals.engineering_legals.queue_unsynced_engineering_legals"
         ],
         "15 3 * * *": [
             "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_frequency.run_current_month_frequency_sync"
