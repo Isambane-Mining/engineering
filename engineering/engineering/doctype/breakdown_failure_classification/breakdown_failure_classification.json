@@ -1,0 +1,30 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:classification_name",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["classification_name", "description"],
+ "fields": [
+  {"fieldname": "classification_name", "fieldtype": "Data", "label": "Classification Name", "in_list_view": 1, "reqd": 1, "unique": 1},
+  {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"}
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Engineering",
+ "name": "Breakdown Failure Classification",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "export": 1, "report": 1},
+  {"role": "Engineering Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "export": 1, "report": 1},
+  {"role": "Engineering User", "read": 1, "select": 1, "export": 1, "report": 1},
+  {"role": "Engineering Foreman", "read": 1, "select": 1},
+  {"role": "Engineering Area Manager", "read": 1, "select": 1},
+  {"role": "Engineering Supervisor", "read": 1, "select": 1},
+  {"role": "Production Manager", "read": 1, "select": 1},
+  {"role": "Production User", "read": 1, "select": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "classification_name"
+}

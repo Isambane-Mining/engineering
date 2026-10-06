@@ -21,6 +21,7 @@
   "hours_breakdown_starts",
   "breakdown_start_datetime",
   "breakdown_reason",
+  "failure_classification",
   "mechanic_breakdown_maintenance_start_time",
   "location1",
   "column_break_zygn",
@@ -229,6 +230,14 @@
    "fieldtype": "Small Text",
    "label": "Breakdown/Maintenance Reason",
    "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.downtime_type == 'Breakdown'",
+   "fieldname": "failure_classification",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Failure Classification",
+   "options": "Breakdown Failure Classification"
   },
   {
    "fieldname": "column_break_zygn",
