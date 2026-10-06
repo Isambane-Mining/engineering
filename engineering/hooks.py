@@ -69,7 +69,8 @@ website_route_rules = [
 
 
 app_include_css = [
-    "/assets/engineering/css/engineering.css"
+    # Public CSS is served with a long cache lifetime; update this version when editing it.
+    "/assets/engineering/css/engineering.css?v=20261006-reliability-layout"
 ]
 
 # Breakdown History global public List View
