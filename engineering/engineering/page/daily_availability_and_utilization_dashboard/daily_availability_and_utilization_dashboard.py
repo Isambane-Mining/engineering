@@ -11,6 +11,9 @@ from engineering.engineering.page.daily_availability_dashboard.daily_availabilit
   get_monthly_production_shift_hours,
 )
 from engineering.engineering.page.daily_availability_and_utilization_dashboard.ownership_sections import (
+    ALL_ASSETS,
+    IN_HOUSE_ASSETS,
+    SUPPLIER_ASSETS,
     get_ownership_average_sections,
     should_show_spare_average_section,
 )
@@ -731,6 +734,25 @@ def execute(filters=None):
         or "Isambane & Excavo Assets"
     )
 
+    chart_categories = filters.get("chart_categories")
+
+    if isinstance(chart_categories, str):
+        chart_categories = [
+            item.strip()
+            for item in chart_categories.split(",")
+            if item.strip()
+        ]
+
+    if chart_categories:
+        chart_categories = [
+            category
+            for category in chart_categories
+            if category in UI_CATEGORIES
+        ]
+
+    if not chart_categories:
+        chart_categories = list(UI_CATEGORIES)
+
     if not start_date:
         frappe.throw("Please select Start Date.")
 
@@ -800,11 +822,30 @@ def execute(filters=None):
             ownership_rows
         )
 
+        ownership_machine_series = (
+            build_machine_series_from_source_rows(
+                ownership_rows,
+                short_haul_hours=fetch_short_haul_hours(
+                    ownership_rows,
+                    location,
+                    start_date,
+                    end_date,
+                ),
+            )
+        )
+
         ownership_average_sections.append({
             "asset_ownership": ownership_scope,
             "label": ownership_label,
             "production_avgs": ownership_production_avgs,
             "spare_avgs": ownership_spare_avgs,
+            "source_rows": ownership_rows,
+            "machine_series": ownership_machine_series,
+            "spare_swing_asset_map": (
+                get_engine_spare_swing_asset_map(
+                    ownership_rows
+                )
+            ),
         })
 
     dashboard_html = build_dashboard_html(
@@ -821,6 +862,7 @@ def execute(filters=None):
         hours_display,
         hours_asset,
         asset_ownership,
+        chart_categories,
     )
 
     columns = [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}]
@@ -1619,6 +1661,7 @@ def build_dashboard_html(
     hours_display="Hours Average per Category",
     hours_asset=None,
     asset_ownership="Isambane & Excavo Assets",
+    chart_categories=None,
 ):
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Average Per Machine")
@@ -1786,18 +1829,80 @@ def build_dashboard_html(
 
     metric_bands_html = "".join(metric_bands)
 
-    chart_html = build_selected_summary_chart_html(
-        summary_type,
-        location,
-        source_rows or [],
-        avgs,
-        machine_series,
-        start_date,
-        end_date,
-        machine_scope,
-        spare_swing_asset_map,
-        getattr(frappe.local, "daily_dashboard_au_target_filter", "100% A & U")
-    )
+    if summary_type == "Average Per Machine":
+        ownership_chart_categories = (
+            chart_categories
+            or list(UI_CATEGORIES)
+        )
+
+        ownership_machine_charts = []
+
+        for category in ownership_chart_categories:
+            for ownership_section in ownership_average_sections:
+                ownership_scope = (
+                    ownership_section.get(
+                        "asset_ownership"
+                    )
+                )
+
+                if ownership_scope == IN_HOUSE_ASSETS:
+                    ownership_title = "ISAMBANE"
+                elif ownership_scope == SUPPLIER_ASSETS:
+                    ownership_title = "SUPPLIER"
+                else:
+                    ownership_title = str(
+                        ownership_scope or ""
+                    ).upper()
+
+                ownership_machine_scope = (
+                    "Production Machines"
+                    if ownership_scope == SUPPLIER_ASSETS
+                    else machine_scope
+                )
+
+                ownership_machine_charts.append(
+                    build_chart_html(
+                        ownership_section.get(
+                            "machine_series"
+                        )
+                        or {},
+                        ownership_machine_scope,
+                        ownership_section.get(
+                            "spare_swing_asset_map"
+                        )
+                        or {},
+                        ownership_section.get(
+                            "source_rows"
+                        )
+                        or [],
+                        categories=[category],
+                        ownership_label=ownership_title,
+                    )
+                )
+
+        chart_html = (
+            '<div style="width:100%;min-width:0;">'
+            + "".join(ownership_machine_charts)
+            + "</div>"
+        )
+
+    else:
+        chart_html = build_selected_summary_chart_html(
+            summary_type,
+            location,
+            source_rows or [],
+            avgs,
+            machine_series,
+            start_date,
+            end_date,
+            machine_scope,
+            spare_swing_asset_map,
+            getattr(
+                frappe.local,
+                "daily_dashboard_au_target_filter",
+                "100% A & U",
+            ),
+        )
     trend_html = build_trend_html(location, start_date, end_date, machine_scope)
 
     legend_target = 85 if au_target_filter == "85% A & U" else 100
@@ -2305,6 +2410,8 @@ def build_chart_html(
     machine_scope="Production + Swing/Spare Machines",
     spare_swing_asset_map=None,
     source_rows=None,
+    categories=None,
+    ownership_label=None,
 ):
     spare_swing_asset_map = spare_swing_asset_map or {}
 
@@ -2346,6 +2453,13 @@ def build_chart_html(
         title = UI_TITLES.get(category, category)
         items = items or []
 
+        display_scope = section_scope
+
+        if ownership_label:
+            display_scope = (
+                f"{ownership_label} {section_scope}"
+            )
+
         category_avgs = (
             (section_avgs or {}).get(category)
             or {}
@@ -2380,7 +2494,7 @@ def build_chart_html(
         style="{title_style}"
     >
         {esc(title)} AVAILABILITY &amp; UTILISATION
-        - {esc(section_scope)}
+        - {esc(display_scope)}
     </div>
 
     <div class="isd-no-machine-data">
@@ -2722,7 +2836,7 @@ def build_chart_html(
         style="{title_style}"
     >
         {esc(title)} AVAILABILITY &amp; UTILISATION
-        - {esc(section_scope)}
+        - {esc(display_scope)}
     </div>
 
     {average_legend_html}
@@ -2765,7 +2879,13 @@ def build_chart_html(
 
     sections = []
 
-    for category in UI_CATEGORIES:
+    chart_categories = (
+        categories
+        if categories is not None
+        else UI_CATEGORIES
+    )
+
+    for category in chart_categories:
         category_items = (
             machine_series.get(category) or []
         )
