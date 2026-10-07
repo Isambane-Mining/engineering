@@ -390,7 +390,52 @@ def compute_vehicle_licence_status(asset, threshold_days=None):
 	return None, "Outstanding", None
 
 
-def compute_overall_status(vehicle_licence_status, has_driver, driver_licence_status, addendum_status):
+def compute_fleet_card_status(asset, threshold_days=None):
+	"""Mirrors compute_vehicle_licence_status exactly, but against Fleet Card
+	(fleet_number = asset) instead of Vehicle Licence — the current card for
+	an Asset is simply the most recently *issued* submitted one, same
+	reasoning as Fleet Card's own virtual status property.
+
+	If no submitted record exists but a currently-valid Draft one does, that
+	is reported as "Incomplete" rather than "Outstanding"."""
+	if threshold_days is None:
+		threshold_days = get_expiring_threshold_days()
+
+	if not asset or not frappe.db.exists("DocType", "Fleet Card"):
+		return None, "Outstanding", None
+
+	today = getdate(nowdate())
+
+	records = frappe.get_all(
+		"Fleet Card",
+		filters={"fleet_number": asset, "docstatus": 1},
+		fields=["name", "expiry_date"],
+		order_by="issue_date desc",
+		limit_page_length=1,
+	)
+
+	if records:
+		row = records[0]
+		valid_to = getdate(row.expiry_date) if row.expiry_date else None
+		return valid_to, _status_from_valid_to(valid_to, threshold_days, today), row.name
+
+	draft = frappe.get_all(
+		"Fleet Card",
+		filters={"fleet_number": asset, "docstatus": 0},
+		fields=["name", "expiry_date"],
+		order_by="issue_date desc",
+		limit_page_length=1,
+	)
+
+	if draft:
+		return _incomplete_or_outstanding(draft[0].expiry_date, draft[0].name, today)
+
+	return None, "Outstanding", None
+
+
+def compute_overall_status(
+	vehicle_licence_status, has_driver, driver_licence_status, addendum_status, fleet_card_status=None
+):
 	# "Incomplete" (a currently-valid Draft record exists, just not yet
 	# submitted) is partial compliance — the paperwork is in motion, only a
 	# finalisation step is outstanding — so it belongs with "Attention
@@ -401,7 +446,14 @@ def compute_overall_status(vehicle_licence_status, has_driver, driver_licence_st
 	# driver at all — allocated to a Location as a shared resource — has
 	# nobody's licence/undertaking to check, so those sections don't count
 	# against it either way.
+	#
+	# fleet_card_status gets the same treatment as vehicle_licence_status
+	# (not gated on has_driver — a card is issued against the vehicle, not a
+	# driver). Optional/None for callers that don't track Fleet Card at all.
 	non_compliant_flags = [vehicle_licence_status in ("Expired", "Outstanding")]
+
+	if fleet_card_status is not None:
+		non_compliant_flags.append(fleet_card_status in ("Expired", "Outstanding"))
 
 	if has_driver:
 		non_compliant_flags.append(driver_licence_status in ("Expired", "Outstanding"))
@@ -411,6 +463,9 @@ def compute_overall_status(vehicle_licence_status, has_driver, driver_licence_st
 		return "Non-Compliant"
 
 	attention_flags = [vehicle_licence_status in ("Expiring", "Incomplete")]
+
+	if fleet_card_status is not None:
+		attention_flags.append(fleet_card_status in ("Expiring", "Incomplete"))
 
 	if has_driver:
 		attention_flags.append(driver_licence_status in ("Expiring", "Incomplete"))
@@ -644,6 +699,7 @@ def compute_all(asset, drivers, required_licence_type, threshold_days=None):
 	vehicle_licence_valid_to, vehicle_licence_status, vehicle_licence_source = compute_vehicle_licence_status(
 		asset, threshold_days
 	)
+	fleet_card_valid_to, fleet_card_status, fleet_card_source = compute_fleet_card_status(asset, threshold_days)
 
 	drivers = collect_drivers(drivers)
 
@@ -656,12 +712,17 @@ def compute_all(asset, drivers, required_licence_type, threshold_days=None):
 		driver_licence_valid_to, driver_licence_status, driver_licence_source = None, "Not Applicable", None
 		addendum_status, addendum_date, addendum_url = "Not Applicable", None, None
 
-	overall_status = compute_overall_status(vehicle_licence_status, bool(drivers), driver_licence_status, addendum_status)
+	overall_status = compute_overall_status(
+		vehicle_licence_status, bool(drivers), driver_licence_status, addendum_status, fleet_card_status
+	)
 
 	return {
 		"vehicle_licence_valid_to": vehicle_licence_valid_to,
 		"vehicle_licence_status": vehicle_licence_status,
 		"vehicle_licence_source": vehicle_licence_source,
+		"fleet_card_valid_to": fleet_card_valid_to,
+		"fleet_card_status": fleet_card_status,
+		"fleet_card_source": fleet_card_source,
 		"driver_licence_valid_to": driver_licence_valid_to,
 		"driver_licence_status": driver_licence_status,
 		"driver_licence_source": driver_licence_source,

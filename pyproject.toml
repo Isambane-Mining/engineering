@@ -9,6 +9,14 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
+    "pymupdf>=1.24",       # PDF text-layer detection (text PDF vs scanned/image PDF) + page
+                           # rasterization for OCR fallback, used by the Fleet Card Transaction
+                           # Import pipeline. Both known statement formats extract cleanly as
+                           # text today (pdfplumber, a transitive dependency via erpnext) - this
+                           # is future-proofing against a bank that sends a scanned statement,
+                           # not a current requirement.
+    "pytesseract>=0.3.10", # OCR engine wrapper, invoked only when a PDF page has no extractable
+                           # text layer (see pymupdf above).
 ]
 
 [build-system]
@@ -18,3 +26,7 @@ build-backend = "flit_core.buildapi"
 # These dependencies are only installed when developer mode is enabled
 [tool.bench.dev-dependencies]
 # package_name = "~=1.1.0"
+
+# These apt dependencies will be installed from Ubuntu repositories when you host your app on Frappe Cloud
+[deploy.dependencies.apt]
+packages = ["tesseract-ocr"]  # system binary required by pytesseract

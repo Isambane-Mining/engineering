@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 10:35:05.018521",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "card_identifier",
+  "registration_number",
+  "occurrence_count",
+  "first_seen",
+  "fleet_card"
+ ],
+ "fields": [
+  {
+   "description": "The card number (or, for a statement that masks it, the visible suffix) exactly as it appears in the file, that doesn't match any Fleet Card record.",
+   "fieldname": "card_identifier",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Card Identifier",
+   "read_only": 1
+  },
+  {
+   "fieldname": "registration_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Registration Number",
+   "read_only": 1
+  },
+  {
+   "description": "How many rows in the file carry this card — so you can judge impact before deciding.",
+   "fieldname": "occurrence_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Occurrences",
+   "read_only": 1
+  },
+  {
+   "fieldname": "first_seen",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "First Seen",
+   "read_only": 1
+  },
+  {
+   "description": "Pick the Fleet Card this belongs to. Only applies to re-running Start Import on this same document — it is not written back to the Fleet Card itself, since (unlike an Employee code) there's no permanent alternate-spelling field to teach.",
+   "fieldname": "fleet_card",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Fleet Card",
+   "options": "Fleet Card"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-06 10:35:05.018521",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Card Transaction Import Issue",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

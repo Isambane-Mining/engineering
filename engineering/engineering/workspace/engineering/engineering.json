@@ -1,7 +1,7 @@
 {
  "app": "engineering",
  "charts": [],
- "content": "[{\"id\":\"skzRE6WTC2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h1\\\">Engineering</span>\",\"col\":12}},{\"id\":\"sZDBbZCI3L\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">Dashboards</span>\",\"col\":12}},{\"id\":\"LtXdvfLbmE\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly A & U Dashboard\",\"col\":6}},{\"id\":\"aCmzuqPZli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Weekly Performance Tool\",\"col\":6}},{\"id\":\"lKxVpGPEZa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Availability & Utilisation Dashboard\",\"col\":6}},{\"id\":\"fleetMgmtShortcut1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Fleet Management Dashboard\",\"col\":6}},{\"id\":\"fleetMgmtSpacer1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ngshvtiyUP\",\"type\":\"card\",\"data\":{\"card_name\":\"Downtime Verification and Reports\",\"col\":6}},{\"id\":\"ff-YLzTyzs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MyMIER7PYD\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Reports\",\"col\":6}},{\"id\":\"OeS-8We268\",\"type\":\"card\",\"data\":{\"card_name\":\"Availability and Utilisation Capture\",\"col\":6}},{\"id\":\"l27-epjru2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"BJ1IGn-pXU\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Capturing\",\"col\":6}},{\"id\":\"3nTbUdn6sC\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Information Report\",\"col\":6}},{\"id\":\"U0E_aVRgp2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Y_vUfdikNP\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Management\",\"col\":6}},{\"id\":\"n0zteetS9m\",\"type\":\"card\",\"data\":{\"card_name\":\"Machine Planning\",\"col\":6}},{\"id\":\"6lM7a_TdfA\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Dq5KicizMW\",\"type\":\"card\",\"data\":{\"card_name\":\"Engineering Legals Reports\",\"col\":6}},{\"id\":\"wdVZshp1eP\",\"type\":\"card\",\"data\":{\"card_name\":\"Legals\",\"col\":6}},{\"id\":\"rZWIfUNJRQ\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"7fnJchMR8X\",\"type\":\"card\",\"data\":{\"card_name\":\"Diesel\",\"col\":6}},{\"id\":\"vsQTdHb-Bj\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":6}},{\"id\":\"fleetMgmtSpacer2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"fleetMgmtCard1\",\"type\":\"card\",\"data\":{\"card_name\":\"Fleet Management\",\"col\":12}}]",
+ "content": "[{\"id\": \"skzRE6WTC2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h1\\\">Engineering</span>\", \"col\": 12}}, {\"id\": \"sZDBbZCI3L\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h3\\\">Dashboards</span>\", \"col\": 12}}, {\"id\": \"LtXdvfLbmE\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Weekly A & U Dashboard\", \"col\": 6}}, {\"id\": \"aCmzuqPZli\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Weekly Performance Tool\", \"col\": 6}}, {\"id\": \"lKxVpGPEZa\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Daily Availability & Utilisation Dashboard\", \"col\": 6}}, {\"id\": \"fleetMgmtSpacer1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ngshvtiyUP\", \"type\": \"card\", \"data\": {\"card_name\": \"Downtime Verification and Reports\", \"col\": 6}}, {\"id\": \"ff-YLzTyzs\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"MyMIER7PYD\", \"type\": \"card\", \"data\": {\"card_name\": \"Availability and Utilisation Reports\", \"col\": 6}}, {\"id\": \"OeS-8We268\", \"type\": \"card\", \"data\": {\"card_name\": \"Availability and Utilisation Capture\", \"col\": 6}}, {\"id\": \"l27-epjru2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"BJ1IGn-pXU\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Information Capturing\", \"col\": 6}}, {\"id\": \"3nTbUdn6sC\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Information Report\", \"col\": 6}}, {\"id\": \"U0E_aVRgp2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"Y_vUfdikNP\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Management\", \"col\": 6}}, {\"id\": \"n0zteetS9m\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Planning\", \"col\": 6}}, {\"id\": \"6lM7a_TdfA\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"Dq5KicizMW\", \"type\": \"card\", \"data\": {\"card_name\": \"Engineering Legals Reports\", \"col\": 6}}, {\"id\": \"wdVZshp1eP\", \"type\": \"card\", \"data\": {\"card_name\": \"Legals\", \"col\": 6}}, {\"id\": \"rZWIfUNJRQ\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"7fnJchMR8X\", \"type\": \"card\", \"data\": {\"card_name\": \"Diesel\", \"col\": 6}}, {\"id\": \"vsQTdHb-Bj\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 6}}]",
  "creation": "2026-09-01 06:16:15.374789",
  "custom_blocks": [],
  "docstatus": 0,
@@ -407,6 +407,45 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Availability and Utilisation Reports",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "A & U Summary",
+   "link_count": 0,
+   "link_to": "Availability and Utilisation Month End Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Availability and Utilisation Engine",
+   "link_count": 0,
+   "link_to": "Availability and Utilisation Engine",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Breakdown and Standby Machine Report",
+   "link_count": 0,
+   "link_to": "Availability and utilization Asset timeline",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Machine Information Report",
    "link_count": 5,
    "link_type": "DocType",
@@ -530,95 +569,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Fleet Management",
-   "link_count": 8,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Vehicle Allocation",
-   "link_count": 0,
-   "link_to": "Vehicle Allocation",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Vehicle Licence",
-   "link_count": 0,
-   "link_to": "Vehicle Licence",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Fleet Compliance Overview",
-   "link_count": 0,
-   "link_to": "Fleet Compliance Overview",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Fleet Compliance Dashboard",
-   "link_count": 0,
-   "link_to": "fleet-compliance-dashboard",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Licence Expiration Report",
-   "link_count": 0,
-   "link_to": "Licence Expiration",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Vehicle Licence Expiration",
-   "link_count": 0,
-   "link_to": "vehicle-licence-expiration",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Fleet Management Settings",
-   "link_count": 0,
-   "link_to": "Fleet Management Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Asset Movement",
-   "link_count": 0,
-   "link_to": "Asset Movement",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Machine Planning",
    "link_count": 6,
    "link_type": "DocType",
@@ -684,68 +634,9 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Availability and Utilisation Reports",
-   "link_count": 5,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "HOD Presentation",
-   "link_count": 0,
-   "link_to": "HOD Presentation",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "A & U Summary",
-   "link_count": 0,
-   "link_to": "Availability and Utilisation Month End Report",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Availability and Utilisation Engine",
-   "link_count": 0,
-   "link_to": "Availability and Utilisation Engine",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Breakdown and Standby Machine Report",
-   "link_count": 0,
-   "link_to": "Availability and utilization Asset timeline",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "ADT Hourly Productivity",
-   "link_count": 0,
-   "link_to": "adt-hourly-productivity",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
   }
  ],
- "modified": "2026-10-05 07:39:57.894988",
+ "modified": "2026-10-06 18:45:22.811389",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Engineering",
@@ -788,13 +679,6 @@
    "link_to": "Production Efficiency",
    "stats_filter": "[]",
    "type": "DocType"
-  },
-  {
-   "color": "Green",
-   "doc_view": "",
-   "label": "Fleet Management Dashboard",
-   "link_to": "Fleet Management",
-   "type": "Dashboard"
   }
  ],
  "title": "Engineering",

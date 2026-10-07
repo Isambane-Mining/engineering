@@ -1,0 +1,177 @@
+{
+ "app": "engineering",
+ "charts": [],
+ "content": "[{\"id\":\"fmHeader1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h1\\\">Fleet Management</span>\",\"col\":12}},{\"id\":\"fmHeader2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">Dashboards</span>\",\"col\":12}},{\"id\":\"fleetMgmtShortcut1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Fleet Management Dashboard\",\"col\":3}},{\"id\":\"cVAy26ah3I\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Fleet Compliance Dashboard\",\"col\":3}},{\"id\":\"cc-xBFwOdf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Fleet Compliance Overview\",\"col\":3}},{\"id\":\"fmSpacer1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"fleetMgmtCard1\",\"type\":\"card\",\"data\":{\"card_name\":\"Fleet Management\",\"col\":6}},{\"id\":\"fleetCardMgmtCard1\",\"type\":\"card\",\"data\":{\"card_name\":\"Fleet Card Management\",\"col\":6}}]",
+ "creation": "2026-10-06 18:45:37.375978",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "assets",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Fleet Management",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fleet Card Management",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fleet Card",
+   "link_count": 0,
+   "link_to": "Fleet Card",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fleet Card Transaction",
+   "link_count": 0,
+   "link_to": "Fleet Card Transaction",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fleet Card Transaction Import",
+   "link_count": 0,
+   "link_to": "Fleet Card Transaction Import",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fleet Management",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Vehicle Allocation",
+   "link_count": 0,
+   "link_to": "Vehicle Allocation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Vehicle Licence",
+   "link_count": 0,
+   "link_to": "Vehicle Licence",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Licence Expiration Report",
+   "link_count": 0,
+   "link_to": "Licence Expiration",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Vehicle Licence",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Vehicle Licence Expiration",
+   "link_count": 0,
+   "link_to": "vehicle-licence-expiration",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fleet Management Settings",
+   "link_count": 0,
+   "link_to": "Fleet Management Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset Movement",
+   "link_count": 0,
+   "link_to": "Asset Movement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-07 12:09:25.392602",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Management",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Engineering",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Engineering Manager"
+  },
+  {
+   "role": "Engineering User"
+  },
+  {
+   "role": "Fleet Manager"
+  }
+ ],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Fleet Management Dashboard",
+   "link_to": "Fleet Management",
+   "type": "Dashboard"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Fleet Compliance Dashboard",
+   "link_to": "fleet-compliance-dashboard",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Fleet Compliance Overview",
+   "link_to": "Fleet Compliance Overview",
+   "report_ref_doctype": "Vehicle Allocation",
+   "type": "Report"
+  }
+ ],
+ "title": "Fleet Management",
+ "type": "Workspace"
+}

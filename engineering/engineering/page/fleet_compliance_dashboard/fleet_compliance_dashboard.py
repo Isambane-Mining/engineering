@@ -98,4 +98,14 @@ def get_asset_history(asset):
 	for lic in licences:
 		lic["docstatus_label"] = DOCSTATUS_LABEL.get(lic.docstatus, "")
 
-	return {"allocations": allocations, "licences": licences}
+	fleet_cards = frappe.get_all(
+		"Fleet Card",
+		filters={"fleet_number": asset},
+		fields=["name", "bank", "card_number", "issue_date", "expiry_date", "docstatus", "attach"],
+		order_by="issue_date desc, creation desc",
+	)
+
+	for card in fleet_cards:
+		card["docstatus_label"] = DOCSTATUS_LABEL.get(card.docstatus, "")
+
+	return {"allocations": allocations, "licences": licences, "fleet_cards": fleet_cards}

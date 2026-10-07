@@ -1,0 +1,44 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 09:59:53.717931",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "import_bank_label",
+  "bank"
+ ],
+ "fields": [
+  {
+   "description": "The bank name exactly as it appears on an imported statement (e.g. a PDF header) — matched case-insensitively by the importer to resolve which Bank record a transaction belongs to.",
+   "fieldname": "import_bank_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Import Bank Label",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Bank",
+   "options": "Bank",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-06 09:59:53.717931",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Card Bank Map",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

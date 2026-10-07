@@ -1,0 +1,236 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "creation": "2026-10-06 08:17:25.239708",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_main",
+  "fleet_card",
+  "asset",
+  "driver",
+  "column_break_main",
+  "transaction_type",
+  "transaction_datetime",
+  "document_number",
+  "section_break_detail",
+  "merchant",
+  "town",
+  "column_break_detail",
+  "litres",
+  "odometer",
+  "section_break_amounts",
+  "amount",
+  "vat_amount",
+  "column_break_amounts",
+  "source_reference",
+  "section_break_accounting",
+  "account",
+  "column_break_accounting",
+  "transaction_recorded",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_main",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "fleet_card",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Fleet Card",
+   "options": "Fleet Card",
+   "reqd": 1
+  },
+  {
+   "description": "Fetched from the Fleet Card itself — a card is issued against exactly one vehicle, so this can never disagree with its own Fleet Card record.",
+   "fetch_from": "fleet_card.fleet_number",
+   "fieldname": "asset",
+   "fieldtype": "Read Only",
+   "in_list_view": 1,
+   "label": "Asset"
+  },
+  {
+   "description": "Populated from whatever the statement/card itself says for this line — not derived from Vehicle Allocation, which can have more than one current driver.",
+   "fieldname": "driver",
+   "fieldtype": "Link",
+   "label": "Driver",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "transaction_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Transaction Type",
+   "options": "Fuel\nFuel & Oil\nToll\nOil\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "transaction_datetime",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Transaction Date/Time",
+   "reqd": 1
+  },
+  {
+   "description": "The statement's own voucher/document number — used for idempotent re-import dedup once the PDF importer exists.",
+   "fieldname": "document_number",
+   "fieldtype": "Data",
+   "label": "Document Number"
+  },
+  {
+   "fieldname": "section_break_detail",
+   "fieldtype": "Section Break",
+   "label": "Transaction Detail"
+  },
+  {
+   "fieldname": "merchant",
+   "fieldtype": "Data",
+   "label": "Merchant"
+  },
+  {
+   "fieldname": "town",
+   "fieldtype": "Data",
+   "label": "Town"
+  },
+  {
+   "fieldname": "column_break_detail",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "litres",
+   "fieldtype": "Float",
+   "label": "Litres"
+  },
+  {
+   "fieldname": "odometer",
+   "fieldtype": "Int",
+   "label": "Odometer"
+  },
+  {
+   "fieldname": "section_break_amounts",
+   "fieldtype": "Section Break",
+   "label": "Amounts"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "reqd": 1
+  },
+  {
+   "fieldname": "vat_amount",
+   "fieldtype": "Currency",
+   "label": "VAT Amount"
+  },
+  {
+   "fieldname": "column_break_amounts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Free-text placeholder for which statement/page this came from — replaced by a real import-batch Link once the PDF importer doctype is built.",
+   "fieldname": "source_reference",
+   "fieldtype": "Data",
+   "label": "Source Reference"
+  },
+  {
+   "fieldname": "section_break_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "description": "Not used yet — reserved for a future pass that posts Fleet Card Transactions into the actual ERPNext Accounting modules (e.g. a Journal Entry/Purchase Invoice line).",
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "label": "Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_accounting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Not used yet — will be set once a future pass actually posts this transaction into Accounting, so it is never double-recorded.",
+   "fieldname": "transaction_recorded",
+   "fieldtype": "Check",
+   "label": "Transaction Recorded",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Fleet Card Transaction",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-06 10:32:43.161499",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Fleet Card Transaction",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Fleet Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "transaction_datetime",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
+}

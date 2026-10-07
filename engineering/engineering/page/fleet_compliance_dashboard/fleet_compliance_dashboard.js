@@ -340,13 +340,14 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 						<td>${esc(r.location || "")}</td>
 						<td>${esc(r.drivers || "")}</td>
 						<td>${status_chip(r.vehicle_licence_status)}</td>
+						<td>${status_chip(r.fleet_card_status)}</td>
 						<td>${status_chip(r.driver_licence_status)}</td>
 						<td>${status_chip(r.addendum_status)}</td>
 						<td>${status_chip(r.overall_status)}</td>
 						<td>${esc(r.comments || "")}</td>
 					</tr>
 					<tr class="fcd-history-row" data-asset="${asset_key}" hidden>
-						<td colspan="11">
+						<td colspan="12">
 							<div class="fcd-history-body fcd-panel-empty">${__("Expand to load…")}</div>
 						</td>
 					</tr>
@@ -365,6 +366,7 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 						<th>${__("Location")}</th>
 						<th>${__("Drivers")}</th>
 						<th>${__("Vehicle Licence")}</th>
+						<th>${__("Fleet Card")}</th>
 						<th>${__("Driver Licence")}</th>
 						<th>${__("Undertaking")}</th>
 						<th>${__("Overall Status")}</th>
@@ -422,6 +424,31 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 				.join("") ||
 			`<tr><td colspan="7" style="text-align:center;">${__("No Vehicle Licence records")}</td></tr>`;
 
+		const cards = data.fleet_cards || [];
+
+		const card_rows =
+			cards
+				.map((c) => {
+					const attach = (c.attach || "").trim();
+					const open_link = attach
+						? `<a href="${encodeURI(attach)}" target="_blank" rel="noopener noreferrer">${__("Open")}</a>`
+						: `<span style="color:var(--text-muted);">${__("No File")}</span>`;
+
+					return `
+						<tr>
+							<td><a href="/app/fleet-card/${encodeURIComponent(c.name)}" target="_blank" rel="noopener noreferrer">${esc(c.name)}</a></td>
+							<td>${esc(c.bank || "")}</td>
+							<td>${esc(c.card_number || "")}</td>
+							<td>${esc(c.issue_date ? String(c.issue_date) : "")}</td>
+							<td>${esc(c.expiry_date ? String(c.expiry_date) : "")}</td>
+							<td>${esc(c.docstatus_label || "")}</td>
+							<td>${open_link}</td>
+						</tr>
+					`;
+				})
+				.join("") ||
+			`<tr><td colspan="7" style="text-align:center;">${__("No Fleet Card records")}</td></tr>`;
+
 		return `
 			<div class="fcd-history-section">
 				<div class="fcd-history-title">${__("Vehicle Allocations")}</div>
@@ -457,6 +484,23 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 					<tbody>${lic_rows}</tbody>
 				</table>
 			</div>
+			<div class="fcd-history-section">
+				<div class="fcd-history-title">${__("Fleet Cards")}</div>
+				<table class="fcd-table">
+					<thead>
+						<tr>
+							<th>${__("Name")}</th>
+							<th>${__("Bank")}</th>
+							<th>${__("Card Number")}</th>
+							<th>${__("Issue Date")}</th>
+							<th>${__("Expiry Date")}</th>
+							<th>${__("Docstatus")}</th>
+							<th>${__("Attachment")}</th>
+						</tr>
+					</thead>
+					<tbody>${card_rows}</tbody>
+				</table>
+			</div>
 		`;
 	}
 
@@ -472,7 +516,7 @@ frappe.pages["fleet-compliance-dashboard"].on_page_load = function (wrapper) {
 			method: "engineering.engineering.page.fleet_compliance_dashboard.fleet_compliance_dashboard.get_asset_history",
 			args: { asset },
 			callback: (r) => {
-				const data = (r && r.message) || { allocations: [], licences: [] };
+				const data = (r && r.message) || { allocations: [], licences: [], fleet_cards: [] };
 				FCD_HISTORY_CACHE[asset] = data;
 				$body.html(render_history_html(data));
 			},
