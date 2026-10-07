@@ -8,11 +8,41 @@ class ReliabilityEngineeringPage {
         this.page = frappe.ui.make_app_page({parent: wrapper, title: __("Reliability Engineering"), single_column: true});
         this.requestToken = 0;
         this.build();
+        this.buildTabs();
         this.initialize();
     }
 
     escape(value) {
         return $("<div>").text(value == null ? "" : String(value)).html();
+    }
+
+    buildTabs() {
+        const shell = this.page.main.find(".re-shell");
+        shell.children().not(".re-header").wrapAll('<div class="re-analysis-tab" role="tabpanel" id="re-analysis-panel" aria-labelledby="re-analysis-tab"></div>');
+        shell.find(".re-header").after(`<div class="re-tabs" role="tablist" aria-label="${__("Analysis views")}">
+            <button type="button" id="re-analysis-tab" role="tab" aria-selected="true" aria-controls="re-analysis-panel" data-tab="analysis">${__("Breakdown Analysis")}</button>
+            <button type="button" id="re-problems-tab" role="tab" aria-selected="false" aria-controls="re-problems-panel" tabindex="-1" data-tab="problems">${__("Problem Machines")}</button></div>`);
+        shell.append('<div class="re-problems-tab" role="tabpanel" id="re-problems-panel" aria-labelledby="re-problems-tab" hidden></div>');
+        this.problems = new ProblemMachinesPanel(shell.find(".re-problems-tab"), this);
+        const select = name => {
+            shell.find(".re-tabs button").each((index, button) => {
+                const active = button.dataset.tab === name;
+                $(button).attr({"aria-selected": String(active), tabindex: active ? "0" : "-1"});
+            });
+            shell.find(".re-analysis-tab").prop("hidden", name !== "analysis");
+            shell.find(".re-problems-tab").prop("hidden", name !== "problems");
+            if (name === "problems") this.problems.activate();
+            shell.find(".re-period").prop("hidden", name === "problems");
+        };
+        shell.on("click", ".re-tabs button", event => select(event.currentTarget.dataset.tab));
+        shell.on("keydown", ".re-tabs button", event => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const name = event.key === "Home" ? "analysis" : event.key === "End" ? "problems" :
+                event.currentTarget.dataset.tab === "analysis" ? "problems" : "analysis";
+            select(name);
+            shell.find(`.re-tabs [data-tab="${name}"]`).trigger("focus");
+        });
     }
 
     build() {
@@ -243,5 +273,156 @@ class ReliabilityEngineeringPage {
             <p><strong>${__("Days since previous matching failure")}</strong> ${this.number(row.days_since_previous, " days", 2)}</p>
             <p><strong>${__("Reason")}</strong> ${this.escape(row.reason || "—")}</p>
             <p><strong>${__("Resolution")}</strong> ${this.escape(row.resolution || "—")}</p></div></details>`).join(""));
+    }
+}
+
+class ProblemMachinesPanel {
+    constructor(root, page) {
+        this.root = root;
+        this.page = page;
+        this.token = 0;
+        this.initializing = true;
+        root.html(`<div class="re-filters pm-filters"><div class="pm-site"></div><div class="pm-from"></div>
+            <div class="pm-to"></div><div class="pm-top"></div></div>
+            <div class="pm-status" role="status" aria-live="polite"></div>
+            <div class="pm-results">
+            <div class="pm-summary"></div>
+            <div class="pm-charts"><section class="re-panel"><div class="re-panel-head"><h2>${__("Worst Machines by Breakdown Impact")}</h2></div>
+            <p class="pm-caption">${__("Problem Score · higher means worse")}</p><div class="pm-impact"></div></section>
+            <section class="re-panel"><div class="re-panel-head"><h2>${__("Breakdown Frequency")}</h2></div><div class="pm-frequency"></div></section></div>
+            <section class="re-panel pm-ranking"><div class="re-panel-head"><h2>${__("Problem machine ranking")}</h2><span class="pm-count"></span></div>
+            <div class="pm-table-wrap"></div><div class="pm-cards"></div></section></div>
+            <details class="pm-method re-panel"><summary>${__("How scores and recurring problems are calculated")}</summary>
+            <p>${__("Score (0–100) = 100 × average of metric / fleet maximum for breakdown hours, breakdown count, BDFR, MTTR, repeat rate and inverse MTBF. Each available metric contributes equally. Scores are relative to all machines with breakdowns in the selected site and dates, before Top N is applied.")}</p>
+            <p>${__("BDFR and inverse MTBF express the same failure exposure relationship; both are included as requested. Missing metrics are excluded, not treated as zero. Scores with different metric coverage need care when comparing machines.")}</p>
+            <p>${__("Breakdown hours include valid recorded completed repair intervals; open or invalid intervals are excluded. MTTR uses completed repairs only. Operating hours come from validated Pre-Use meter readings. MTBF and BDFR are unavailable when operating hours are zero.")}</p>
+            <p>${__("A repeat is the same machine and failure classification within seven days, including the seven-day lookback. Repeat rate is available only at 100% classification coverage. Main recurring problem is the class with the most known repeats, then the most events. With no known repeats, the most frequent class is shown. For unclassified problems, the most frequent recorded reason is shown with recurrence unverified; free-text reasons do not establish repeats.")}</p></details>
+            <div class="pm-quality"></div>`);
+        [
+            ["site", {fieldtype: "Link", options: "Location", fieldname: "pm_site", label: __("Site")}],
+            ["from", {fieldtype: "Date", fieldname: "pm_from", label: __("Date From")}],
+            ["to", {fieldtype: "Date", fieldname: "pm_to", label: __("Date To")}],
+            ["top", {fieldtype: "Select", fieldname: "pm_top", label: __("Show Top"), options: Array.from({length: 10}, (_, i) => String(i + 1)).join("\n")}]
+        ].forEach(([key, df]) => {
+            this[key] = frappe.ui.form.make_control({parent: root.find(`.pm-${key}`), render_input: true,
+                df: {...df, onchange: () => this.load()}});
+        });
+        this.ready = this.initialize();
+    }
+
+    async initialize() {
+        const today = frappe.datetime.get_today();
+        await this.from.set_value(today.slice(0, 8) + "01");
+        await this.to.set_value(today);
+        await this.top.set_value("5");
+        this.initializing = false;
+    }
+
+    async activate() {
+        await this.ready;
+        if (!this.data) await this.load();
+        else this.render();
+    }
+
+    async load() {
+        if (this.initializing) return;
+        const token = ++this.token;
+        const from_date = this.from.get_value(), to_date = this.to.get_value();
+        this.data = null;
+        this.root.find(".pm-results").prop("hidden", true);
+        this.root.find(".pm-quality").empty();
+        if (!from_date || !to_date || to_date < from_date) {
+            this.root.find(".pm-status").text(__("Select dates with Date To on or after Date From."));
+            return;
+        }
+        this.root.find(".pm-status").text(__("Loading problem machines…"));
+        try {
+            const response = await frappe.call({
+                method: "engineering.engineering.page.reliability_engineering.problem_machines.get_problem_machines",
+                args: {from_date, to_date, location: this.site.get_value() || null, show_top: this.top.get_value() || "5"}
+            });
+            if (token !== this.token) return;
+            this.data = response.message;
+            if (!this.root.prop("hidden")) this.render();
+        } catch (error) {
+            if (token !== this.token) return;
+            this.root.find(".pm-status").text(__("Unable to load problem machines. Check the filters and try again."));
+        }
+    }
+
+    escape(value) { return this.page.escape(value); }
+    number(value, suffix = "", digits = 1) { return this.page.number(value, suffix, digits); }
+
+    coverage(row) {
+        return row.score_metrics === 6 ? __("6/6 score metrics") :
+            `${row.score_metrics}/6 ${__("score metrics")} · ${__("Unavailable")}: ${row.missing_metrics.join(", ")}`;
+    }
+
+    problem(row) {
+        return `${this.escape(row.main_problem)}<small>${row.main_problem_unverified ? __("Most frequent reason; recurrence unverified") : row.main_problem_repeats ?
+            `${row.main_problem_repeats} ${__("known repeats")}` : __("Most frequent class; no known repeats")} · ${row.main_problem_events} ${__("events")}</small>`;
+    }
+
+    render() {
+        if (!this.data) return;
+        const rows = this.data.ranking;
+        this.root.find(".pm-status").empty();
+        this.root.find(".pm-results").prop("hidden", false);
+        this.root.find(".pm-count").text(`${rows.length} ${__("of")} ${this.data.total_machines} ${__("machines with breakdowns")}`);
+        const worst = rows[0];
+        const summaries = [
+            [__("Highest ranked machine"), worst ? worst.asset_label : "—", worst ? `${__("Problem Score")}: ${this.number(worst.problem_score)}` : __("No breakdowns")],
+            [__("Selected breakdown hours"), this.number(rows.reduce((sum, row) => sum + row.breakdown_hours, 0), " h"), `${__("Top")} ${this.data.show_top} · ${__("completed repair intervals")}`],
+            [__("Selected breakdowns"), this.number(rows.reduce((sum, row) => sum + row.breakdowns, 0), "", 0), `${rows.length} ${__("ranked machines")}`],
+            [__("Period / site"), this.site.get_value() || __("All sites"), `${this.from.get_value()} – ${this.to.get_value()}`]
+        ];
+        this.root.find(".pm-summary").html(summaries.map(([label, value, note]) => `<div class="re-kpi re-kpi-primary"><span>${this.escape(label)}</span><strong>${this.escape(value)}</strong><small>${this.escape(note)}</small></div>`).join(""));
+        const impact = this.root.find(".pm-impact").empty();
+        if (this.frequencyChart) this.frequencyChart.destroy();
+        const frequency = this.root.find(".pm-frequency").empty();
+        if (!rows.length) {
+            const empty = `<div class="re-empty">${__("No machines with breakdowns for this site and period.")}</div>`;
+            impact.html(empty); frequency.html(empty);
+            this.root.find(".pm-table-wrap").html(empty);
+            this.root.find(".pm-cards").html(empty);
+        } else {
+            // Frappe Charts supplies the frequency chart. Its bar chart has no
+            // horizontal mode, so score bars use semantic HTML and the same palette.
+            impact.html(`<ol class="pm-bars" aria-label="${__("Problem Scores from 0 to 100")}">${rows.map(row =>
+                `<li><div class="pm-bar-label"><strong>#${row.rank} ${this.escape(row.asset_label)}</strong><span>${this.number(row.problem_score)}</span></div>
+                <div class="pm-bar-track"><div class="pm-bar-fill ${row.rank === 1 ? "pm-worst" : ""}" style="width:${row.problem_score}%"></div></div></li>`).join("")}</ol><div class="pm-axis"><span>0</span><span>${__("Problem Score")}</span><span>100</span></div>`);
+            this.frequencyChart = new frappe.Chart(frequency[0], {type: "bar", height: 280,
+                animate: false, disableEntryAnimation: true,
+                data: {labels: rows.map(row => row.asset_label), datasets: [{name: __("Breakdowns"), values: rows.map(row => row.breakdowns)}]},
+                colors: ["#16858a"], barOptions: {spaceRatio: 0.35},
+                tooltipOptions: {formatTooltipY: value => this.number(value, ` ${__("breakdowns")}`, 0)}});
+            this.renderRanking(rows);
+        }
+        const q = this.data.quality;
+        this.root.find(".pm-quality").text(`${__("Data quality")}: ${q.invalid_repairs} ${__("open/invalid repair intervals")}; ${q.invalid_meter_rows} ${__("invalid meter rows")}; ${q.conflicting_hour_groups} ${__("conflicting shifts")}; ${q.missing_asset_breakdowns} ${__("events without a machine link, excluded from ranking")}; ${q.invalid_start_times} ${__("missing breakdown start times")}.`);
+    }
+
+    renderRanking(rows) {
+        const metrics = row => [
+            [__("Breakdown Hours"), this.number(row.breakdown_hours, " h")],
+            [__("Breakdowns"), this.number(row.breakdowns, "", 0)],
+            [__("MTBF"), this.number(row.score_mtbf, " h")],
+            [__("MTTR"), this.number(row.mttr, " h")],
+            [__("BDFR"), this.number(row.bdfr, " / 1,000 h")],
+            [__("Repeat Rate"), this.number(row.repeat_rate, "%")]
+        ];
+        this.root.find(".pm-table-wrap").html(`<table class="pm-table"><thead><tr>
+            <th>${__("Rank")}</th><th>${__("Machine")}</th><th>${__("Problem Score")}</th>
+            ${metrics(rows[0]).map(([label]) => `<th>${label}</th>`).join("")}<th>${__("Main Recurring Problem")}</th></tr></thead>
+            <tbody>${rows.map(row => `<tr class="${row.rank === 1 ? "pm-first" : ""}"><td>#${row.rank}</td>
+            <td><strong>${this.escape(row.asset_label)}</strong><small>${this.escape(row.asset)}</small></td>
+            <td><strong>${this.number(row.problem_score)}</strong><small>${this.escape(this.coverage(row))}</small></td>
+            ${metrics(row).map(([, value]) => `<td>${this.escape(value)}</td>`).join("")}
+            <td class="pm-problem">${this.problem(row)}</td></tr>`).join("")}</tbody></table>`);
+        this.root.find(".pm-cards").html(rows.map(row => `<article class="pm-card ${row.rank === 1 ? "pm-first" : ""}">
+            <div class="pm-card-head"><h3>#${row.rank} ${this.escape(row.asset_label)}</h3><span>${__("Problem Score")}<strong>${this.number(row.problem_score)}</strong></span></div>
+            <div class="pm-coverage">${this.escape(this.coverage(row))}</div><dl>${metrics(row).map(([label, value]) =>
+                `<div><dt>${label}</dt><dd>${this.escape(value)}</dd></div>`).join("")}</dl>
+            <div class="pm-main-problem"><span>${__("Main Recurring Problem")}</span><strong>${this.problem(row)}</strong></div></article>`).join(""));
     }
 }
