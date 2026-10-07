@@ -1,0 +1,13 @@
+/* Follow Down Time's Hourly/Daily Reports panel without changing its styles. */
+.epr-page .epr-saved-panel {background:#f5f7fa;border:1px solid #d8dce3;border-radius:8px;padding:16px;margin:12px 0 16px}
+.epr-page .epr-filters {display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;align-items:end}
+.epr-page .epr-selector {margin-top:12px}
+.epr-page .control-label {font-weight:700;margin-bottom:6px}
+.epr-page select {width:100%;min-height:36px}
+.epr-page .epr-actions {display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.epr-page .epr-message {color:#52606d;margin-top:12px}
+.epr-page .epr-preview {margin-top:16px;background:#fff;border:1px solid #cfd5dd;border-radius:8px;padding:24px;color:#111}
+.epr-page .epr-preview-title {text-align:center;font-size:22px;font-weight:800;color:#173f73;margin-bottom:6px}
+.epr-page .epr-preview-meta {text-align:center;color:#52606d;font-weight:600;padding-bottom:14px;margin-bottom:16px;border-bottom:2px solid #dbeafe}
+.epr-page .epr-preview iframe {width:100%;height:75vh;min-height:480px;border:0;background:#fff}
+@media(max-width:600px) {.epr-page .epr-filters {grid-template-columns:1fr}.epr-page .epr-preview {padding:12px}}

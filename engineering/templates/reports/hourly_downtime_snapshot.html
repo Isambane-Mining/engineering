@@ -1,0 +1,5 @@
+<p><strong>Fleet:</strong> {{ fleet_total|e }} &nbsp; <strong>Open at hour end:</strong> {{ open_count|e }}
+&nbsp; <strong>Closed during hour:</strong> {{ closed_count|e }} &nbsp; <strong>Available at hour end:</strong> {{ available_count|e }}</p>
+<table><thead><tr><th>Plant</th><th>Category</th><th>Status</th><th>Reason / detail</th><th>Open hours</th><th>Start</th></tr></thead><tbody>
+{% for row in rows %}<tr><td>{{ (row.plant_no or '')|e }}</td><td>{{ (row.category_group or row.asset_category or '')|e }}</td><td>{{ (row.status_key or '')|e }}</td><td>{{ (row.reason or row.item_name or '')|e }}</td><td>{{ amount(row.open_hours)|e }}</td><td>{{ (row.start_time or '')|e }}</td></tr>
+{% else %}<tr><td colspan="6">No rows in this saved snapshot.</td></tr>{% endfor %}</tbody></table>

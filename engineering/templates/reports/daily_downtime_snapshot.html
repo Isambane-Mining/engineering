@@ -1,0 +1,6 @@
+<p><strong>Events:</strong> {{ event_count|e }} &nbsp; <strong>Total downtime hours:</strong> {{ amount(total_hours)|e }} &nbsp; <strong>Signing status:</strong> {{ status|e }}</p>
+<table><thead><tr><th>Plant</th><th>Category</th><th>Status</th><th>Downtime hours</th><th>Reason</th><th>Start</th><th>Back in production</th><th>Resolution</th></tr></thead><tbody>
+{% for row in rows %}<tr><td>{{ (row.plant_no or '')|e }}</td><td>{{ (row.asset_category or '')|e }}</td><td>{{ (row.open_closed or '')|e }}</td><td>{{ amount(row.breakdown_hours)|e }}</td><td>{{ (row.breakdown_reason or '')|e }}</td><td>{{ (row.breakdown_start_datetime or '')|e }}</td><td>{{ (row.resolved_datetime or 'Open')|e }}</td><td>{{ (row.resolution_summary or '')|e }}</td></tr>
+{% else %}<tr><td colspan="8">No rows in this saved snapshot.</td></tr>{% endfor %}</tbody></table>
+<table class="signatures"><tr>{% for field,value in signatures.items() %}<td>{{ field|replace('_',' ')|title|e }}<br>
+{% if value and value.startswith('data:image/png;base64,') %}<img src="{{ value|e }}" alt="Saved signature">{% elif value %}Signature recorded{% else %}Not signed{% endif %}</td>{% endfor %}</tr></table>
