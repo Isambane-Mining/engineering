@@ -6,8 +6,8 @@ import frappe
 
 class TestReporting(unittest.TestCase):
     def setUp(self):
-        from engineering.reporting import service, rendering
-        self.service, self.rendering = service, rendering
+        from . import engineering_and_production_reports as page
+        self.page = page
         self.doc = frappe._dict(name='saved', site='Klipfontein', report_date='2026-08-03',
             shift='Day', hour_slot='06:00-07:00', period_bcm=123, generated_at='2026-08-04',
             period_start='2026-08-03 06:00:00', period_end='2026-08-03 07:00:00',
@@ -18,7 +18,7 @@ class TestReporting(unittest.TestCase):
         self.doc.check_permission = lambda permission: None
 
     def test_registry_has_five_types_and_consistent_handlers(self):
-        from engineering.reporting.registry import REPORT_TYPES
+        from .engineering_and_production_reports import REPORT_TYPES
         self.assertEqual(len(REPORT_TYPES),5)
         for spec in REPORT_TYPES.values():
             self.assertTrue(callable(spec['view_handler']))
@@ -27,10 +27,10 @@ class TestReporting(unittest.TestCase):
         self.assertNotIn('shift',REPORT_TYPES['hourly_downtime']['filters'])
 
     def load(self, key='hourly_production', eligible=True):
-        with patch.object(self.service,'available',return_value=True), \
-             patch.object(self.service.frappe,'get_doc',return_value=self.doc), \
-             patch.object(self.service,'production_eligible',return_value=eligible):
-            return self.service.get_report(key,'saved')
+        with patch.object(self.page,'_available',return_value=True), \
+             patch.object(self.page.frappe,'get_doc',return_value=self.doc), \
+             patch.object(self.page,'_production_eligible',return_value=eligible):
+            return self.page._get_report(key,'saved')
 
     def test_production_uses_saved_values_and_null_availability(self):
         result=self.load()
@@ -48,8 +48,8 @@ class TestReporting(unittest.TestCase):
         with self.assertRaises(frappe.PermissionError): self.load()
 
     def test_unknown_type_rejected_before_document_lookup(self):
-        with patch.object(self.service.frappe,'get_doc',side_effect=AssertionError('must not load')):
-            with self.assertRaises(frappe.ValidationError): self.service.get_report('User','saved')
+        with patch.object(self.page.frappe,'get_doc',side_effect=AssertionError('must not load')):
+            with self.assertRaises(frappe.ValidationError): self.page._get_report('User','saved')
 
     def test_malformed_json_fails_without_live_fallback(self):
         self.doc.report_data_json='{broken'
@@ -68,30 +68,30 @@ class TestReporting(unittest.TestCase):
         self.assertEqual(result['total_hours'],4)
 
     def test_list_hides_ineligible_snapshots(self):
-        with patch.object(self.service,'available',return_value=True), \
-             patch.object(self.service,'production_windows',return_value={}), \
-             patch.object(self.service.frappe,'get_meta',return_value=frappe._dict(has_field=lambda f:True)), \
-             patch.object(self.service.frappe,'get_list',return_value=[self.doc]), \
-             patch.object(self.service,'production_eligible',return_value=False):
-            result=self.service.search('hourly_production',report_date='2026-08-03')
+        with patch.object(self.page,'_available',return_value=True), \
+             patch.object(self.page,'_production_windows',return_value={}), \
+             patch.object(self.page.frappe,'get_meta',return_value=frappe._dict(has_field=lambda f:True)), \
+             patch.object(self.page.frappe,'get_list',return_value=[self.doc]), \
+             patch.object(self.page,'_production_eligible',return_value=False):
+            result=self.page._search('hourly_production',report_date='2026-08-03')
         self.assertEqual(result['rows'],[])
 
     def test_invalid_and_inapplicable_filters_are_rejected(self):
-        with patch.object(self.service,'available',return_value=True):
+        with patch.object(self.page,'_available',return_value=True):
             with self.assertRaises(frappe.ValidationError):
-                self.service.search('daily_production',hour_slot='06:00-07:00')
+                self.page._search('daily_production',hour_slot='06:00-07:00')
             with self.assertRaises(frappe.ValidationError):
-                self.service.search('shift_production',shift='invalid')
+                self.page._search('shift_production',shift='invalid')
 
     def test_pdf_uses_same_html_as_preview_and_requires_print(self):
         permissions=[]
         self.doc.check_permission=permissions.append
-        with patch.object(self.service,'available',return_value=True), \
-             patch.object(self.service.frappe,'get_doc',return_value=self.doc), \
-             patch.object(self.service,'production_eligible',return_value=True), \
-             patch.object(self.rendering,'render',return_value='<html>Saved report</html>'), \
+        with patch.object(self.page,'_available',return_value=True), \
+             patch.object(self.page.frappe,'get_doc',return_value=self.doc), \
+             patch.object(self.page,'_production_eligible',return_value=True), \
+             patch.object(self.page,'_render',return_value='<html>Saved report</html>'), \
              patch('frappe.utils.pdf.get_pdf',return_value=b'%PDF-test') as pdf:
-            content=self.rendering.pdf_bytes(self.service.get_report('hourly_production','saved',for_pdf=True))
+            content=self.page._pdf_bytes(self.page._get_report('hourly_production','saved',for_pdf=True))
         self.assertEqual(content,b'%PDF-test')
         pdf.assert_called_once_with('<html>Saved report</html>',{'orientation':'Landscape'})
         self.assertEqual(permissions,['read','print'])
@@ -100,13 +100,13 @@ class TestReporting(unittest.TestCase):
         from datetime import date
         rows=[frappe._dict(name=str(i),site='Koppie' if i%2 else 'Inactive',report_date='2026-08-03') for i in range(220)]
         def get_list(*a,**kw): return rows[kw['start']:kw['start']+100]
-        with patch.object(self.service,'available',return_value=True), \
-             patch.object(self.service,'production_windows',return_value={'Koppie':[(date(2026,8,1),date(2026,8,31))]}), \
-             patch.object(self.service.frappe,'get_meta',return_value=frappe._dict(has_field=lambda f:True)), \
-             patch.object(self.service.frappe,'get_list',side_effect=get_list):
-            first=self.service.search('daily_production')
-            second=self.service.search('daily_production',start=first['next_start'])
-            third=self.service.search('daily_production',start=second['next_start'])
+        with patch.object(self.page,'_available',return_value=True), \
+             patch.object(self.page,'_production_windows',return_value={'Koppie':[(date(2026,8,1),date(2026,8,31))]}), \
+             patch.object(self.page.frappe,'get_meta',return_value=frappe._dict(has_field=lambda f:True)), \
+             patch.object(self.page.frappe,'get_list',side_effect=get_list):
+            first=self.page._search('daily_production')
+            second=self.page._search('daily_production',start=first['next_start'])
+            third=self.page._search('daily_production',start=second['next_start'])
         self.assertEqual([len(x['rows']) for x in (first,second,third)],[50,50,10])
         self.assertIsNone(third['next_start'])
         self.assertEqual(len({row['name'] for page in (first,second,third) for row in page['rows']}),110)
@@ -159,47 +159,72 @@ class TestFrappeReporting(unittest.TestCase):
         self.names={kind:create_snapshot('Koppie',make_period(kind,datetime(2026,10,1,6))) for kind in ('hourly','shift','daily')}
 
     def test_all_five_types_list_and_render_actual_saved_documents(self):
-        from . import service,rendering
-        from .registry import REPORT_TYPES
-        self.assertEqual(len(service.metadata()),5)
+        from . import engineering_and_production_reports as page
+        from .engineering_and_production_reports import REPORT_TYPES
+        self.assertEqual(len(page._metadata()),5)
         for key in REPORT_TYPES:
-            result=service.search(key,site='Koppie',report_date='2026-10-01')
+            result=page._search(key,site='Koppie',report_date='2026-10-01')
             self.assertEqual(len(result['rows']),1,key)
-            model=service.get_report(key,result['rows'][0]['name'])
-            html=rendering.render(model)
+            model=page._get_report(key,result['rows'][0]['name'])
+            html=page._render(model)
             self.assertIn('Koppie',html)
             self.assertIn('Saved report reference',html)
             self.assertNotIn('<script>unsafe</script>',html)
-        self.assertIn('&lt;script&gt;unsafe&lt;/script&gt;',rendering.render(service.get_report('hourly_downtime','engineering-saved')))
+        self.assertIn('&lt;script&gt;unsafe&lt;/script&gt;',page._render(page._get_report('hourly_downtime','engineering-saved')))
+
+    def test_page_endpoints_preview_and_download_all_five_saved_types(self):
+        from . import engineering_and_production_reports as page
+        from is_production.production.controllers import production_summary_sources as sources
+        before = {spec['doctype']: frappe.db.count(spec['doctype']) for spec in page.REPORT_TYPES.values()}
+        with patch.object(sources, 'load_snapshot', side_effect=AssertionError('must use saved data')), \
+             patch('frappe.utils.pdf.get_pdf', return_value=b'%PDF-saved-report') as pdf:
+            self.assertEqual(len(page.get_report_types()), 5)
+            for key, spec in page.REPORT_TYPES.items():
+                with self.subTest(report_type=key):
+                    rows = page.search_reports(key, site='Koppie', report_date='2026-10-01')['rows']
+                    self.assertEqual(len(rows), 1)
+                    name = rows[0]['name']
+                    preview = page.view_report(key, name)['html']
+                    self.assertIn(spec['label'], preview)
+                    self.assertIn('Saved report reference: ' + name, preview)
+                    page.download_pdf(key, name)
+                    pdf.assert_called_with(preview, {'orientation': 'Landscape'})
+                    self.assertEqual(frappe.local.response.filecontent, b'%PDF-saved-report')
+                    self.assertEqual(frappe.local.response.type, 'download')
+                    self.assertTrue(frappe.local.response.filename.endswith('.pdf'))
+                    self.assertIn('Koppie', frappe.local.response.filename)
+        after = {spec['doctype']: frappe.db.count(spec['doctype']) for spec in page.REPORT_TYPES.values()}
+        self.assertEqual(before, after)
+        frappe.local.response.pop('filecontent', None)
 
     def test_cancelled_plan_hides_stored_snapshots_and_blocks_direct_pdf(self):
-        from . import service
+        from . import engineering_and_production_reports as page
         from is_production.production.controllers.production_summary_snapshot import DOCTYPES
         frappe.db.set_value('Monthly Production Planning','BASE-Koppie','docstatus',2)
         for kind,name in self.names.items():
             key=kind+'_production'
-            self.assertEqual(service.search(key)['rows'],[])
-            with self.assertRaises(frappe.PermissionError): service.get_report(key,name,for_pdf=True)
+            self.assertEqual(page._search(key)['rows'],[])
+            with self.assertRaises(frappe.PermissionError): page._get_report(key,name,for_pdf=True)
             self.assertTrue(frappe.db.exists(DOCTYPES[kind],name))
-        self.assertEqual(len(service.search('hourly_downtime')['rows']),1)
+        self.assertEqual(len(page._search('hourly_downtime')['rows']),1)
 
     def test_filters_and_non_privileged_permissions_are_enforced(self):
-        from . import service
-        self.assertEqual(len(service.search('hourly_downtime',hour_slot='23:00-00:00')['rows']),1)
-        self.assertEqual(service.search('hourly_downtime',site='Gwab')['rows'],[])
-        self.assertEqual(service.search('daily_downtime',shift='Night Shift')['rows'],[])
+        from . import engineering_and_production_reports as page
+        self.assertEqual(len(page._search('hourly_downtime',hour_slot='23:00-00:00')['rows']),1)
+        self.assertEqual(page._search('hourly_downtime',site='Gwab')['rows'],[])
+        self.assertEqual(page._search('daily_downtime',shift='Night Shift')['rows'],[])
         original=frappe.session.user
         try:
             frappe.set_user('Guest')
-            self.assertEqual(service.metadata(),[])
-            with self.assertRaises(frappe.PermissionError): service.search('daily_production')
-            with self.assertRaises(frappe.PermissionError): service.get_report('hourly_downtime','engineering-saved',for_pdf=True)
+            self.assertEqual(page._metadata(),[])
+            with self.assertRaises(frappe.PermissionError): page._search('daily_production')
+            with self.assertRaises(frappe.PermissionError): page._get_report('hourly_downtime','engineering-saved',for_pdf=True)
         finally:
             frappe.set_user(original)
 
     def test_site_user_permission_restricts_list_preview_and_download(self):
         from datetime import datetime
-        from . import service
+        from . import engineering_and_production_reports as page
         from is_production.production.controllers.production_summary_snapshot import create_snapshot
         from is_production.production.controllers.production_summary_periods import make_period
         fixture=self.fixture_case.fixture
@@ -215,10 +240,10 @@ class TestFrappeReporting(unittest.TestCase):
         original=frappe.session.user
         try:
             frappe.set_user(reader)
-            rows=service.search('daily_production')['rows']
+            rows=page._search('daily_production')['rows']
             self.assertEqual([row['site'] for row in rows],['Koppie'])
-            self.assertEqual(service.get_report('daily_production',self.names['daily'])['site'],'Koppie')
-            with self.assertRaises(frappe.PermissionError): service.get_report('daily_production',other)
-            with self.assertRaises(frappe.PermissionError): service.get_report('daily_production',other,for_pdf=True)
+            self.assertEqual(page._get_report('daily_production',self.names['daily'])['site'],'Koppie')
+            with self.assertRaises(frappe.PermissionError): page._get_report('daily_production',other)
+            with self.assertRaises(frappe.PermissionError): page._get_report('daily_production',other,for_pdf=True)
         finally:
             frappe.set_user(original)
