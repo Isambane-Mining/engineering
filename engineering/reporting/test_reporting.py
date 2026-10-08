@@ -154,7 +154,7 @@ class TestFrappeReporting(unittest.TestCase):
         self.fixture_case.fixture('Daily Downtime Summary','daily-saved',site='Koppie',report_date='2026-10-01',
             shift='Full Daily',report_data_json=json.dumps([dict(plant_no='DZ-1',breakdown_hours=4,open_closed='Closed')]))
         from datetime import datetime
-        from is_production.production.production_summaries.snapshot import create_snapshot
+        from is_production.production.controllers.production_summary_snapshot import create_snapshot
         from is_production.production.production_summaries.periods import make_period
         self.names={kind:create_snapshot('Koppie',make_period(kind,datetime(2026,10,1,6))) for kind in ('hourly','shift','daily')}
 
@@ -174,7 +174,7 @@ class TestFrappeReporting(unittest.TestCase):
 
     def test_cancelled_plan_hides_stored_snapshots_and_blocks_direct_pdf(self):
         from . import service
-        from is_production.production.production_summaries.snapshot import DOCTYPES
+        from is_production.production.controllers.production_summary_snapshot import DOCTYPES
         frappe.db.set_value('Monthly Production Planning','BASE-Koppie','docstatus',2)
         for kind,name in self.names.items():
             key=kind+'_production'
@@ -200,7 +200,7 @@ class TestFrappeReporting(unittest.TestCase):
     def test_site_user_permission_restricts_list_preview_and_download(self):
         from datetime import datetime
         from . import service
-        from is_production.production.production_summaries.snapshot import create_snapshot
+        from is_production.production.controllers.production_summary_snapshot import create_snapshot
         from is_production.production.production_summaries.periods import make_period
         fixture=self.fixture_case.fixture
         fixture('Monthly Production Planning','GWAB-VALID',location='Gwab',prod_month_start_date='2026-10-01',prod_month_end_date='2026-10-01')

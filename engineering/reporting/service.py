@@ -20,7 +20,7 @@ def available(spec):
 
 
 def production_windows():
-    from is_production.production.production_summaries.eligibility import get_plan_windows
+    from is_production.production.controllers.production_summary_planning import get_plan_windows
     return get_plan_windows()
 
 
@@ -30,7 +30,7 @@ def production_eligible(site, report_date, windows=None):
     if windows is not None:
         day = getdate(report_date)
         return any(start <= day <= end for start, end in windows.get(site, []))
-    from is_production.production.production_summaries.eligibility import get_covering_plan
+    from is_production.production.controllers.production_summary_planning import get_covering_plan
     return bool(get_covering_plan(site, report_date))
 
 
