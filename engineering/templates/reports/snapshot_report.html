@@ -1,0 +1,17 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>{{ title|e }}</title>
+<style>
+body {font:12px Arial,sans-serif;color:#182b3a;margin:20px;background:white} h1 {font-size:22px;color:#153f54;margin-bottom:8px}
+h2 {font-size:16px;margin:20px 0 8px} .meta {line-height:1.8;color:#425563} table {border-collapse:collapse;width:100%;margin:10px 0}
+th,td {border:1px solid #d6dfe4;padding:7px;text-align:left;vertical-align:top} th {background:#edf3f6} .number {text-align:right}
+.notice {padding:10px;background:#fff6df;border:1px solid #f0dc9b;margin:12px 0} .muted {color:#576976} .signatures img {max-width:150px;max-height:70px}
+thead {display:table-header-group} tr {page-break-inside:avoid} .footer {margin-top:20px;font-size:10px;color:#576976}
+</style></head><body>
+<h1>{{ title|e }}</h1>
+<div class="meta"><strong>Site:</strong> {{ site|e }} &nbsp; <strong>Operational report date:</strong> {{ report_date|e }}
+{% if shift %} &nbsp; <strong>Shift:</strong> {{ shift|e }}{% endif %}{% if hour_slot %} &nbsp; <strong>Hour:</strong> {{ hour_slot|e }}{% endif %}
+{% if period_start %}<br><strong>Period:</strong> {{ period_start|e }} to {{ period_end|e }}{% endif %}
+<br><strong>Snapshot created:</strong> {{ generated_at|e }}</div>
+{% include report_template %}
+<div class="footer">Saved report reference: {{ name|e }}. Figures reflect this saved snapshot.</div>
+</body></html>
