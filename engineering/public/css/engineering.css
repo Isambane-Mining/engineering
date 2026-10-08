@@ -1269,51 +1269,94 @@
 .reliability-engineering-page .layout-main-section{width:100%;min-width:0;max-width:none;background:#f1f5f6}
 .reliability-engineering-page .page-head{background:#f1f5f6}
 .reliability-engineering-page .page-content{max-width:none}
-.re-shell{width:100%;max-width:1600px;margin:0 auto;padding:18px 24px 40px;color:#183746}
-.re-shell *{box-sizing:border-box}
-.re-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 0 16px}
-.re-eyebrow{color:#198488;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
-.re-header h1{font-size:clamp(28px,4vw,40px);line-height:1.1;letter-spacing:-.04em;margin:6px 0 4px;font-weight:800}
-.re-header p,.re-focus p{margin:0;color:#617784;font-size:13px;line-height:1.5}
-.re-period{font-size:12px;color:#54717d;background:#e2eded;border-radius:20px;padding:7px 12px;white-space:nowrap}
-.re-filters{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr)) minmax(120px,auto);align-items:end;gap:12px;padding:14px;border:1px solid #d6e3e6;border-radius:16px;background:#fff;box-shadow:0 8px 30px rgba(22,59,73,.05)}
-.re-filters>div,.re-filters .frappe-control,.re-filters .control-input-wrapper{min-width:0}
-.re-filters .form-group,.re-filters .frappe-control{margin-bottom:0}
-.re-filters .control-label{font-size:11px;font-weight:800;color:#56717d;letter-spacing:.05em}
-.re-filters .form-control{width:100%;max-width:100%;min-height:40px}
-.re-refresh{border:0;border-radius:9px;background:#143e51;color:#fff;font-weight:800;min-height:40px;padding:0 16px;white-space:nowrap;cursor:pointer}
-.re-refresh:hover{background:#0a6470}.re-refresh:focus-visible,.re-event summary:focus-visible{outline:3px solid #72c4c4;outline-offset:2px}
-.re-status:not(:empty){margin:8px 3px;color:#a35823;font-size:12px}
-.re-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:12px;margin:14px 0}
-.re-kpi{min-width:0;min-height:118px;padding:16px;background:#fff;border:1px solid #dce7e9;border-radius:14px;box-shadow:0 4px 18px rgba(22,59,73,.035);display:flex;flex-direction:column}
-.re-kpi-active{background:#e9f5f3;border-color:#9ed2cd}.re-kpi span,.re-kpi small{display:block;color:#66808c}
-.re-kpi-primary{border-top:3px solid #16858a}
-.re-kpi span{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;overflow-wrap:anywhere}
-.re-kpi strong{display:block;margin:8px 0 3px;color:#164b58;font-size:clamp(22px,2.6vw,33px);line-height:1.15;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.re-kpi small{font-size:11px;line-height:1.4;margin-top:auto;overflow-wrap:anywhere}
-.re-insights{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:14px}
-.re-insights-focused{grid-template-columns:minmax(250px,.9fr) minmax(0,1.8fr)}
-.re-panel{min-width:0;background:#fff;border:1px solid #dce7e9;border-radius:16px;padding:18px;box-shadow:0 4px 20px rgba(22,59,73,.035)}
-.re-panel h2{font-size:18px;font-weight:800;margin:5px 0 0;color:#1d3f4d}.re-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
-.re-panel-head>span{font-size:12px;color:#728a95}.re-focus{background:linear-gradient(145deg,#153f52,#1b6e72);color:#fff;display:flex;flex-direction:column;justify-content:center;min-height:0}
-.re-focus[hidden]{display:none}
-.re-focus .re-eyebrow{color:#9cdbd6}.re-focus h2{font-size:23px;color:#fff}.re-focus-value{font-size:clamp(42px,5vw,66px);line-height:1.15;font-weight:800;letter-spacing:-.05em;margin:12px 0;overflow-wrap:anywhere}
-.re-focus p{color:#d5e8e8}.re-trend .re-chart{min-height:260px;overflow:hidden}.re-empty{padding:48px 14px;text-align:center;color:#738a94;font-size:13px}
-.re-ranking,.re-drill{margin-bottom:14px}.re-table-wrap{overflow:auto;max-height:520px}.re-table{width:100%;border-collapse:collapse;min-width:960px;font-size:12px}
-.re-table th{position:sticky;top:0;background:#edf4f5;text-align:right;padding:12px 10px;color:#5a737e;font-size:10px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-.re-table .re-highlight{background:#e7f5f2;color:#076a70;font-weight:800}
-.re-table td{text-align:right;border-bottom:1px solid #e8eff0;padding:11px 10px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.re-table th:first-child,.re-table td:first-child,.re-table th:nth-child(2),.re-table td:nth-child(2){text-align:left}
-.re-table td strong,.re-table td small{display:block;overflow-wrap:anywhere}.re-table td small{color:#8297a0;font-size:10px}.re-table tr:hover{background:#f5f9f9}
-.re-table tbody tr{cursor:pointer}.re-table tbody tr:focus-visible{outline:3px solid #72c4c4;outline-offset:-3px}
-.re-show-all{border:0;background:transparent;color:#087f83;font-weight:800;cursor:pointer;padding:0}
-.re-breakdowns{max-height:600px;overflow:auto}.re-event{border:1px solid #e2eaec;border-radius:10px;margin:0 0 8px;overflow:hidden}
-.re-event summary{display:grid;grid-template-columns:minmax(130px,1.1fr) minmax(140px,1fr) minmax(100px,1fr) auto;gap:12px;align-items:center;cursor:pointer;padding:12px 14px;font-size:12px;color:#4d6875;list-style:none}
-.re-event summary::-webkit-details-marker{display:none}.re-event summary:after{content:'+';font-size:18px;font-weight:700;color:#6d8d95}.re-event[open] summary:after{content:'−'}
-.re-event summary>span{min-width:0;overflow-wrap:anywhere}.re-event-machine{font-weight:800;color:#204957;font-size:13px}.re-event-tag{justify-self:start;padding:4px 9px;border-radius:20px;background:#e8f0f2;color:#496875;font-weight:700}.re-event-tag.re-repeat{background:#fff0dc;color:#a26220}
-.re-event-body{padding:14px;border-top:1px solid #e2eaec;background:#f8fbfb;font-size:12px;overflow-wrap:anywhere}
-.re-event-body dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 12px}.re-event-body dt{font-size:10px;font-weight:800;color:#718996;text-transform:uppercase}.re-event-body dd{margin:3px 0 0;color:#264959}
-.re-event-body p{margin:8px 0;line-height:1.5}.re-quality{color:#738b96;font-size:11px;line-height:1.5;padding:0 4px}
-@media(min-width:1200px){.re-insights-focused .re-focus-value{font-size:clamp(38px,4vw,58px)}}
-@media(min-width:768px) and (max-width:1199px){.re-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.re-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.re-insights-focused{grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr)}}
-@media(max-width:767px){.re-shell{padding:12px 14px 30px}.re-header{display:block}.re-period{display:inline-block;margin-top:10px}.re-filters{grid-template-columns:minmax(0,1fr);padding:12px;gap:8px}.re-kpis{grid-template-columns:minmax(0,1fr);gap:9px}.re-kpi{min-height:0;padding:13px}.re-kpi strong{font-size:27px}.re-insights-focused{grid-template-columns:minmax(0,1fr)}.re-focus{min-height:170px}.re-panel{padding:13px}.re-event summary{grid-template-columns:1fr auto;gap:5px}.re-event summary>span:nth-child(2),.re-event summary>span:nth-child(3){grid-column:1}.re-event-tag{grid-column:1;grid-row:4}.re-event summary:after{grid-column:2;grid-row:1}.re-event-body dl{grid-template-columns:1fr}}
+.reliability-engineering-page .re-shell{width:100%;max-width:1600px;margin:0 auto;padding:18px 24px 40px;color:#183746}
+.reliability-engineering-page .re-shell *{box-sizing:border-box}
+.reliability-engineering-page .re-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 0 16px}
+.reliability-engineering-page .re-eyebrow{color:#198488;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.reliability-engineering-page .re-header h1{font-size:clamp(28px,4vw,40px);line-height:1.1;letter-spacing:-.04em;margin:6px 0 4px;font-weight:800}
+.reliability-engineering-page .re-header p,.reliability-engineering-page .re-focus p{margin:0;color:#617784;font-size:13px;line-height:1.5}
+.reliability-engineering-page .re-period{font-size:12px;color:#54717d;background:#e2eded;border-radius:20px;padding:7px 12px;white-space:nowrap}
+.reliability-engineering-page .re-filters{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr)) minmax(120px,auto);align-items:end;gap:12px;padding:14px;border:1px solid #d6e3e6;border-radius:16px;background:#fff;box-shadow:0 8px 30px rgba(22,59,73,.05)}
+.reliability-engineering-page .re-filters>div,.reliability-engineering-page .re-filters .frappe-control,.reliability-engineering-page .re-filters .control-input-wrapper{min-width:0}
+.reliability-engineering-page .re-filters .form-group,.reliability-engineering-page .re-filters .frappe-control{margin-bottom:0}
+.reliability-engineering-page .re-filters .control-label{font-size:11px;font-weight:800;color:#56717d;letter-spacing:.05em}
+.reliability-engineering-page .re-filters .form-control{width:100%;max-width:100%;min-height:40px}
+.reliability-engineering-page .re-refresh{border:0;border-radius:9px;background:#143e51;color:#fff;font-weight:800;min-height:40px;padding:0 16px;white-space:nowrap;cursor:pointer}
+.reliability-engineering-page .re-refresh:hover{background:#0a6470}.reliability-engineering-page .re-refresh:focus-visible,.reliability-engineering-page .re-event summary:focus-visible{outline:3px solid #72c4c4;outline-offset:2px}
+.reliability-engineering-page .re-status:not(:empty){margin:8px 3px;color:#a35823;font-size:12px}
+.reliability-engineering-page .re-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:12px;margin:14px 0}
+.reliability-engineering-page .re-kpi{min-width:0;min-height:118px;padding:16px;background:#fff;border:1px solid #dce7e9;border-radius:14px;box-shadow:0 4px 18px rgba(22,59,73,.035);display:flex;flex-direction:column}
+.reliability-engineering-page .re-kpi-active{background:#e9f5f3;border-color:#9ed2cd}.reliability-engineering-page .re-kpi span,.reliability-engineering-page .re-kpi small{display:block;color:#66808c}
+.reliability-engineering-page .re-kpi-primary{border-top:3px solid #16858a}
+.reliability-engineering-page .re-kpi span{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;overflow-wrap:anywhere}
+.reliability-engineering-page .re-kpi strong{display:block;margin:8px 0 3px;color:#164b58;font-size:clamp(22px,2.6vw,33px);line-height:1.15;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.reliability-engineering-page .re-kpi small{font-size:11px;line-height:1.4;margin-top:auto;overflow-wrap:anywhere}
+.reliability-engineering-page .re-insights{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:14px}
+.reliability-engineering-page .re-insights-focused{grid-template-columns:minmax(250px,.9fr) minmax(0,1.8fr)}
+.reliability-engineering-page .re-panel{min-width:0;background:#fff;border:1px solid #dce7e9;border-radius:16px;padding:18px;box-shadow:0 4px 20px rgba(22,59,73,.035)}
+.reliability-engineering-page .re-panel h2{font-size:18px;font-weight:800;margin:5px 0 0;color:#1d3f4d}.reliability-engineering-page .re-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.reliability-engineering-page .re-panel-head>span{font-size:12px;color:#728a95}.reliability-engineering-page .re-focus{background:linear-gradient(145deg,#153f52,#1b6e72);color:#fff;display:flex;flex-direction:column;justify-content:center;min-height:0}
+.reliability-engineering-page .re-focus[hidden]{display:none}
+.reliability-engineering-page .re-focus .re-eyebrow{color:#9cdbd6}.reliability-engineering-page .re-focus h2{font-size:23px;color:#fff}.reliability-engineering-page .re-focus-value{font-size:clamp(42px,5vw,66px);line-height:1.15;font-weight:800;letter-spacing:-.05em;margin:12px 0;overflow-wrap:anywhere}
+.reliability-engineering-page .re-focus p{color:#d5e8e8}.reliability-engineering-page .re-trend .re-chart{min-height:260px;overflow:hidden}.reliability-engineering-page .re-empty{padding:48px 14px;text-align:center;color:#738a94;font-size:13px}
+.reliability-engineering-page .re-ranking,.reliability-engineering-page .re-drill{margin-bottom:14px}.reliability-engineering-page .re-table-wrap{overflow:auto;max-height:520px}.reliability-engineering-page .re-table{width:100%;border-collapse:collapse;min-width:960px;font-size:12px}
+.reliability-engineering-page .re-table th{position:sticky;top:0;background:#edf4f5;text-align:right;padding:12px 10px;color:#5a737e;font-size:10px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.reliability-engineering-page .re-table .re-highlight{background:#e7f5f2;color:#076a70;font-weight:800}
+.reliability-engineering-page .re-table td{text-align:right;border-bottom:1px solid #e8eff0;padding:11px 10px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.reliability-engineering-page .re-table th:first-child,.reliability-engineering-page .re-table td:first-child,.reliability-engineering-page .re-table th:nth-child(2),.reliability-engineering-page .re-table td:nth-child(2){text-align:left}
+.reliability-engineering-page .re-table td strong,.reliability-engineering-page .re-table td small{display:block;overflow-wrap:anywhere}.reliability-engineering-page .re-table td small{color:#8297a0;font-size:10px}.reliability-engineering-page .re-table tr:hover{background:#f5f9f9}
+.reliability-engineering-page .re-table tbody tr{cursor:pointer}.reliability-engineering-page .re-table tbody tr:focus-visible{outline:3px solid #72c4c4;outline-offset:-3px}
+.reliability-engineering-page .re-show-all{border:0;background:transparent;color:#087f83;font-weight:800;cursor:pointer;padding:0}
+.reliability-engineering-page .re-breakdowns{max-height:600px;overflow:auto}.reliability-engineering-page .re-event{border:1px solid #e2eaec;border-radius:10px;margin:0 0 8px;overflow:hidden}
+.reliability-engineering-page .re-event summary{display:grid;grid-template-columns:minmax(130px,1.1fr) minmax(140px,1fr) minmax(100px,1fr) auto;gap:12px;align-items:center;cursor:pointer;padding:12px 14px;font-size:12px;color:#4d6875;list-style:none}
+.reliability-engineering-page .re-event summary::-webkit-details-marker{display:none}.reliability-engineering-page .re-event summary:after{content:'+';font-size:18px;font-weight:700;color:#6d8d95}.reliability-engineering-page .re-event[open] summary:after{content:'−'}
+.reliability-engineering-page .re-event summary>span{min-width:0;overflow-wrap:anywhere}.reliability-engineering-page .re-event-machine{font-weight:800;color:#204957;font-size:13px}.reliability-engineering-page .re-event-tag{justify-self:start;padding:4px 9px;border-radius:20px;background:#e8f0f2;color:#496875;font-weight:700}.reliability-engineering-page .re-event-tag.re-repeat{background:#fff0dc;color:#a26220}
+.reliability-engineering-page .re-event-body{padding:14px;border-top:1px solid #e2eaec;background:#f8fbfb;font-size:12px;overflow-wrap:anywhere}
+.reliability-engineering-page .re-event-body dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 12px}.reliability-engineering-page .re-event-body dt{font-size:10px;font-weight:800;color:#718996;text-transform:uppercase}.reliability-engineering-page .re-event-body dd{margin:3px 0 0;color:#264959}
+.reliability-engineering-page .re-event-body p{margin:8px 0;line-height:1.5}.reliability-engineering-page .re-quality{color:#738b96;font-size:11px;line-height:1.5;padding:0 4px}
+@media(min-width:1200px){.reliability-engineering-page .re-insights-focused .re-focus-value{font-size:clamp(38px,4vw,58px)}}
+@media(min-width:768px) and (max-width:1199px){.reliability-engineering-page .re-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.reliability-engineering-page .re-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.reliability-engineering-page .re-insights-focused{grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr)}}
+@media(max-width:767px){.reliability-engineering-page .re-shell{padding:12px 14px 30px}.reliability-engineering-page .re-header{display:block}.reliability-engineering-page .re-period{display:inline-block;margin-top:10px}.reliability-engineering-page .re-filters{grid-template-columns:minmax(0,1fr);padding:12px;gap:8px}.reliability-engineering-page .re-kpis{grid-template-columns:minmax(0,1fr);gap:9px}.reliability-engineering-page .re-kpi{min-height:0;padding:13px}.reliability-engineering-page .re-kpi strong{font-size:27px}.reliability-engineering-page .re-insights-focused{grid-template-columns:minmax(0,1fr)}.reliability-engineering-page .re-focus{min-height:170px}.reliability-engineering-page .re-panel{padding:13px}.reliability-engineering-page .re-event summary{grid-template-columns:1fr auto;gap:5px}.reliability-engineering-page .re-event summary>span:nth-child(2),.reliability-engineering-page .re-event summary>span:nth-child(3){grid-column:1}.reliability-engineering-page .re-event-tag{grid-column:1;grid-row:4}.reliability-engineering-page .re-event summary:after{grid-column:2;grid-row:1}.reliability-engineering-page .re-event-body dl{grid-template-columns:1fr}}
 /* End Reliability Engineering */
+
+/* Problem Machines: independent view of the reliability report. */
+.reliability-engineering-page .re-tabs{display:flex;gap:6px;margin:0 0 14px;border-bottom:1px solid #cfdee2}
+.reliability-engineering-page .re-tabs button{padding:12px 16px;border:0;border-bottom:3px solid transparent;background:transparent;color:#617784;font-weight:700;cursor:pointer}
+.reliability-engineering-page .re-tabs button[aria-selected=true]{border-color:#16858a;color:#164b58;background:#e7f3f3}
+.reliability-engineering-page .re-tabs button:focus-visible{outline:3px solid #72c4c4;outline-offset:-3px}
+.reliability-engineering-page .re-analysis-tab[hidden],.reliability-engineering-page .re-problems-tab[hidden],.reliability-engineering-page .pm-results[hidden]{display:none}
+.reliability-engineering-page .re-problems-tab .pm-filters{grid-template-columns:repeat(4,minmax(0,1fr))}
+.reliability-engineering-page .pm-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
+.reliability-engineering-page .pm-status:not(:empty){margin:8px 3px;color:#a35823;font-size:12px}
+.reliability-engineering-page .pm-quality{color:#738b96;font-size:11px;line-height:1.5;padding:0 4px}
+.reliability-engineering-page .pm-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.reliability-engineering-page .pm-caption,.reliability-engineering-page .pm-method p{font-size:12px;line-height:1.6;color:#617784}
+.reliability-engineering-page .pm-bars{padding:0;margin:12px 0;list-style:none}.reliability-engineering-page .pm-bars li{margin-bottom:12px}
+.reliability-engineering-page .pm-bar-label{display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-bottom:5px}
+.reliability-engineering-page .pm-bar-label strong{overflow-wrap:anywhere;min-width:0}.reliability-engineering-page .pm-bar-label span{font-variant-numeric:tabular-nums}
+.reliability-engineering-page .pm-bar-track{height:14px;border-radius:5px;background:#edf4f5;overflow:hidden}
+.reliability-engineering-page .pm-bar-fill{height:100%;background:#16858a;border-radius:5px}.reliability-engineering-page .pm-bar-fill.pm-worst{background:#b7652b}
+.reliability-engineering-page .pm-axis{display:flex;justify-content:space-between;font-size:10px;color:#738b96}
+.reliability-engineering-page .pm-frequency{min-height:280px;overflow:hidden}
+.reliability-engineering-page .pm-ranking{margin-bottom:14px}.reliability-engineering-page .pm-table-wrap{overflow:auto}
+.reliability-engineering-page .pm-table{width:100%;border-collapse:collapse;font-size:12px}
+.reliability-engineering-page .pm-table th{padding:12px 8px;text-align:right;color:#56717d;background:#edf4f5;font-size:10px}
+.reliability-engineering-page .pm-table td{padding:12px 8px;text-align:right;border-bottom:1px solid #e3edef;font-variant-numeric:tabular-nums}
+.reliability-engineering-page .pm-table th:first-child,.reliability-engineering-page .pm-table th:nth-child(2),.reliability-engineering-page .pm-table td:first-child,.reliability-engineering-page .pm-table td:nth-child(2),.reliability-engineering-page .pm-table .pm-problem{text-align:left}
+.reliability-engineering-page .pm-table th:last-child{text-align:left}.reliability-engineering-page .pm-table td strong,.reliability-engineering-page .pm-table td small{display:block}
+.reliability-engineering-page .pm-table td small{font-size:10px;font-weight:400;color:#617784;margin-top:4px;max-width:160px;overflow-wrap:anywhere}
+.reliability-engineering-page .pm-first{background:#fff6e9}.reliability-engineering-page .pm-first td:first-child{color:#9d4e19;font-weight:800}
+.reliability-engineering-page .pm-cards{display:none}.reliability-engineering-page .pm-method{margin-bottom:14px}.reliability-engineering-page .pm-method summary{cursor:pointer;font-size:12px;font-weight:700;color:#164b58}
+.reliability-engineering-page .pm-method p:last-child{margin-bottom:0}
+@media(max-width:1199px){.reliability-engineering-page .pm-table-wrap{display:none}.reliability-engineering-page .pm-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.reliability-engineering-page .pm-card{padding:14px;border:1px solid #dce7e9;border-radius:12px;min-width:0}
+.reliability-engineering-page .pm-card.pm-first{border-color:#deb381}.reliability-engineering-page .pm-card-head{display:flex;justify-content:space-between;align-items:start;gap:10px}
+.reliability-engineering-page .pm-card h3{font-size:17px;font-weight:800;margin:0;overflow-wrap:anywhere}.reliability-engineering-page .pm-card-head>span{font-size:10px;text-align:right;color:#617784;flex-shrink:0}
+.reliability-engineering-page .pm-card-head>span strong{display:block;font-size:24px;color:#164b58}.reliability-engineering-page .pm-coverage{font-size:10px;color:#738b96;margin:6px 0 12px;overflow-wrap:anywhere}
+.reliability-engineering-page .pm-card dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0}
+.reliability-engineering-page .pm-card dt,.reliability-engineering-page .pm-main-problem>span{font-size:10px;color:#617784}.reliability-engineering-page .pm-card dd{margin:4px 0 0;font-size:15px;font-weight:700;overflow-wrap:anywhere}
+.reliability-engineering-page .pm-main-problem{margin-top:14px;border-top:1px solid #dce7e9;padding-top:10px;overflow-wrap:anywhere}
+.reliability-engineering-page .pm-main-problem strong{display:block;font-size:13px;margin-top:4px}.reliability-engineering-page .pm-main-problem small{display:block;font-size:10px;font-weight:400;color:#617784;margin-top:4px}}
+@media(max-width:767px){.reliability-engineering-page .re-problems-tab .pm-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.reliability-engineering-page .pm-site{grid-column:1/-1}
+.reliability-engineering-page .pm-charts{grid-template-columns:minmax(0,1fr)}.reliability-engineering-page .pm-cards{grid-template-columns:minmax(0,1fr)}
+.reliability-engineering-page .re-problems-tab .pm-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.reliability-engineering-page .re-problems-tab .pm-summary strong{font-size:20px}
+.reliability-engineering-page .re-tabs button{padding:12px 9px;font-size:12px;flex:1}.reliability-engineering-page .pm-frequency{min-height:280px}}
