@@ -72,6 +72,11 @@ app_include_css = [
     "/assets/engineering/css/engineering.css"
 ]
 
+# Work around Frappe v16.50.0 Report View export bug (with_link_titles) - TEMPORARY, REMOVE ONCE RESOLVED UPSTREAM
+override_whitelisted_methods = {
+    "frappe.desk.reportview.export_query": "engineering.overrides.reportview.export_query",
+}
+
 # Breakdown History global public List View
 doctype_list_js = {
     "Breakdown History": "public/js/breakdown_history_list.js",
@@ -92,6 +97,7 @@ scheduler_events = {
         "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders",
         "engineering.controllers.fleet_notifications.send_terminated_driver_alert_gate",
         "engineering.controllers.fleet_notifications.send_temporary_loan_digest_gate",
+        "engineering.engineering.doctype.fleet_card.fleet_card.refresh_all_statuses",
     ],
     "weekly": [
         "engineering.controllers.fleet_notifications.send_weekly_fleet_digest_gate",

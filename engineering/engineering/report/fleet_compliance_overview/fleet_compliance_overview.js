@@ -50,6 +50,14 @@ frappe.query_reports["Fleet Compliance Overview"] = {
 				Expired: "red",
 				Outstanding: "red",
 			},
+			fleet_card_status: {
+				Valid: "green",
+				"None Issued": "green",
+				Expiring: "orange",
+				Incomplete: "blue",
+				Expired: "red",
+				Outstanding: "red",
+			},
 			addendum_status: {
 				"On File": "green",
 				Outstanding: "red",
