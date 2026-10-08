@@ -100,7 +100,7 @@ def get_asset_history(asset):
 
 	fleet_cards = frappe.get_all(
 		"Fleet Card",
-		filters={"fleet_number": asset},
+		filters={"allocation_type": "Asset", "fleet_number": asset},
 		fields=["name", "bank", "card_number", "issue_date", "expiry_date", "docstatus", "attach"],
 		order_by="issue_date desc, creation desc",
 	)

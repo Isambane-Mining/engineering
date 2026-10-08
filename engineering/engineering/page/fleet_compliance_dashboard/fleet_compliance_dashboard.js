@@ -13,6 +13,7 @@ const FCD_STATUS_META = {
 	Compliant: { bg: "var(--bg-green)", fg: "var(--text-on-green)" },
 	Valid: { bg: "var(--bg-green)", fg: "var(--text-on-green)" },
 	"On File": { bg: "var(--bg-green)", fg: "var(--text-on-green)" },
+	"None Issued": { bg: "var(--bg-green)", fg: "var(--text-on-green)" },
 	Expiring: { bg: "var(--bg-orange)", fg: "var(--text-on-orange)" },
 	Incomplete: { bg: "var(--bg-orange)", fg: "var(--text-on-orange)" },
 	Expired: { bg: "var(--bg-red)", fg: "var(--text-on-red)" },

@@ -391,10 +391,18 @@ def compute_vehicle_licence_status(asset, threshold_days=None):
 
 
 def compute_fleet_card_status(asset, threshold_days=None):
-	"""Mirrors compute_vehicle_licence_status exactly, but against Fleet Card
+	"""Mirrors compute_vehicle_licence_status, but against Fleet Card
 	(fleet_number = asset) instead of Vehicle Licence — the current card for
-	an Asset is simply the most recently *issued* submitted one, same
-	reasoning as Fleet Card's own virtual status property.
+	an Asset is simply the most recently *issued* submitted one.
+
+	Unlike a Vehicle Licence, a Fleet Card isn't a legal requirement every
+	vehicle must carry — plenty of real Assets legitimately have none at
+	all (private-use vehicles, assets not on a fuel/toll card scheme). So
+	"no card at all" reads "None Issued" (compliant, not a gap), unlike
+	Vehicle Licence's own "no record" case which correctly reads
+	Outstanding. "Outstanding" here is reserved for a real but currently-
+	unusable record (a Draft whose own dates have already lapsed) — a card
+	someone actually started capturing, not nothing.
 
 	If no submitted record exists but a currently-valid Draft one does, that
 	is reported as "Incomplete" rather than "Outstanding"."""
@@ -402,13 +410,18 @@ def compute_fleet_card_status(asset, threshold_days=None):
 		threshold_days = get_expiring_threshold_days()
 
 	if not asset or not frappe.db.exists("DocType", "Fleet Card"):
-		return None, "Outstanding", None
+		return None, "None Issued", None
 
 	today = getdate(nowdate())
 
+	# allocation_type="Asset" is explicit, not just implied by the value
+	# matching - fleet_number is a Dynamic Link (a card can instead be
+	# allocated to an Employee, for a private vehicle with no Asset record
+	# at all), so an Asset name and an Employee id are different ID spaces
+	# that could in principle collide.
 	records = frappe.get_all(
 		"Fleet Card",
-		filters={"fleet_number": asset, "docstatus": 1},
+		filters={"allocation_type": "Asset", "fleet_number": asset, "docstatus": 1},
 		fields=["name", "expiry_date"],
 		order_by="issue_date desc",
 		limit_page_length=1,
@@ -421,7 +434,7 @@ def compute_fleet_card_status(asset, threshold_days=None):
 
 	draft = frappe.get_all(
 		"Fleet Card",
-		filters={"fleet_number": asset, "docstatus": 0},
+		filters={"allocation_type": "Asset", "fleet_number": asset, "docstatus": 0},
 		fields=["name", "expiry_date"],
 		order_by="issue_date desc",
 		limit_page_length=1,
@@ -430,7 +443,7 @@ def compute_fleet_card_status(asset, threshold_days=None):
 	if draft:
 		return _incomplete_or_outstanding(draft[0].expiry_date, draft[0].name, today)
 
-	return None, "Outstanding", None
+	return None, "None Issued", None
 
 
 def compute_overall_status(
@@ -483,6 +496,7 @@ _STATUS_COLOURS = {
 	"Valid": "#2e7d32",
 	"On File": "#2e7d32",
 	"Closed": "#2e7d32",
+	"None Issued": "#2e7d32",
 	"Expiring": "#e65100",
 	"Incomplete": "#e65100",
 	"Open": "#e65100",

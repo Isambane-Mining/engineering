@@ -9,12 +9,17 @@
  "field_order": [
   "section_break_dpsy",
   "general_information",
+  "allocation_type",
   "fleet_number",
   "model",
   "registration_number",
+  "issued_to",
+  "issued_to_name",
+  "collected",
   "column_break_ktpe",
   "bank",
   "card_number",
+  "card_pin",
   "card_limit",
   "section_break_caps",
   "covers_fuel",
@@ -28,6 +33,9 @@
   "status",
   "days_left",
   "attach",
+  "section_break_reissue",
+  "previous_fleet_card",
+  "comments",
   "amended_from"
  ],
  "fields": [
@@ -41,25 +49,57 @@
    "label": "General Information"
   },
   {
-   "description": "The single vehicle this card is issued against. A card being replaced or reissued is a wholly new Fleet Card record for the same Asset, never an edit to this one (same convention as Vehicle Licence).",
-   "fieldname": "fleet_number",
+   "default": "Asset",
+   "description": "What this card is allocated against — a company Asset (the normal case), or an Employee (a private vehicle on a company fuel/toll scheme, which has no Asset record at all). Determines what Allocated To below links to.",
+   "fieldname": "allocation_type",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Fleet Number",
-   "options": "Asset",
+   "label": "Allocation Type",
+   "options": "DocType",
    "reqd": 1
   },
   {
-   "fetch_from": "fleet_number.item_code",
+   "description": "The vehicle (or, for a private-vehicle allocation, the Employee) this card is issued against. A card being replaced or reissued is a wholly new Fleet Card record for the same Allocated To, never an edit to this one (same convention as Vehicle Licence).",
+   "fieldname": "fleet_number",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Allocated To",
+   "options": "allocation_type",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.allocation_type==\"Asset\"",
    "fieldname": "model",
    "fieldtype": "Read Only",
    "label": "Model",
    "read_only": 1
   },
   {
+   "description": "The vehicle's registration plate — the company Asset's own, or the employee's private vehicle's own.",
    "fieldname": "registration_number",
    "fieldtype": "Data",
    "label": "Registration Number"
+  },
+  {
+   "description": "Who this specific card was physically issued to.",
+   "fieldname": "issued_to",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Issued To",
+   "options": "Employee"
+  },
+  {
+   "fetch_from": "issued_to.employee_name",
+   "fieldname": "issued_to_name",
+   "fieldtype": "Read Only",
+   "label": "Issued To (Name)"
+  },
+  {
+   "default": "0",
+   "description": "Whether the card has actually been physically collected by Issued To yet.",
+   "fieldname": "collected",
+   "fieldtype": "Check",
+   "label": "Collected"
   },
   {
    "fieldname": "column_break_ktpe",
@@ -76,8 +116,15 @@
    "fieldname": "card_number",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Card Number",
    "reqd": 1
+  },
+  {
+   "description": "The card's PIN. Stored as plain text at the user's explicit request — be aware this is visible to anyone with read access to Fleet Card (list view, reports, exports), the same exposure the original spreadsheet already had.",
+   "fieldname": "card_pin",
+   "fieldtype": "Data",
+   "label": "Card Pin"
   },
   {
    "fieldname": "card_limit",
@@ -133,10 +180,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Computed live from Expiry Date (and, for a submitted card, whether a newer one for this Asset has since been submitted). Never stored.",
+   "description": "Active/Expiring/Expired are refreshed daily (see engineering.controllers.fleet_card.refresh_all_statuses, hooks.py's daily scheduler bucket) and set immediately on submit/reissue/cancel — stored, not virtual, so it can be filtered and reported on from the list view.",
    "fieldname": "status",
    "fieldtype": "Select",
-   "is_virtual": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Status",
    "options": "Active\nExpiring\nExpired\nSuperseded\nCancelled",
    "read_only": 1
@@ -150,9 +198,29 @@
    "read_only": 1
   },
   {
+   "description": "The signed \"Fleet Card Issued\" print-out, scanned back in — required before this card can be submitted.",
    "fieldname": "attach",
    "fieldtype": "Attach",
    "label": "Attach Documents"
+  },
+  {
+   "fieldname": "section_break_reissue",
+   "fieldtype": "Section Break",
+   "label": "Reissue"
+  },
+  {
+   "description": "Set automatically by the Reissue button — the card this one replaces for the same Allocated To. That previous card is marked Superseded the moment this one is submitted.",
+   "fieldname": "previous_fleet_card",
+   "fieldtype": "Link",
+   "label": "Previous Fleet Card",
+   "options": "Fleet Card",
+   "read_only": 1
+  },
+  {
+   "description": "Why this card is being (re)issued — lost, damaged, stolen, driver change, initial issue, etc. Required whenever Previous Fleet Card is set.",
+   "fieldname": "comments",
+   "fieldtype": "Small Text",
+   "label": "Reason"
   },
   {
    "fieldname": "amended_from",
@@ -169,7 +237,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-06 09:49:29.796981",
+ "modified": "2026-10-07 08:00:00.000000",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Fleet Card",
