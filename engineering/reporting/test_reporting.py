@@ -117,7 +117,7 @@ class TestFrappeReporting(unittest.TestCase):
     """Real permission/list/render checks in the guarded disposable SQLite site."""
     @classmethod
     def setUpClass(cls):
-        from is_production.production.production_summaries.test_production_summaries import TestFrappeIntegration
+        from is_production.production.controllers.test_production_summaries import TestFrappeIntegration
         cls.fixture_case=TestFrappeIntegration()
         TestFrappeIntegration.setUpClass()
         frappe.db.set_global('installed_apps',json.dumps(['frappe','is_production','engineering']))
@@ -141,7 +141,7 @@ class TestFrappeReporting(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        from is_production.production.production_summaries.test_production_summaries import TestFrappeIntegration
+        from is_production.production.controllers.test_production_summaries import TestFrappeIntegration
         TestFrappeIntegration.tearDownClass()
 
     def setUp(self):
@@ -155,7 +155,7 @@ class TestFrappeReporting(unittest.TestCase):
             shift='Full Daily',report_data_json=json.dumps([dict(plant_no='DZ-1',breakdown_hours=4,open_closed='Closed')]))
         from datetime import datetime
         from is_production.production.controllers.production_summary_snapshot import create_snapshot
-        from is_production.production.production_summaries.periods import make_period
+        from is_production.production.controllers.production_summary_periods import make_period
         self.names={kind:create_snapshot('Koppie',make_period(kind,datetime(2026,10,1,6))) for kind in ('hourly','shift','daily')}
 
     def test_all_five_types_list_and_render_actual_saved_documents(self):
@@ -201,7 +201,7 @@ class TestFrappeReporting(unittest.TestCase):
         from datetime import datetime
         from . import service
         from is_production.production.controllers.production_summary_snapshot import create_snapshot
-        from is_production.production.production_summaries.periods import make_period
+        from is_production.production.controllers.production_summary_periods import make_period
         fixture=self.fixture_case.fixture
         fixture('Monthly Production Planning','GWAB-VALID',location='Gwab',prod_month_start_date='2026-10-01',prod_month_end_date='2026-10-01')
         other=create_snapshot('Gwab',make_period('daily',datetime(2026,10,1,6)))
