@@ -1360,3 +1360,15 @@
 .reliability-engineering-page .pm-charts{grid-template-columns:minmax(0,1fr)}.reliability-engineering-page .pm-cards{grid-template-columns:minmax(0,1fr)}
 .reliability-engineering-page .re-problems-tab .pm-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.reliability-engineering-page .re-problems-tab .pm-summary strong{font-size:20px}
 .reliability-engineering-page .re-tabs button{padding:12px 9px;font-size:12px;flex:1}.reliability-engineering-page .pm-frequency{min-height:280px}}
+
+/* Shared reliability help; no calculation or ranking behavior. */
+.reliability-engineering-page .re-formulas{margin:14px 0}
+.reliability-engineering-page .re-formulas summary{cursor:pointer;font-size:13px;font-weight:700;color:#164b58}
+.reliability-engineering-page .re-formulas dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.reliability-engineering-page .re-formulas dl>div{min-width:0;overflow-wrap:anywhere}
+.reliability-engineering-page .re-formulas dt{font-size:12px;font-weight:800;color:#164b58;margin-bottom:5px}
+.reliability-engineering-page .re-formulas dd{margin:0;font-size:12px;line-height:1.6}
+.reliability-engineering-page .re-formulas p,.reliability-engineering-page .pm-trial-note{font-size:12px;line-height:1.6;color:#617784}
+.reliability-engineering-page .re-formulas .re-repeat-quality{padding:10px 12px;border-left:3px solid #b7652b;background:#fff6e9;color:#714b28}
+.reliability-engineering-page .pm-trial-note{margin:8px 4px}
+@media(max-width:767px){.reliability-engineering-page .re-formulas dl{grid-template-columns:minmax(0,1fr)}}

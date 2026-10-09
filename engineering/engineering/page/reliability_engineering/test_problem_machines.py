@@ -80,5 +80,31 @@ class ProblemMachinesTest(unittest.TestCase):
         self.assertTrue(0 <= row["problem_score"] <= 100)
 
 
+    def test_classified_repeat_example_uses_class_not_free_text(self):
+        rows = [dict(name="B1", asset_name="A1", location="Site", failure_classification="Hydraulic",
+                     breakdown_start_datetime="2026-08-01 08:00:00", resolved_datetime="2026-08-01 10:00:00",
+                     breakdown_reason="Hose leak"),
+                dict(name="B2", asset_name="A1", location="Site", failure_classification="Hydraulic",
+                     breakdown_start_datetime="2026-08-03 08:00:00", resolved_datetime="2026-08-03 10:00:00",
+                     breakdown_reason="Hydraulic line damaged")]
+        meters = [dict(asset_name="A1", location="Site", shift_date="2026-08-01", shift="Day",
+                       eng_hrs_start=100, eng_hrs_end=110)]
+        report = build_report(rows, meters, "2026-08-01", "2026-08-31")
+        row = problem_machines.build_problem_report(report)["ranking"][0]
+        self.assertEqual(row["bdfr"], 200)
+        self.assertEqual(row["repeat_rate"], 50)
+        self.assertEqual(row["repeat_breakdowns"], 1)
+        self.assertFalse(row["main_problem_unverified"])
+
+    def test_identical_free_text_without_classification_is_not_a_repeat(self):
+        rows = [dict(name=str(day), asset_name="A1", breakdown_reason="Hose leak",
+                     breakdown_start_datetime=f"2026-08-{day:02d} 08:00:00") for day in (1, 3)]
+        report = build_report(rows, [], "2026-08-01", "2026-08-31")
+        row = problem_machines.build_problem_report(report)["ranking"][0]
+        self.assertIsNone(row["repeat_rate"])
+        self.assertEqual(row["repeat_breakdowns"], 0)
+        self.assertTrue(row["main_problem_unverified"])
+
+
 if __name__ == "__main__":
     unittest.main()
