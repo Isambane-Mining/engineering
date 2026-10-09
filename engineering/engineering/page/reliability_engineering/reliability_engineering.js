@@ -16,9 +16,30 @@ class ReliabilityEngineeringPage {
         return $("<div>").text(value == null ? "" : String(value)).html();
     }
 
+    formulaHelp(extraClass = "") {
+        const formulas = [
+            [__("MTBF"), __("MTBF = validated operating hours / breakdowns"),
+                __("Higher means more operating hours between breakdowns. Unavailable when there are no breakdowns.")],
+            [__("MTTR"), __("MTTR = valid completed repair hours / completed repairs"),
+                __("Higher means longer repairs. Open or invalid repair intervals are excluded; unavailable when there are no valid completed repairs.")],
+            [__("BDFR"), __("BDFR = breakdowns / validated operating hours × 1,000"),
+                __("Higher means more breakdowns per operating hour. Unavailable when operating hours are zero. Operating hours use validated Pre-Use meter deltas.")],
+            [__("% Repeat Breakdown"), __("% Repeat Breakdown = known repeat breakdowns / all breakdowns × 100"),
+                __("Available only when there are breakdowns and 100% are classified. Incomplete classification means Unavailable, not 0%.")],
+            [__("Problem Score"), __("Problem Score = 100 × average of each available metric / its fleet maximum"),
+                __("Equal contributions from breakdown hours, breakdown count, BDFR, MTTR, repeat rate and inverse MTBF (BDFR / 1,000). BDFR and inverse MTBF describe the same failure exposure relationship. Higher scores mean worse impact relative to the selected site and dates. A zero fleet maximum contributes zero; unavailable metrics are excluded. Scores with different metric coverage need care when comparing machines. All fleet maxima are calculated before Top N; changing Top N only changes the number displayed.")]
+        ];
+        return `<details class="re-formulas re-panel ${extraClass}" open><summary>${__("Reliability formulas and data quality")}</summary>
+            <dl>${formulas.map(([label, formula, explanation]) => `<div><dt>${this.escape(label)}</dt><dd><strong>${this.escape(formula)}</strong><p>${this.escape(explanation)}</p></dd></div>`).join("")}</dl>
+            <p>${__("A known repeat uses the same Asset ID and exact Failure Classification within 7 days of the previous matching event, including exactly 7 days and the lookback before Date From. Event time is the breakdown start, falling back to record creation when the start is missing. Downtime type selects Breakdown records; it is not the repeat-matching key.")}</p>
+            <p class="re-repeat-quality">${__("Free-text descriptions do not confirm repeats. Missing descriptions do not prevent a classified match. Missing classification prevents a known-repeat match and makes the percentage unavailable when classification coverage is incomplete. Consistent breakdown types and failure classifications improve repeat-failure accuracy. Incorrect or overly broad classifications can distort results even at 100% coverage.")}</p>
+            <p>${__("Main recurring problem uses the classification with the most known repeats, then the most events. Unclassified reason summaries are labelled recurrence unverified; matching free-text wording does not establish repeat failures. Breakdown hours include valid completed repair intervals. Zero operating hours cannot establish exposure; Problem Machines withholds MTBF and BDFR for scoring when exposure is unavailable.")}</p></details>`;
+    }
+
     buildTabs() {
         const shell = this.page.main.find(".re-shell");
         shell.children().not(".re-header").wrapAll('<div class="re-analysis-tab" role="tabpanel" id="re-analysis-panel" aria-labelledby="re-analysis-tab"></div>');
+        shell.find(".re-analysis-tab").append(this.formulaHelp());
         shell.find(".re-header").after(`<div class="re-tabs" role="tablist" aria-label="${__("Analysis views")}">
             <button type="button" id="re-analysis-tab" role="tab" aria-selected="true" aria-controls="re-analysis-panel" data-tab="analysis">${__("Breakdown Analysis")}</button>
             <button type="button" id="re-problems-tab" role="tab" aria-selected="false" aria-controls="re-problems-panel" tabindex="-1" data-tab="problems">${__("Problem Machines")}</button></div>`);
@@ -150,9 +171,9 @@ class ReliabilityEngineeringPage {
         const cards = [
             ["mtbf", __("MTBF"), this.metricValue(kpis, "mtbf"), __("Operating hours / breakdowns")],
             ["mttr", __("MTTR"), this.metricValue(kpis, "mttr"), __("Valid repair hours / completed repairs")],
-            ["bdfr", __("BDFR"), this.metricValue(kpis, "bdfr"), __("Breakdowns per 1,000 operating hours")],
+            ["bdfr", __("BDFR"), this.metricValue(kpis, "bdfr"), __("Breakdowns / operating hours × 1,000; higher means more failures")],
             ["repeat_rate", __("Repeat Breakdown Rate"), this.metricValue(kpis, "repeat_rate"),
-                kpis.repeat_rate == null && kpis.breakdowns ? __("Available at 100% classification coverage") : __("Same machine and class within 7 days")],
+                kpis.repeat_rate == null && kpis.breakdowns ? __("Unavailable: requires 100% classification coverage") : __("Known repeats / breakdowns × 100; same machine/class within 7 days")],
             ["operating_hours", __("Validated operating hours"), this.number(kpis.operating_hours, " h"), __("Pre-Use engine meter deltas")],
             ["breakdowns", __("Breakdowns"), this.number(kpis.breakdowns, "", 0), `${__("Known repeats")}: ${this.number(kpis.repeat_breakdowns, "", 0)}`],
             ["breakdown_hours", __("Breakdown hours"), this.number(kpis.breakdown_hours, " h"), __("Valid recorded repair intervals")],
@@ -284,6 +305,7 @@ class ProblemMachinesPanel {
         this.initializing = true;
         root.html(`<div class="re-filters pm-filters"><div class="pm-site"></div><div class="pm-from"></div>
             <div class="pm-to"></div><div class="pm-top"></div></div>
+            <p class="pm-trial-note">${__("Small-machine trial: choose a Site and date range, then Show Top 1–3. Top N selects the worst-ranked machines, not a fixed hand-picked group. Keep the site and dates fixed when comparing Top N; scores still use the full filtered fleet.")}</p>
             <div class="pm-status" role="status" aria-live="polite"></div>
             <div class="pm-results">
             <div class="pm-summary"></div>
@@ -292,11 +314,7 @@ class ProblemMachinesPanel {
             <section class="re-panel"><div class="re-panel-head"><h2>${__("Breakdown Frequency")}</h2></div><div class="pm-frequency"></div></section></div>
             <section class="re-panel pm-ranking"><div class="re-panel-head"><h2>${__("Problem machine ranking")}</h2><span class="pm-count"></span></div>
             <div class="pm-table-wrap"></div><div class="pm-cards"></div></section></div>
-            <details class="pm-method re-panel"><summary>${__("How scores and recurring problems are calculated")}</summary>
-            <p>${__("Score (0–100) = 100 × average of metric / fleet maximum for breakdown hours, breakdown count, BDFR, MTTR, repeat rate and inverse MTBF. Each available metric contributes equally. Scores are relative to all machines with breakdowns in the selected site and dates, before Top N is applied.")}</p>
-            <p>${__("BDFR and inverse MTBF express the same failure exposure relationship; both are included as requested. Missing metrics are excluded, not treated as zero. Scores with different metric coverage need care when comparing machines.")}</p>
-            <p>${__("Breakdown hours include valid recorded completed repair intervals; open or invalid intervals are excluded. MTTR uses completed repairs only. Operating hours come from validated Pre-Use meter readings. MTBF and BDFR are unavailable when operating hours are zero.")}</p>
-            <p>${__("A repeat is the same machine and failure classification within seven days, including the seven-day lookback. Repeat rate is available only at 100% classification coverage. Main recurring problem is the class with the most known repeats, then the most events. With no known repeats, the most frequent class is shown. For unclassified problems, the most frequent recorded reason is shown with recurrence unverified; free-text reasons do not establish repeats.")}</p></details>
+            ${page.formulaHelp("pm-method")}
             <div class="pm-quality"></div>`);
         [
             ["site", {fieldtype: "Link", options: "Location", fieldname: "pm_site", label: __("Site")}],
@@ -409,7 +427,8 @@ class ProblemMachinesPanel {
             [__("MTBF"), this.number(row.score_mtbf, " h")],
             [__("MTTR"), this.number(row.mttr, " h")],
             [__("BDFR"), this.number(row.bdfr, " / 1,000 h")],
-            [__("Repeat Rate"), this.number(row.repeat_rate, "%")]
+            [__("% Repeat Breakdown"), row.repeat_rate == null && row.breakdowns ?
+                `${__("Unavailable")} (${this.number(row.classification_coverage, "%")} ${__("classified")})` : this.number(row.repeat_rate, "%")]
         ];
         this.root.find(".pm-table-wrap").html(`<table class="pm-table"><thead><tr>
             <th>${__("Rank")}</th><th>${__("Machine")}</th><th>${__("Problem Score")}</th>
