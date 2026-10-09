@@ -1,0 +1,16 @@
+{% if missing_data or missing_hours %}<div class="notice"><strong>Snapshot completeness:</strong>
+{% if missing_data %}Missing source data: {{ missing_data|join(', ')|e }}.{% endif %}
+{% if missing_hours %} Missing hours: {{ missing_hours|join(', ')|e }}.{% endif %}</div>{% endif %}
+<div class="muted">Source coverage: {{ source_hour_count|e }} / {{ expected_hour_count|e }} hours.
+Monthly values are planning values captured at generation, rather than historical recalculations.
+{% if planning_name %}Plan: {{ planning_name|e }} (saved plan modified {{ planning_modified|e }}).{% endif %}</div>
+<table><thead><tr><th>Metric</th><th>Saved value</th></tr></thead><tbody>
+{% for field,label in metric_labels %}<tr><td>{{ label|e }}</td><td class="number">{{ amount(metrics[field])|e }}</td></tr>{% endfor %}
+</tbody></table>
+<h2>Excavator production</h2><table><thead><tr><th>Excavator</th><th>Area</th><th>Material</th><th>BCM</th></tr></thead><tbody>
+{% for row in excavators %}<tr><td>{{ (row.excavator or '')|e }}</td><td>{{ (row.area or '')|e }}</td><td>{{ (row.material or '')|e }}</td><td class="number">{{ amount(row.bcms)|e }}</td></tr>{% else %}<tr><td colspan="4">No recorded excavator production.</td></tr>{% endfor %}</tbody></table>
+<h2>Dozer production</h2><table><thead><tr><th>Dozer</th><th>Service</th><th>BCM</th></tr></thead><tbody>
+{% for row in dozers %}<tr><td>{{ (row.dozer or '')|e }}</td><td>{{ (row.service or '')|e }}</td><td class="number">{{ amount(row.bcm_hour)|e }}</td></tr>{% else %}<tr><td colspan="3">No recorded dozer production.</td></tr>{% endfor %}</tbody></table>
+<h2>Drilling production</h2><table><thead><tr><th>Drill</th><th>Area</th><th>Material</th><th>Meters</th></tr></thead><tbody>
+{% for row in drills %}<tr><td>{{ (row.drill or '')|e }}</td><td>{{ (row.area or '')|e }}</td><td>{{ (row.material or '')|e }}</td><td class="number">{{ amount(row.meters)|e }}</td></tr>{% else %}<tr><td colspan="4">{% if 'drilling_reports' in missing_data %}Drilling source data unavailable.{% else %}No recorded drilling production.{% endif %}</td></tr>{% endfor %}</tbody></table>
+<div class="muted">Calculation version: {{ calculation_version|e }}. Monthly basis: {{ monthly_values_basis|e }}.</div>
