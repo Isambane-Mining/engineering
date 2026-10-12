@@ -1,0 +1,143 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-07 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "site",
+  "active",
+  "day_section",
+  "day_shift_type",
+  "day_planned_available_hours",
+  "day_shift_change",
+  "day_fatigue_break",
+  "night_section",
+  "night_shift_type",
+  "night_planned_available_hours",
+  "night_shift_change",
+  "night_fatigue_break"
+ ],
+ "fields": [
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "day_section",
+   "fieldtype": "Section Break",
+   "label": "Day Shift"
+  },
+  {
+   "fieldname": "day_shift_type",
+   "fieldtype": "Link",
+   "label": "Day Shift Type",
+   "options": "Shift Type"
+  },
+  {
+   "fieldname": "day_planned_available_hours",
+   "fieldtype": "Link",
+   "label": "Day Planned Available Hours",
+   "options": "MOS Planned Available Hours"
+  },
+  {
+   "fieldname": "day_shift_change",
+   "fieldtype": "Link",
+   "label": "Day Shift Change",
+   "options": "MOS Shift Change"
+  },
+  {
+   "fieldname": "day_fatigue_break",
+   "fieldtype": "Link",
+   "label": "Day Fatigue Break",
+   "options": "MOS Fatigue Break"
+  },
+  {
+   "fieldname": "night_section",
+   "fieldtype": "Section Break",
+   "label": "Night Shift"
+  },
+  {
+   "fieldname": "night_shift_type",
+   "fieldtype": "Link",
+   "label": "Night Shift Type",
+   "options": "Shift Type"
+  },
+  {
+   "fieldname": "night_planned_available_hours",
+   "fieldtype": "Link",
+   "label": "Night Planned Available Hours",
+   "options": "MOS Planned Available Hours"
+  },
+  {
+   "fieldname": "night_shift_change",
+   "fieldtype": "Link",
+   "label": "Night Shift Change",
+   "options": "MOS Shift Change"
+  },
+  {
+   "fieldname": "night_fatigue_break",
+   "fieldtype": "Link",
+   "label": "Night Fatigue Break",
+   "options": "MOS Fatigue Break"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "MOS Site Shift Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
