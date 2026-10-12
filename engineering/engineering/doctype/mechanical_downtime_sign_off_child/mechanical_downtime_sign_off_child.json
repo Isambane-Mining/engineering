@@ -18,12 +18,14 @@
   "date_time_p",
   "shift_p",
   "production_user",
+  "production_user_id",
   "production_signature",
   "comments2",
   "engineering_user_table",
   "date_time_e",
   "shift_e",
   "engineering_user",
+  "engineering_user_id",
   "engineering_signature",
   "comments3",
   "section_break_hnno",
@@ -39,19 +41,23 @@
    "fieldname": "date_time_p",
    "fieldtype": "Datetime",
    "in_list_view": 1,
-   "label": "Date and Time"
+   "label": "Date and Time",
+   "read_only": 1
   },
   {
    "fieldname": "production_user",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Production User"
+   "label": "Production User",
+   "read_only": 1
   },
   {
    "fieldname": "production_signature",
    "fieldtype": "Signature",
    "in_list_view": 1,
-   "label": "Production Signature"
+   "label": "Production Signature",
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "engineering_user_table",
@@ -62,33 +68,39 @@
    "fieldname": "date_time_e",
    "fieldtype": "Datetime",
    "in_list_view": 1,
-   "label": "Date and Time"
+   "label": "Date and Time",
+   "read_only": 1
   },
   {
    "fieldname": "engineering_user",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Engineering User"
+   "label": "Engineering User",
+   "read_only": 1
   },
   {
    "fieldname": "engineering_signature",
    "fieldtype": "Signature",
    "in_list_view": 1,
-   "label": "Engineering Signature"
+   "label": "Engineering Signature",
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "shift_p",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Shift",
-   "options": "Day Shift\nNight Shift"
+   "options": "Day Shift\nNight Shift",
+   "read_only": 1
   },
   {
    "fieldname": "shift_e",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Shift",
-   "options": "Day Shift\nNight Shift"
+   "options": "Day Shift\nNight Shift",
+   "read_only": 1
   },
   {
    "fieldname": "information_officer_section",
@@ -155,6 +167,20 @@
    "fieldname": "column_break_lswz",
    "fieldtype": "Column Break",
    "hidden": 1
+  },
+  {
+   "fieldname": "engineering_user_id",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "Engineering User ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "production_user_id",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "Production User ID",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

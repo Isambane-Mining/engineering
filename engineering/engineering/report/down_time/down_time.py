@@ -556,19 +556,113 @@ def get_data(filters):
     return data
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def save_downtime_signoff(
     report_date,
     site,
     asset_category,
     shift,
     signoff_section,
-    signature,
+    signature=None,
     downtime_comments=None,
 ):
+    import hashlib
+
+    if not report_date:
+        frappe.throw(_("Please select a report date."))
+
+    site = str(site or "").strip()
     report_date = getdate(report_date)
-    signoff_shift = shift or ""
-    report_shift = shift or "All Shifts"
+
+    if report_date > getdate(frappe.utils.today()):
+        frappe.throw(
+            _("Future report dates cannot be signed off.")
+        )
+    shift = str(shift or "").strip()
+
+    if not site or not frappe.db.exists("Location", site):
+        frappe.throw(_("Please select a valid site."))
+
+    if shift not in ("", "Day Shift", "Night Shift"):
+        frappe.throw(_("Please select a valid shift."))
+
+    identity = "{0}|{1}|{2}".format(
+        site, report_date, shift or "All Shifts"
+    )
+
+    lock_name = "dt-signoff:" + hashlib.sha256(
+        identity.encode("utf-8")
+    ).hexdigest()[:40]
+
+    acquired = frappe.db.sql(
+        "SELECT GET_LOCK(%s, %s)",
+        (lock_name, 15),
+    )
+
+    if not acquired or acquired[0][0] != 1:
+        frappe.throw(_(
+            "This downtime sign-off is being processed. "
+            "Please try again."
+        ))
+
+    try:
+        result = _save_downtime_signoff(
+            report_date=report_date,
+            site=site,
+            asset_category=asset_category,
+            shift=shift,
+            signoff_section=signoff_section,
+            signature=signature,
+            downtime_comments=downtime_comments,
+        )
+        frappe.db.commit()
+        return result
+
+    except Exception:
+        frappe.db.rollback()
+        raise
+
+    finally:
+        frappe.db.sql(
+            "SELECT RELEASE_LOCK(%s)",
+            (lock_name,),
+        )
+
+
+def _save_downtime_signoff(
+    report_date,
+    site,
+    asset_category,
+    shift,
+    signoff_section,
+    signature=None,
+    downtime_comments=None,
+):
+    if not report_date:
+        frappe.throw(_("Please select a report date."))
+
+    report_date = getdate(report_date)
+
+    if report_date > getdate(frappe.utils.today()):
+        frappe.throw(
+            _("Future report dates cannot be signed off.")
+        )
+    site = str(site or "").strip()
+    signoff_shift = str(shift or "").strip()
+    report_shift = signoff_shift or "All Shifts"
+
+    if not site or not frappe.db.exists("Location", site):
+        frappe.throw(_("Please select a valid site."))
+
+    if report_shift not in ("Day Shift", "Night Shift", "All Shifts"):
+        frappe.throw(_("Please select a valid shift."))
+
+    from engineering.engineering.report.downtime_correction_dashboard.downtime_correction_dashboard import (
+        check_site_access,
+    )
+
+    check_site_access(site)
+
     user = frappe.session.user
     roles = frappe.get_roles(user)
     full_name = frappe.db.get_value("User", user, "full_name") or user
@@ -612,8 +706,14 @@ def save_downtime_signoff(
             "You do not have permission to complete the Production sign-off."
         ))
 
-    parent = get_or_create_signoff_parent(report_date, signoff_shift)
+    parent = get_or_create_signoff_parent(report_date, site, report_shift)
     row = get_or_create_signoff_row(parent, report_date, signoff_shift)
+
+    if signoff_section == "Engineering" and row.date_time_e and row.engineering_user:
+        frappe.throw(_("Engineering has already submitted this sign-off."))
+
+    if signoff_section == "Production" and row.date_time_p and row.production_user:
+        frappe.throw(_("Production has already submitted this sign-off."))
 
     formatted_downtime_comments = format_downtime_comments_for_signoff(
         downtime_comments
@@ -623,7 +723,7 @@ def save_downtime_signoff(
         row.date_time_e = now_datetime()
         row.shift_e = signoff_shift
         row.engineering_user = full_name
-        row.engineering_signature = signature
+        row.engineering_user_id = user
 
         if formatted_downtime_comments:
             row.comments3 = formatted_downtime_comments
@@ -632,62 +732,58 @@ def save_downtime_signoff(
         row.date_time_p = now_datetime()
         row.shift_p = signoff_shift
         row.production_user = full_name
-        row.production_signature = signature
+        row.production_user_id = user
 
         if formatted_downtime_comments:
             row.comments2 = formatted_downtime_comments
 
     parent.site = site
     parent.status = get_signoff_status(row)
-    parent.save(ignore_permissions=True)
 
-    new_name = make_signoff_name(row, report_date, report_shift, site)
+    flag_name = "_mechanical_dt_signoff_save"
+    previous_flag = frappe.flags.get(flag_name)
 
-    if parent.name != new_name:
-        if frappe.db.exists("Mechanical Downtime sign-off", new_name):
-            frappe.throw(_("A sign-off already exists with this name: {0}").format(new_name))
-
-        frappe.rename_doc("Mechanical Downtime sign-off", parent.name, new_name, force=True)
-        parent = frappe.get_doc("Mechanical Downtime sign-off", new_name)
+    try:
+        frappe.flags[flag_name] = (parent.name, signoff_section)
+        parent.save(ignore_permissions=True)
+    finally:
+        if previous_flag is None:
+            frappe.flags.pop(flag_name, None)
+        else:
+            frappe.flags[flag_name] = previous_flag
 
     attach_signed_report_pdf(parent, report_date, site, asset_category, signoff_shift, downtime_comments)
 
-    return _("Downtime sign-off saved. Status: {0}").format(parent.status)
+    return _("Downtime sign-off submitted. Status: {0}").format(parent.status)
 
 
-def get_or_create_signoff_parent(report_date, shift):
-    existing_parent = frappe.db.sql(
-        """
-        select distinct parent
-        from `tabMechanical Downtime sign-off child`
-        where parenttype = 'Mechanical Downtime sign-off'
-            and (
-                (
-                    date(date_time_e) = %(report_date)s
-                    and ifnull(shift_e, '') in (%(shift)s, '')
-                )
-                or
-                (
-                    date(date_time_p) = %(report_date)s
-                    and ifnull(shift_p, '') in (%(shift)s, '')
-                )
-            )
-        order by modified desc
-        limit 1
-        """,
-        {
+def get_or_create_signoff_parent(report_date, site, shift):
+    doctype = "Mechanical Downtime sign-off"
+
+    matches = frappe.get_all(
+        doctype,
+        filters={
+            "site": site,
             "report_date": report_date,
-            "shift": shift,
+            "report_shift": shift,
         },
+        fields=["name"],
+        limit_page_length=2,
     )
 
-    if existing_parent:
-        return frappe.get_doc(
-            "Mechanical Downtime sign-off",
-            existing_parent[0][0],
-        )
+    if len(matches) > 1:
+        frappe.throw(_(
+            "Multiple sign-offs exist for this site, date "
+            "and shift. Contact the administrator."
+        ))
 
-    parent = frappe.new_doc("Mechanical Downtime sign-off")
+    if matches:
+        return frappe.get_doc(doctype, matches[0].name)
+
+    parent = frappe.new_doc(doctype)
+    parent.site = site
+    parent.report_date = report_date
+    parent.report_shift = shift
     parent.status = "Open"
     parent.insert(ignore_permissions=True)
 
@@ -695,62 +791,28 @@ def get_or_create_signoff_parent(report_date, shift):
 
 
 def get_or_create_signoff_row(parent, report_date, shift):
-    for row in parent.signoff_information:
-        same_engineering = (
-            row.date_time_e
-            and getdate(row.date_time_e) == report_date
-            and row.shift_e in (shift, None, "")
-        )
+    rows = parent.signoff_information
 
-        same_production = (
-            row.date_time_p
-            and getdate(row.date_time_p) == report_date
-            and row.shift_p in (shift, None, "")
-        )
+    if len(rows) > 1:
+        frappe.throw(_(
+            "Multiple verification rows found. "
+            "Contact the administrator."
+        ))
 
-        if same_engineering or same_production:
-            return row
+    if rows:
+        return rows[0]
 
     row = parent.append("signoff_information", {})
     row.shift_e = shift
     row.shift_p = shift
-
     return row
 
 
 def get_signoff_status(row):
-    if row.engineering_signature and row.production_signature:
-        return "Closed"
+    engineering_verified = bool(row.engineering_user and row.date_time_e)
+    production_verified = bool(row.production_user and row.date_time_p)
 
-    return "Open"
-
-
-def make_signoff_name(row, report_date, shift, site):
-    production_user = row.production_user or "Pending Production"
-    engineering_user = row.engineering_user or "Pending Engineering"
-    shift = row.shift_e or row.shift_p or shift or "All Shifts"
-    site = site or "All Sites"
-
-    return clean_docname("{0}-{1}-{2}-{3}-{4}".format(
-        site,
-        production_user,
-        engineering_user,
-        report_date,
-        shift,
-    ))
-
-
-def clean_docname(value):
-    value = str(value or "").strip()
-    value = value.replace("/", "-")
-    value = value.replace("\\", "-")
-    value = value.replace(":", "-")
-    value = value.replace("\n", " ")
-    value = " ".join(value.split())
-
-    return value
-
-
+    return "Closed" if engineering_verified and production_verified else "Open"
 
 
 def format_downtime_comments_for_signoff(downtime_comments=None):
@@ -1105,8 +1167,12 @@ def get_signed_report_html(parent, report_date, site, asset_category, shift, col
         engineering_user=frappe.utils.escape_html(engineering_user or ""),
         production_date_time=frappe.utils.escape_html(production_date_time or ""),
         engineering_date_time=frappe.utils.escape_html(engineering_date_time or ""),
-        production_signature_html=get_signature_html(production_signature),
-        engineering_signature_html=get_signature_html(engineering_signature),
+        production_signature_html=get_verification_html(
+            production_user, production_date_time, production_signature
+        ),
+        engineering_signature_html=get_verification_html(
+            engineering_user, engineering_date_time, engineering_signature
+        ),
         avail_util_html=get_avail_util_pdf_html(avail_util_summary),
         downtime_cards=get_downtime_cards_html(data, downtime_comments, signoff_row),
     )
@@ -1314,6 +1380,16 @@ def get_downtime_cards_html(data, downtime_comments=None, signoff_row=None):
         ))
 
     return "".join(cards)
+
+
+def get_verification_html(user, date_time, signature):
+    if signature:
+        return get_signature_html(signature)
+
+    if user and date_time:
+        return '<div class="verified">Electronically verified</div>'
+
+    return '<div class="pending">Pending verification</div>'
 
 
 def get_signature_html(signature):
