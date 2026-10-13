@@ -652,6 +652,14 @@ def get_engineering_downtime(filters, shift_values):
     from_date = getdate(from_date)
     to_date = getdate(to_date)
 
+    night_offset = int(
+        frappe.db.get_value(
+            "MOS Site Shift Configuration",
+            {"site": site, "active": 1},
+            "night_shift_reporting_day_offset",
+        ) or 0
+    )
+
     shift_windows = {
         "day": [],
         "night": [],
@@ -672,9 +680,14 @@ def get_engineering_downtime(filters, shift_values):
         ):
             return
 
-        current_date = from_date
+        offset_days = (
+            night_offset if shift_key == "night" else 0
+        )
 
-        while current_date <= to_date:
+        current_date = from_date + timedelta(days=offset_days)
+        last_date = to_date + timedelta(days=offset_days)
+
+        while current_date <= last_date:
             window_start, window_end = build_shift_window(
                 current_date,
                 definition.start_time,
@@ -1068,6 +1081,21 @@ def get_pre_use_operating_hours(filters, shift_values):
         }
 
     if include_night:
+        night_offset = int(
+            frappe.db.get_value(
+                "MOS Site Shift Configuration",
+                {"site": site, "active": 1},
+                "night_shift_reporting_day_offset",
+            ) or 0
+        )
+
+        night_from_date = (
+            getdate(from_date) + timedelta(days=night_offset)
+        )
+        night_to_date = (
+            getdate(to_date) + timedelta(days=night_offset)
+        )
+
         rows = frappe.db.sql(
             """
             SELECT
@@ -1085,8 +1113,8 @@ def get_pre_use_operating_hours(filters, shift_values):
             """,
             {
                 "site": site,
-                "from_date": from_date,
-                "to_date": to_date,
+                "from_date": night_from_date,
+                "to_date": night_to_date,
                 "shift": "Night",
             },
             as_dict=True,
