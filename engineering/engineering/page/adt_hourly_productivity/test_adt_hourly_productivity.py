@@ -8,8 +8,9 @@ class TestADTHourlyProductivity(TestCase):
     def setUp(self):
         self.assets = [{"name": "ADT04", "asset_name": "ADT04"}, {"name": "ADT05", "asset_name": "ADT05"}]
 
-    def build(self, shift="Day", breakdowns=(), production=()):
-        return report.build_report("2026-09-28", shift, "Koppie", self.assets, breakdowns, production)
+    def build(self, shift="Day", breakdowns=(), production=(), excavators=(), planned_adts=(), tub_factors=()):
+        return report.build_report("2026-09-28", shift, "Koppie", self.assets, breakdowns, production,
+                                   excavators, planned_adts, tub_factors)
 
     def excavator_row(self, hour, excavator="EX019", first=None, last=None, **values):
         return {
@@ -186,3 +187,83 @@ class TestADTHourlyProductivity(TestCase):
         self.assertIn("EX019", html)
         self.assertIn("06:23", html)
         self.assertIn("17:14", html)
+
+    def test_excavator_full_and_twenty_minute_availability_across_buckets(self):
+        excavators = [{"name": "EX019", "asset_name": "EX019", "location": "Koppie"}]
+        breakdowns = [{"asset_name": "EX019", "breakdown_start_datetime": "2026-09-28 06:40:00",
+                       "resolved_datetime": "2026-09-28 07:40:00"}]
+        hours = self.build(breakdowns=breakdowns, excavators=excavators)["hours"]
+        self.assertAlmostEqual(hours[0]["excavator_available"], 40 / 60)
+        self.assertAlmostEqual(hours[1]["excavator_available"], 20 / 60)
+        self.assertEqual(hours[2]["excavator_available"], 1)
+
+    def test_excavator_utilisation_is_unique_and_requires_positive_loads(self):
+        excavators = [{"name": "EX019", "location": "Koppie"}, {"name": "EX021", "location": "Koppie"}]
+        production = [self.excavator_row("06:00-07:00", "EX019", loads=1),
+                      self.excavator_row("06:00-07:00", "EX019", loads=3),
+                      self.excavator_row("06:00-07:00", "EX021", loads=1),
+                      self.excavator_row("07:00-08:00", "EX021", loads=0)]
+        hours = self.build(production=production, excavators=excavators)["hours"]
+        self.assertEqual(hours[0]["excavator_utilised"], 2)
+        self.assertEqual(hours[1]["excavator_utilised"], 0)
+
+    def test_other_site_excavators_are_not_counted(self):
+        excavators = [{"name": "EX019", "location": "Koppie"}, {"name": "EX099", "location": "Gwab"}]
+        production = [self.excavator_row("06:00-07:00", "EX099", loads=2)]
+        hour = self.build(production=production, excavators=excavators)["hours"][0]
+        self.assertEqual(hour["excavator_available"], 1)
+        self.assertEqual(hour["excavator_utilised"], 0)
+
+    def test_night_excavator_utilisation_after_midnight(self):
+        production = [self.excavator_row("02:00-03:00", "EX019", loads=1)]
+        hour = self.build("Night", production=production, excavators=[{"name": "EX019"}])["hours"][8]
+        self.assertEqual(hour["excavator_utilised"], 1)
+        self.assertEqual(hour["start"], "2026-09-29 02:00:00")
+
+    def test_target_bcm_windows_average_model_factors_and_exclude_spares(self):
+        planned = [{"name": "ADT04", "item_name": "Model A"}, {"name": "ADT05", "item_name": "Model B"}]
+        factors = [{"item_name": "Model A", "mat_type": "Softs", "tub_factor": 14},
+                   {"item_name": "Model A", "mat_type": "Hards", "tub_factor": 16},
+                   {"item_name": "Model B", "mat_type": "Coal", "tub_factor": 20}]
+        hours = self.build(planned_adts=planned, tub_factors=factors)["hours"]
+        self.assertEqual([hours[i]["target_bcm"] for i in (0, 1, 11)], [55, 220, 165])
+        self.assertEqual(hours[0]["target_loads"], round(55 / 15 + 55 / 20, 1))
+        self.assertEqual(hours[1]["target_loads"], round(220 / 15 + 220 / 20, 1))
+        self.assertEqual(hours[11]["target_loads"], round(165 / 15 + 165 / 20, 1))
+        self.assertNotEqual(hours[1]["target_loads"], round(220 / 15 + 220 / 20 + 220 / 14, 1))
+
+    def test_target_ignores_breakdown_and_missing_factors_are_reported(self):
+        planned = [{"name": "ADT04", "item_name": "Model A"}, {"name": "ADT05", "item_name": "Model Missing"}]
+        factors = [{"item_name": "Model A", "mat_type": "Softs", "tub_factor": 14},
+                   {"item_name": "Model Missing", "mat_type": "Coal", "tub_factor": 0}]
+        breakdowns = [{"asset_name": "ADT04", "breakdown_start_datetime": "2026-09-28 06:00:00",
+                       "resolved_datetime": "2026-09-28 07:00:00"}]
+        data = self.build(breakdowns=breakdowns, planned_adts=planned, tub_factors=factors)
+        self.assertEqual(data["hours"][0]["available"], 1)
+        self.assertEqual(data["hours"][0]["target_loads"], round(55 / 14, 1))
+        self.assertEqual(data["missing_tub_factors"], ["ADT05"])
+
+    def test_target_averages_only_valid_material_factors_and_handles_no_valid_factor(self):
+        planned = [{"name": "ADT04", "item_name": "Model A"}]
+        factors = [{"item_name": "Model A", "mat_type": "Softs", "tub_factor": 14},
+                   {"item_name": "Model A", "mat_type": "Hards", "tub_factor": ""},
+                   {"item_name": "Model A", "mat_type": "Coal", "tub_factor": 0}]
+        self.assertEqual(self.build(planned_adts=planned, tub_factors=factors)["hours"][1]["target_loads"],
+                         round(220 / 14, 1))
+        missing = self.build(planned_adts=planned, tub_factors=[])
+        self.assertIsNone(missing["hours"][1]["target_loads"])
+        self.assertEqual(missing["missing_tub_factors"], ["ADT04"])
+
+    def test_night_target_uses_same_first_middle_and_last_windows(self):
+        data = self.build("Night", planned_adts=[{"name": "ADT04", "item_name": "Model A"}],
+                          tub_factors=[{"item_name": "Model A", "mat_type": "Softs", "tub_factor": 10}])
+        self.assertEqual([data["hours"][i]["target_loads"] for i in (0, 6, 11)], [5.5, 22.0, 16.5])
+
+    def test_pdf_hourly_section_contains_all_six_metrics(self):
+        data = self.build(excavators=[{"name": "EX019"}],
+                          planned_adts=[{"name": "ADT04", "item_name": "Model A"}],
+                          tub_factors=[{"item_name": "Model A", "mat_type": "Softs", "tub_factor": 14}])
+        html = report.build_pdf_html(data)
+        for label in ("ADT Available", "ADT Utilised", "Actual Loads", "Target Loads",
+                      "Excavator Available", "Excavator Utilised"):
+            self.assertIn(label, html)
