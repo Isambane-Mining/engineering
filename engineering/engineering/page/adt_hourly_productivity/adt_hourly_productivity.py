@@ -83,25 +83,21 @@ def _excavator_events(production, shift, hours):
         if label:
             item["label"] = str(label).strip()
 
-        # Hourly Production copies load times forward as excavator setup. Select
-        # the latest nonblank value by operational hour, not by child-row order
-        # or event clock time. Within a duplicate hour, modified/creation/name
-        # and child index/name provide a deterministic correction order.
-        hour_index = _production_hour(_value(row, "hour_slot"), shift)
-        if hour_index is None:
+        # Only records in this operational shift can supply an event. Times
+        # copied into later rows are naturally deduplicated by the extrema.
+        if _production_hour(_value(row, "hour_slot"), shift) is None:
             continue
-        order = (
-            hour_index,
-            str(_value(row, "hp_modified") or ""),
-            str(_value(row, "hp_creation") or ""),
-            str(_value(row, "hp_name") or ""),
-            int(_value(row, "truck_idx") or 0),
-            str(_value(row, "truck_row_name") or ""),
-        )
         for field, event_name in (("exc_start_load_time", "first"), ("exc_end_load_time", "last")):
             clock, event_hour = _event_hour(_value(row, field), shift)
-            if clock is not None and (item[event_name] is None or order > item[event_name][0]):
-                item[event_name] = (order, clock, event_hour)
+            if clock is None:
+                continue
+            # The shift-hour index puts 00:00-05:59 after 18:00-23:59.
+            event_key = (event_hour, clock.minute, clock.second, clock.microsecond)
+            current = item[event_name]
+            if (current is None
+                    or (event_name == "first" and event_key < current[0])
+                    or (event_name == "last" and event_key > current[0])):
+                item[event_name] = (event_key, clock, event_hour)
 
     excavators = []
     for item in sorted(grouped.values(), key=lambda row: row["label"]):
@@ -369,9 +365,7 @@ def _load_report(date, shift, site):
           AND (resolved_datetime > %(start)s OR resolved_datetime IS NULL)
     """, {"site": site, "names": names, "start": start, "end": end}, as_dict=True) if names else []
     production = frappe.db.sql("""
-        SELECT hp.name AS hp_name, hp.hour_slot, hp.modified AS hp_modified,
-               hp.creation AS hp_creation, tl.name AS truck_row_name,
-               tl.idx AS truck_idx, tl.asset_name_truck, tl.loads,
+        SELECT hp.hour_slot, tl.asset_name_truck, tl.loads,
                tl.asset_name_shoval, tl.excavator_plant_no,
                COALESCE(NULLIF(tl.excavator_plant_no, ''), exc.asset_name,
                         tl.asset_name_shoval) AS excavator_label,

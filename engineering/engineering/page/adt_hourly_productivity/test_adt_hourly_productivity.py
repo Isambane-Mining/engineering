@@ -150,27 +150,73 @@ class TestADTHourlyProductivity(TestCase):
         self.assertEqual(sum(len(h["first_load_events"]) for h in data["hours"]), 1)
         self.assertEqual(sum(len(h["last_load_events"]) for h in data["hours"]), 1)
 
-    def test_latest_hourly_record_wins_conflicting_nonblank_values(self):
+    def test_earliest_start_and_latest_end_win_across_operational_shift(self):
         production = [
-            self.excavator_row("10:00-11:00", first="06:44", last="16:58"),
-            self.excavator_row("06:00-07:00", first="06:23", last="17:14"),
+            self.excavator_row("10:00-11:00", first="10:25", last="16:55"),
+            self.excavator_row("06:00-07:00", first="06:18", last="09:40"),
             self.excavator_row("11:00-12:00"),  # Blank copy must not erase a recorded event.
         ]
         data = self.build(production=production)
         self.assertEqual(len(data["excavators"]), 1)
-        self.assertEqual(data["excavators"][0]["first_load_time"], "06:44")
-        self.assertEqual(data["excavators"][0]["last_load_time"], "16:58")
-        self.assertEqual(data["hours"][0]["first_load_events"], [{"excavator": "EX019", "time": "06:44"}])
-        self.assertEqual(data["hours"][10]["last_load_events"], [{"excavator": "EX019", "time": "16:58"}])
+        self.assertEqual(data["excavators"][0]["first_load_time"], "06:18")
+        self.assertEqual(data["excavators"][0]["last_load_time"], "16:55")
+        self.assertEqual(data["hours"][0]["first_load_events"], [{"excavator": "EX019", "time": "06:18"}])
+        self.assertEqual(data["hours"][10]["last_load_events"], [{"excavator": "EX019", "time": "16:55"}])
+        self.assertEqual(sum(len(h["first_load_events"]) for h in data["hours"]), 1)
+        self.assertEqual(sum(len(h["last_load_events"]) for h in data["hours"]), 1)
 
-    def test_same_hour_conflict_uses_latest_modified_record_deterministically(self):
+    def test_same_hour_times_ignore_record_modified_order(self):
         production = [
             self.excavator_row("06:00-07:00", first="06:35", hp_name="second",
-                               hp_modified="2026-09-28 09:00:00"),
+                               last="06:45", hp_modified="2026-09-28 09:00:00"),
             self.excavator_row("06:00-07:00", first="06:23", hp_name="first",
-                               hp_modified="2026-09-28 08:00:00"),
+                               last="06:50", hp_modified="2026-09-28 08:00:00"),
         ]
-        self.assertEqual(self.build(production=production)["excavators"][0]["first_load_time"], "06:35")
+        event = self.build(production=production)["excavators"][0]
+        self.assertEqual(event["first_load_time"], "06:23")
+        self.assertEqual(event["last_load_time"], "06:50")
+
+    def test_breakdown_restart_keeps_original_start_and_final_end(self):
+        production = [
+            self.excavator_row("06:00-07:00", first="06:18", last="09:40"),
+            self.excavator_row("10:00-11:00", first="10:25", last="16:55"),
+        ]
+        breakdowns = [{"asset_name": "EX019", "breakdown_start_datetime": "2026-09-28 09:45:00",
+                       "resolved_datetime": "2026-09-28 10:20:00"}]
+        data = self.build(production=production, breakdowns=breakdowns,
+                          excavators=[{"name": "EX019", "asset_name": "EX019"}])
+        event = data["excavators"][0]
+        self.assertEqual((event["first_load_time"], event["last_load_time"]), ("06:18", "16:55"))
+        self.assertAlmostEqual(data["hours"][3]["excavator_available"], 45 / 60)
+        self.assertAlmostEqual(data["hours"][4]["excavator_available"], 40 / 60)
+
+    def test_night_events_order_across_midnight_and_ignore_out_of_shift_times(self):
+        production = [
+            self.excavator_row("18:00-19:00", first="18:42", last="23:41"),
+            self.excavator_row("00:00-01:00", first="00:15", last="02:15"),
+            self.excavator_row("02:00-03:00", first="00:15", last="23:41"),
+            self.excavator_row("03:00-04:00", first="17:30", last="06:30"),
+        ]
+        data = self.build("Night", production=production)
+        self.assertEqual(data["excavators"][0]["first_load_time"], "18:42")
+        self.assertEqual(data["excavators"][0]["last_load_time"], "02:15")
+        self.assertEqual(data["hours"][0]["first_load_events"], [{"excavator": "EX019", "time": "18:42"}])
+        self.assertEqual(data["hours"][8]["last_load_events"], [{"excavator": "EX019", "time": "02:15"}])
+        self.assertEqual(sum(len(h["first_load_events"]) for h in data["hours"]), 1)
+        self.assertEqual(sum(len(h["last_load_events"]) for h in data["hours"]), 1)
+
+    def test_multiple_excavators_keep_independent_shift_extrema(self):
+        production = [
+            self.excavator_row("06:00-07:00", "EX019", first="06:18", last="09:40"),
+            self.excavator_row("07:00-08:00", "EX021", first="07:12", last="15:20"),
+            self.excavator_row("10:00-11:00", "EX019", first="10:25", last="16:55"),
+            self.excavator_row("11:00-12:00", "EX021", first="11:10", last="14:05"),
+        ]
+        events = {row["excavator"]: row for row in self.build(production=production)["excavators"]}
+        self.assertEqual((events["EX019"]["first_load_time"], events["EX019"]["last_load_time"]),
+                         ("06:18", "16:55"))
+        self.assertEqual((events["EX021"]["first_load_time"], events["EX021"]["last_load_time"]),
+                         ("07:12", "15:20"))
 
     def test_excavator_events_do_not_change_adt_metrics(self):
         production = [self.excavator_row("06:00-07:00", first="06:23", last="17:14", loads=15)]
