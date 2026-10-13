@@ -7,6 +7,8 @@
  "field_order": [
   "signoff_information",
   "site",
+  "report_date",
+  "report_shift",
   "status",
   "signed_report_excel"
  ],
@@ -37,6 +39,21 @@
    "fieldtype": "Attach",
    "label": "Signed Report",
    "read_only": 1
+  },
+  {
+   "fieldname": "report_date",
+   "fieldtype": "Date",
+   "label": "Report Date",
+   "reqd": 0,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "report_shift",
+   "fieldtype": "Select",
+   "label": "Report Shift",
+   "options": "Day Shift\nNight Shift\nAll Shifts",
+   "reqd": 0,
+   "in_list_view": 1
   }
  ],
  "grid_page_length": 50,
