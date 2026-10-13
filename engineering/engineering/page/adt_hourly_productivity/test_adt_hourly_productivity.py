@@ -1,5 +1,7 @@
-from datetime import datetime, time
+from datetime import date, datetime, time
+from types import SimpleNamespace
 from unittest import TestCase
+from unittest.mock import patch
 
 from engineering.engineering.page.adt_hourly_productivity import adt_hourly_productivity as report
 
@@ -23,6 +25,53 @@ class TestADTHourlyProductivity(TestCase):
             "exc_end_load_time": last,
             **values,
         }
+
+    def test_dashboard_uses_paired_excavators_with_legacy_or_migrated_mpp_column(self):
+        class PlanningDB:
+            def __init__(self, has_flag):
+                self.has_flag = has_flag
+
+            def has_column(self, doctype, column):
+                self_outer.assertEqual((doctype, column),
+                                       ("Excavator Truck Link", "production_excavator_without_truck"))
+                return self.has_flag
+
+            def sql(self, query, params, as_dict=False):
+                if "FROM `tabMonthly Production Planning`" in query:
+                    return [SimpleNamespace(name="MPP-1")]
+                if "FROM `tabExcavator Truck Link`" in query:
+                    if not self.has_flag and "0 AS production_excavator_without_truck" not in query:
+                        raise RuntimeError("Unknown column 'production_excavator_without_truck' in 'SELECT'")
+                    if self.has_flag:
+                        self_outer.assertIn("truck, production_excavator_without_truck", query)
+                    return [SimpleNamespace(excavator="EX019", truck="ADT04",
+                                            production_excavator_without_truck=0),
+                            SimpleNamespace(excavator="EX021", truck=None,
+                                            production_excavator_without_truck=int(self.has_flag))]
+                if "asset_category = 'ADT'" in query:
+                    return [SimpleNamespace(name="ADT04", asset_name="ADT04", location="Koppie",
+                                            item_name="Model A")]
+                if "asset_category = 'Excavator'" in query:
+                    self_outer.assertEqual(set(params["names"]),
+                                           {"EX019", "EX021"} if self.has_flag else {"EX019"})
+                    return [SimpleNamespace(name=name, asset_name=name, location="Koppie")
+                            for name in params["names"]]
+                if "FROM `tabMonthly Production Tub Factor`" in query:
+                    return [SimpleNamespace(item_name="Model A", mat_type="Softs", tub_factor=15)]
+                if "FROM `tabPlant Breakdown or Maintenance`" in query:
+                    return []
+                if "FROM `tabHourly Production`" in query:
+                    return []
+                raise AssertionError(query)
+
+        self_outer = self
+        for has_flag, expected_available in ((False, 1), (True, 2)):
+            with self.subTest(has_flag=has_flag), \
+                    patch.object(report.frappe, "db", PlanningDB(has_flag), create=True), \
+                    patch.object(report, "_validated_filters", return_value=(date(2026, 9, 28), "Day", "Koppie")):
+                data = report.get_dashboard("2026-09-28", "Day", "Koppie")
+                self.assertEqual(data["hours"][1]["excavator_available"], expected_available)
+                self.assertEqual(data["hours"][1]["target_loads"], 14.7)
 
     def test_day_shift_has_twelve_hourly_buckets(self):
         rows = self.build()["hours"]

@@ -324,12 +324,18 @@ def _load_report(date, shift, site):
           AND prod_month_end_date >= %(date)s
         ORDER BY modified DESC, name DESC LIMIT 1
     """, {"site": site, "date": date}, as_dict=True)
-    assignments = frappe.db.sql("""
-        SELECT excavator, truck, production_excavator_without_truck
-        FROM `tabExcavator Truck Link`
-        WHERE parent = %(plan)s AND parenttype = 'Monthly Production Planning'
-          AND parentfield = 'excavator_truck_assignments'
-    """, {"plan": plan[0].name}, as_dict=True) if plan else []
+    assignments = []
+    if plan:
+        # MPP's flag may exist in app code before its database migration runs.
+        flag_column = ("production_excavator_without_truck"
+                       if frappe.db.has_column("Excavator Truck Link", "production_excavator_without_truck")
+                       else "0 AS production_excavator_without_truck")
+        assignments = frappe.db.sql(f"""
+            SELECT excavator, truck, {flag_column}
+            FROM `tabExcavator Truck Link`
+            WHERE parent = %(plan)s AND parenttype = 'Monthly Production Planning'
+              AND parentfield = 'excavator_truck_assignments'
+        """, {"plan": plan[0].name}, as_dict=True)
     planned_excavator_ids = {row.excavator for row in assignments
                              if row.excavator and (row.truck or row.production_excavator_without_truck)}
     planned_adt_ids = {row.truck for row in assignments if row.excavator and row.truck}
