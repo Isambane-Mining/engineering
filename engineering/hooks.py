@@ -73,9 +73,10 @@ app_include_css = [
 ]
 
 # Work around Frappe v16.50.0 Report View export bug (with_link_titles) - TEMPORARY, REMOVE ONCE RESOLVED UPSTREAM
-override_whitelisted_methods = {
-    "frappe.desk.reportview.export_query": "engineering.overrides.reportview.export_query",
-}
+# TESTING ON NEW 16.52.0 Release, Add Chore - Cleanup if works
+#override_whitelisted_methods = {
+#    "frappe.desk.reportview.export_query": "engineering.overrides.reportview.export_query",
+#}
 
 # Breakdown History global public List View
 doctype_list_js = {
