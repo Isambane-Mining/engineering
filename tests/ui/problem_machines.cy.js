@@ -73,6 +73,21 @@ describe('LAB Problem Machines',()=>{
   cy.get('.pm-summary').should('contain','Klipfontein');
   cy.get('.pm-table tbody tr').should('have.length',5);
  });
+ it('explains formulas, repeat data quality and the small-machine trial on both layouts',()=>{
+  [1440,375].forEach(width=>{
+   cy.viewport(width,900);
+   cy.get('.re-problems-tab .re-formulas').should('have.attr','open');
+   cy.get('.re-problems-tab .re-formulas').should('contain','BDFR = breakdowns / validated operating hours × 1,000')
+    .and('contain','% Repeat Breakdown = known repeat breakdowns / all breakdowns × 100')
+    .and('contain','7 days').and('contain','Free-text descriptions do not confirm repeats')
+    .and('contain','MTBF =').and('contain','MTTR =').and('contain','Problem Score =');
+   cy.get('.pm-trial-note').should('contain','Top 1–3');
+   cy.get('.pm-cards').should('contain','Unavailable').and('contain','recurrence unverified');
+   cy.get('#re-analysis-tab').click();
+   cy.get('.re-analysis-tab .re-formulas').should('contain','BDFR =').and('contain','% Repeat Breakdown =');
+   cy.get('#re-problems-tab').click();
+  });
+ });
  it('changes sites and dates, and handles empty and invalid ranges',()=>{
   setFilter('site','Koppie');cy.get('.pm-count').should('contain','19');
   setFilter('site','Uitgevallen');cy.get('.pm-count').should('contain','25');

@@ -120,12 +120,24 @@ class ADTHourlyProductivityPage {
         this.page.main.find(".ahp-hours").html(data.hours.map((hour, index) => `
             <article class="ahp-hour"><div class="ahp-hour-top"><span class="ahp-hour-index">${__("Hour")} ${index + 1}</span>
             <span class="ahp-hour-time">${this.escape(hour.label)}</span></div>
+            <div class="ahp-hour-section-label">${__("ADT")}</div>
             <div class="ahp-hour-values">
               <div class="ahp-hour-value available"><strong>${Number(hour.available).toFixed(2)}</strong><span>${__("Available")}</span></div>
               <div class="ahp-hour-value utilised"><strong>${this.escape(hour.utilised)}</strong><span>${__("Utilised")}</span></div>
               <div class="ahp-hour-value loads"><strong>${this.escape(hour.loads)}</strong><span>${__("Loads")}</span></div>
-            </div>${this.renderEvents(hour)}</article>`).join(""));
-        this.page.main.find(".ahp-footer").text(__("Available ADTs are weighted by available minutes in each hour. An ADT is utilised once it records at least one load in that hour."));
+            </div>
+            <div class="ahp-hour-target"><span>${__("Target Loads")}</span>
+              <strong>${hour.target_loads == null ? "—" : Number(hour.target_loads).toFixed(1)}</strong></div>
+            <div class="ahp-hour-exc"><div class="ahp-hour-section-label">${__("Excavator")}</div>
+              <div class="ahp-hour-exc-values">
+                <div><strong>${Number(hour.excavator_available).toFixed(2)}</strong><span>${__("Available")}</span></div>
+                <div><strong>${this.escape(hour.excavator_utilised)}</strong><span>${__("Utilised")}</span></div>
+              </div></div>${this.renderEvents(hour)}</article>`).join(""));
+        const missing = data.missing_tub_factors || [];
+        const baseNote = __("Available ADTs and excavators are weighted by available minutes. A machine is utilised once it records at least one load in that hour.");
+        const missingNote = missing.length ? ` ${__("Target Loads exclude planned ADTs without a valid Tub Factor")}: ${missing.join(", ")}.` : "";
+        const planNote = data.planning_missing ? ` ${__("No Monthly Production Planning record covers this site and date; targets and planned excavator counts are unavailable.")}` : "";
+        this.page.main.find(".ahp-footer").text(baseNote + missingNote + planNote);
         this.renderExcavators(data.excavators || []);
         this.page.main.find(".ahp-download").prop("disabled", false);
     }

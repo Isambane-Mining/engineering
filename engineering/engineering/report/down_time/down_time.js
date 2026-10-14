@@ -129,7 +129,7 @@ function add_signoff_button(report) {
     const html = `
         <div class="downtime-signoff-action-wrapper">
             <button type="button" class="btn btn-danger downtime-signoff-action-button">
-                Save Downtime Sign-off
+                Submit Downtime Sign-off
             </button>
         </div>
     `;
@@ -141,11 +141,6 @@ function add_signoff_button(report) {
 
         if (!report_date) {
             frappe.msgprint(__("Please select a Date first."));
-            return;
-        }
-
-        if (!all_downtime_records_verified()) {
-            frappe.throw(__("Please verify all Downtime records before signing off."));
             return;
         }
 
@@ -191,7 +186,7 @@ function add_signoff_button(report) {
         }
 
         const dialog = new frappe.ui.Dialog({
-            title: __("Save Downtime Sign-off"),
+            title: __("Submit Downtime Sign-off"),
             fields: [
                 {
                     fieldname: "signoff_section",
@@ -200,37 +195,36 @@ function add_signoff_button(report) {
                     options: signoff_options.join("\n"),
                     default: signoff_options[0],
                     reqd: 1
-                },
-                {
-                    fieldname: "signature",
-                    label: __("Signature"),
-                    fieldtype: "Signature",
-                    reqd: 1
                 }
             ],
-            primary_action_label: __("Save"),
+            primary_action_label: __("Submit"),
             primary_action(values) {
-                frappe.call({
-                    method: "engineering.engineering.report.down_time.down_time.save_downtime_signoff",
-                    args: {
-                        report_date: report_date,
-                        site: frappe.query_report.get_filter_value("site") || "",
-                        asset_category: frappe.query_report.get_filter_value("asset_category") || "",
-                        shift: frappe.query_report.get_filter_value("shift") || "",
-                        signoff_section: values.signoff_section,
-                        signature: values.signature,
-                        downtime_comments: get_mobile_downtime_comments()
-                    },
-                    freeze: true,
-                    freeze_message: __("Saving sign-off..."),
-                    callback: function (r) {
-                        if (r.message) {
-                            frappe.msgprint(r.message);
-                        }
-
-                        dialog.hide();
+                frappe.confirm(
+                    __(
+                        "Do you confirm that you have verified all downtime records and corrected any inaccuracies?"
+                    ),
+                    function () {
+                        frappe.call({
+                            method: "engineering.engineering.report.down_time.down_time.save_downtime_signoff",
+                            args: {
+                                report_date: report_date,
+                                site: frappe.query_report.get_filter_value("site") || "",
+                                asset_category: frappe.query_report.get_filter_value("asset_category") || "",
+                                shift: frappe.query_report.get_filter_value("shift") || "",
+                                signoff_section: values.signoff_section,
+                                downtime_comments: get_mobile_downtime_comments()
+                            },
+                            freeze: true,
+                            freeze_message: __("Submitting sign-off..."),
+                            callback: function (r) {
+                                if (r && r.message) {
+                                    dialog.hide();
+                                    frappe.msgprint(r.message);
+                                }
+                            }
+                        });
                     }
-                });
+                );
             }
         });
 

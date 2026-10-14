@@ -45,7 +45,17 @@ after_migrate = "engineering.setup.asset_categories.ensure_asset_categories"
 fixtures = [
     {"dt": "Role", "filters": [["name", "in", ["Engineering Manager", "Engineering User", "Information Officer", "Mechanic", "Engineering Foreman", "Engineering Plant Manager", "Parts Driver", "Engineering Area Manager"]]]},
     {"dt": "Custom DocPerm", "filters": [["role", "in", ["Engineering Manager", "Engineering User", "Information Officer", "Mechanic", "Engineering Foreman", "Engineering Plant Manager", "Parts Driver", "Engineering Area Manager"]]]},
-    {"dt": "Custom Field", "filters": [["dt", "in", ["Asset Movement"]]]},
+    {"dt": "Custom Field", "filters": [
+        ["name", "in", [
+            "Asset Movement-custom_qoute_number",
+            "Asset Movement-custom_qoute_amountexcl",
+            "Asset Movement-custom_invoice_number",
+            "Asset Movement-custom_invoice_amount_excl",
+            "Asset Category-custom_include_in_mos_report",
+            "Asset Category-custom_mos_report_label",
+            "Asset Category-custom_mos_report_order",
+        ]]
+    ]},
     {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]},
     {"dt": "Employee Induction", "filters": [["name", "in", [
         "Drivers Licence - Code B",

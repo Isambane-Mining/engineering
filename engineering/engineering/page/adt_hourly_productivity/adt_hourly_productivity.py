@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 from datetime import datetime, time, timedelta
 from html import escape
+from math import isfinite
 
 import frappe
 from frappe.utils import get_datetime, getdate, now_datetime
@@ -82,25 +83,21 @@ def _excavator_events(production, shift, hours):
         if label:
             item["label"] = str(label).strip()
 
-        # Hourly Production copies load times forward as excavator setup. Select
-        # the latest nonblank value by operational hour, not by child-row order
-        # or event clock time. Within a duplicate hour, modified/creation/name
-        # and child index/name provide a deterministic correction order.
-        hour_index = _production_hour(_value(row, "hour_slot"), shift)
-        if hour_index is None:
+        # Only records in this operational shift can supply an event. Times
+        # copied into later rows are naturally deduplicated by the extrema.
+        if _production_hour(_value(row, "hour_slot"), shift) is None:
             continue
-        order = (
-            hour_index,
-            str(_value(row, "hp_modified") or ""),
-            str(_value(row, "hp_creation") or ""),
-            str(_value(row, "hp_name") or ""),
-            int(_value(row, "truck_idx") or 0),
-            str(_value(row, "truck_row_name") or ""),
-        )
         for field, event_name in (("exc_start_load_time", "first"), ("exc_end_load_time", "last")):
             clock, event_hour = _event_hour(_value(row, field), shift)
-            if clock is not None and (item[event_name] is None or order > item[event_name][0]):
-                item[event_name] = (order, clock, event_hour)
+            if clock is None:
+                continue
+            # The shift-hour index puts 00:00-05:59 after 18:00-23:59.
+            event_key = (event_hour, clock.minute, clock.second, clock.microsecond)
+            current = item[event_name]
+            if (current is None
+                    or (event_name == "first" and event_key < current[0])
+                    or (event_name == "last" and event_key > current[0])):
+                item[event_name] = (event_key, clock, event_hour)
 
     excavators = []
     for item in sorted(grouped.values(), key=lambda row: row["label"]):
@@ -132,7 +129,47 @@ def _unavailable_seconds(intervals, start, end):
     return min(total, 3600.0)
 
 
-def build_report(shift_date, shift, site, assets, breakdowns, production):
+def _target_factors(planned_adts, tub_factors):
+    """Average valid MPP factors once per material type for each ADT model.
+
+    Conflicting values for the same model/material are ambiguous, so that
+    model has no target contribution. A missing material type is not zero.
+    """
+    by_model = defaultdict(dict)
+    ambiguous = set()
+    for row in tub_factors:
+        model = str(_value(row, "item_name") or "").strip()
+        material = str(_value(row, "mat_type") or "").strip()
+        try:
+            factor = float(_value(row, "tub_factor"))
+        except (TypeError, ValueError):
+            continue
+        if not model or not material or not isfinite(factor) or factor <= 0:
+            continue
+        existing = by_model[model].get(material)
+        if existing is not None and existing != factor:
+            ambiguous.add(model)
+        by_model[model][material] = factor
+
+    factors = []
+    missing = []
+    seen_assets = set()
+    for row in planned_adts:
+        asset = _value(row, "name")
+        if not asset or asset in seen_assets:
+            continue
+        seen_assets.add(asset)
+        model = str(_value(row, "item_name") or "").strip()
+        values = by_model[model].values()
+        if model in ambiguous or not values:
+            missing.append(str(_value(row, "asset_name") or asset))
+            continue
+        factors.append(sum(values) / len(values))
+    return factors, sorted(missing)
+
+
+def build_report(shift_date, shift, site, assets, breakdowns, production,
+                 excavator_assets=(), planned_adts=(), tub_factors=()):
     """Calculate twelve buckets using bounded, already-fetched source rows."""
     if shift not in ("Day", "Night"):
         raise ValueError("Shift must be Day or Night")
@@ -149,24 +186,47 @@ def build_report(shift_date, shift, site, assets, breakdowns, production):
         for alias in (_value(row, "name"), _value(row, "asset_name"))
         if alias
     }
+    excavator_rows = sorted(
+        (row for row in excavator_assets if not _value(row, "location") or _value(row, "location") == site),
+        key=lambda row: (_value(row, "asset_name") or _value(row, "name") or ""),
+    )
+    excavator_names = {_value(row, "name") for row in excavator_rows}
+    excavator_aliases = {
+        alias: _value(row, "name")
+        for row in excavator_rows
+        for alias in (_value(row, "name"), _value(row, "asset_name"))
+        if alias
+    }
     intervals = defaultdict(list)
+    excavator_intervals = defaultdict(list)
     for row in breakdowns:
-        asset = aliases.get(str(_value(row, "asset_name") or "").strip())
+        asset_key = str(_value(row, "asset_name") or "").strip()
+        asset = aliases.get(asset_key)
+        excavator = excavator_aliases.get(asset_key)
         started = _value(row, "breakdown_start_datetime")
-        if not asset or not started:
+        if not (asset or excavator) or not started:
             continue
         left = get_datetime(started)
         right_value = _value(row, "resolved_datetime")
         right = get_datetime(right_value) if right_value else start + timedelta(hours=12)
         if right > left:
-            intervals[asset].append((left, right))
+            if asset:
+                intervals[asset].append((left, right))
+            if excavator:
+                excavator_intervals[excavator].append((left, right))
 
     loads_by_hour = defaultdict(int)
+    excavators_used_by_hour = defaultdict(set)
     for row in production:
         asset = aliases.get(str(_value(row, "asset_name_truck") or "").strip())
         index = _production_hour(_value(row, "hour_slot"), shift)
         if asset in asset_names and index is not None:
             loads_by_hour[(index, asset)] += max(int(_value(row, "loads") or 0), 0)
+        excavator = excavator_aliases.get(str(_value(row, "asset_name_shoval") or "").strip())
+        if excavator in excavator_names and index is not None and int(_value(row, "loads") or 0) > 0:
+            excavators_used_by_hour[index].add(excavator)
+
+    factors, missing_tub_factors = _target_factors(planned_adts, tub_factors)
 
     hours = []
     details = []
@@ -199,6 +259,11 @@ def build_report(shift_date, shift, site, assets, breakdowns, production):
                 "utilised": loads > 0,
                 "loads": loads,
             })
+        excavator_available = sum(
+            (3600 - _unavailable_seconds(excavator_intervals[_value(row, "name")], left, right)) / 3600
+            for row in excavator_rows
+        )
+        target_bcm = 55 if index == 0 else 165 if index == 11 else 220
         hours.append({
             "label": label,
             "start": left.strftime("%Y-%m-%d %H:%M:%S"),
@@ -206,6 +271,11 @@ def build_report(shift_date, shift, site, assets, breakdowns, production):
             "available": available,
             "utilised": utilised,
             "loads": total_loads,
+            "target_bcm": target_bcm,
+            "target_loads": (round(sum(target_bcm / factor for factor in factors), 1)
+                             if factors or not missing_tub_factors else None),
+            "excavator_available": excavator_available,
+            "excavator_utilised": len(excavators_used_by_hour[index]),
             "first_load_events": [],
             "last_load_events": [],
         })
@@ -216,6 +286,7 @@ def build_report(shift_date, shift, site, assets, breakdowns, production):
         "site": site,
         "hours": hours,
         "excavators": excavators,
+        "missing_tub_factors": missing_tub_factors,
         "details": details,
         "summary": {
             "adts_at_site": len(asset_rows),
@@ -246,12 +317,50 @@ def _load_report(date, shift, site):
     date, shift, site = _validated_filters(date, shift, site)
     start = _bucket_start(date, shift)
     end = start + timedelta(hours=12)
+    plan = frappe.db.sql("""
+        SELECT name FROM `tabMonthly Production Planning`
+        WHERE location = %(site)s AND docstatus < 2
+          AND prod_month_start_date <= %(date)s
+          AND prod_month_end_date >= %(date)s
+        ORDER BY modified DESC, name DESC LIMIT 1
+    """, {"site": site, "date": date}, as_dict=True)
+    assignments = []
+    if plan:
+        # MPP's flag may exist in app code before its database migration runs.
+        flag_column = ("production_excavator_without_truck"
+                       if frappe.db.has_column("Excavator Truck Link", "production_excavator_without_truck")
+                       else "0 AS production_excavator_without_truck")
+        assignments = frappe.db.sql(f"""
+            SELECT excavator, truck, {flag_column}
+            FROM `tabExcavator Truck Link`
+            WHERE parent = %(plan)s AND parenttype = 'Monthly Production Planning'
+              AND parentfield = 'excavator_truck_assignments'
+        """, {"plan": plan[0].name}, as_dict=True)
+    planned_excavator_ids = {row.excavator for row in assignments
+                             if row.excavator and (row.truck or row.production_excavator_without_truck)}
+    planned_adt_ids = {row.truck for row in assignments if row.excavator and row.truck}
     assets = frappe.db.sql("""
-        SELECT name, asset_name, location FROM `tabAsset`
+        SELECT name, asset_name, location, item_name FROM `tabAsset`
         WHERE docstatus = 1 AND asset_category = 'ADT' AND location = %(site)s
         ORDER BY asset_name, name
     """, {"site": site}, as_dict=True)
-    names = tuple({value for row in assets for value in (row.name, row.asset_name) if value})
+    planned_adts = frappe.db.sql("""
+        SELECT name, asset_name, item_name FROM `tabAsset`
+        WHERE docstatus = 1 AND asset_category = 'ADT' AND name IN %(names)s
+    """, {"names": tuple(planned_adt_ids)}, as_dict=True) if planned_adt_ids else []
+    excavator_assets = frappe.db.sql("""
+        SELECT name, asset_name, location FROM `tabAsset`
+        WHERE docstatus = 1 AND asset_category = 'Excavator'
+          AND location = %(site)s AND name IN %(names)s
+    """, {"site": site, "names": tuple(planned_excavator_ids)}, as_dict=True) if planned_excavator_ids else []
+    tub_factors = frappe.db.sql("""
+        SELECT tf.item_name, tf.mat_type, tf.tub_factor
+        FROM `tabMonthly Production Tub Factor` mptf
+        INNER JOIN `tabTub Factor` tf ON tf.name = mptf.tub_factor AND tf.docstatus = 1
+        WHERE mptf.parent = %(plan)s AND mptf.parenttype = 'Monthly Production Planning'
+          AND mptf.parentfield = 'tub_factors'
+    """, {"plan": plan[0].name}, as_dict=True) if plan else []
+    names = tuple({value for row in assets + excavator_assets for value in (row.name, row.asset_name) if value})
     breakdowns = frappe.db.sql("""
         SELECT asset_name, breakdown_start_datetime, resolved_datetime
         FROM `tabPlant Breakdown or Maintenance`
@@ -262,9 +371,7 @@ def _load_report(date, shift, site):
           AND (resolved_datetime > %(start)s OR resolved_datetime IS NULL)
     """, {"site": site, "names": names, "start": start, "end": end}, as_dict=True) if names else []
     production = frappe.db.sql("""
-        SELECT hp.name AS hp_name, hp.hour_slot, hp.modified AS hp_modified,
-               hp.creation AS hp_creation, tl.name AS truck_row_name,
-               tl.idx AS truck_idx, tl.asset_name_truck, tl.loads,
+        SELECT hp.hour_slot, tl.asset_name_truck, tl.loads,
                tl.asset_name_shoval, tl.excavator_plant_no,
                COALESCE(NULLIF(tl.excavator_plant_no, ''), exc.asset_name,
                         tl.asset_name_shoval) AS excavator_label,
@@ -276,7 +383,13 @@ def _load_report(date, shift, site):
         WHERE hp.location = %(site)s AND hp.prod_date = %(date)s
           AND hp.shift = %(shift)s
     """, {"site": site, "date": date, "shift": shift}, as_dict=True)
-    return build_report(date, shift, site, assets, breakdowns, production)
+    data = build_report(date, shift, site, assets, breakdowns, production,
+                        excavator_assets, planned_adts, tub_factors)
+    data["planning_missing"] = not bool(plan)
+    if not plan:
+        for hour in data["hours"]:
+            hour["target_loads"] = None
+    return data
 
 
 @frappe.whitelist()
@@ -287,7 +400,18 @@ def get_dashboard(date=None, shift=None, site=None):
 def build_pdf_html(data):
     summary = data["summary"]
     rows = []
+    hourly_rows = []
     excavator_rows = []
+    for hour in data["hours"]:
+        target = "-" if hour["target_loads"] is None else f'{hour["target_loads"]:.1f}'
+        hourly_rows.append(
+            "<tr><td>{}</td><td>{:.2f}</td><td>{}</td><td>{}</td>"
+            "<td>{}</td><td>{:.2f}</td><td>{}</td></tr>".format(
+                escape(hour["label"]), hour["available"], hour["utilised"],
+                hour["loads"], target, hour["excavator_available"],
+                hour["excavator_utilised"],
+            )
+        )
     for row in data["excavators"]:
         excavator_rows.append(
             "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
@@ -327,6 +451,12 @@ def build_pdf_html(data):
       <div class="meta">{site} · {date} · {shift} shift</div>
       <div class="summary"><b>ADTs at site:</b> {count} &nbsp; <b>Average available:</b> {average:.2f}
       &nbsp; <b>ADTs utilised:</b> {used} &nbsp; <b>Total loads:</b> {loads}</div>
+      <h2>Hourly ADT and Excavator Performance</h2>
+      <table><thead><tr><th>Hour</th><th>ADT Available</th><th>ADT Utilised</th>
+      <th>Actual Loads</th><th>Target Loads</th><th>Excavator Available</th>
+      <th>Excavator Utilised</th></tr></thead><tbody>{hourly_rows}</tbody></table>
+      {missing_factor_note}
+      {planning_note}
       <h2>Excavator First / Last Load Performance</h2>
       <table><thead><tr><th>Excavator</th><th>First Load Time</th><th>First Load Hour</th>
       <th>Last Load Time</th><th>Last Load Hour</th></tr></thead><tbody>{excavator_rows}</tbody></table>
@@ -340,6 +470,13 @@ def build_pdf_html(data):
         site=escape(str(data["site"])), date=escape(data["date"]), shift=escape(data["shift"]),
         count=summary["adts_at_site"], average=summary["average_available"],
         used=summary["adts_utilised"], loads=summary["total_loads"], rows="".join(rows),
+        hourly_rows="".join(hourly_rows),
+        missing_factor_note=("<p class='note'>Target Loads exclude planned ADTs with no valid or unambiguous "
+                             "Tub Factor: {}</p>".format(", ".join(escape(name) for name in data["missing_tub_factors"])))
+                            if data["missing_tub_factors"] else "",
+        planning_note=("<p class='note'>No Monthly Production Planning record covers this site and date; "
+                       "targets and planned excavator counts are unavailable.</p>")
+                      if data.get("planning_missing") else "",
         excavator_rows="".join(excavator_rows) or "<tr><td colspan='5'>No excavators recorded</td></tr>",
     )
 
