@@ -2233,13 +2233,8 @@ def _mf_get_engineering_legals(
     else:
         filters["docstatus"] = ["<", 2]
 
-    if (
-        site_field
-        and site
-    ):
-        filters[
-            site_field
-        ] = site
+    # Legal history follows the machine across site transfers.
+    # Fleet Number and Sections determine the matching records.
 
     rows = frappe.get_all(
         "Engineering Legals",
