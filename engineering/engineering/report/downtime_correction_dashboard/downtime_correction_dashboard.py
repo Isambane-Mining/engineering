@@ -148,6 +148,80 @@ def get_items(from_date, to_date, site=None):
 			"is_fixed": is_fixed,
 		})
 
+
+	# downtime_verification_dashboard_comments_v3
+	verification_filters = [
+		"v.parenttype = 'Mechanical Downtime sign-off'",
+		"v.parentfield = 'downtime_verifications'",
+		"p.verification_workflow_version = 1",
+		"p.report_date BETWEEN %(from_date)s AND %(to_date)s",
+		"TRIM(COALESCE(v.comments, '')) != ''",
+	]
+
+	verification_values = {
+		"from_date": from_date,
+		"to_date": to_date,
+	}
+
+	if site:
+		verification_filters.append("p.site = %(site)s")
+		verification_values["site"] = site
+	elif allowed_sites:
+		verification_filters.append("p.site IN %(allowed_sites)s")
+		verification_values["allowed_sites"] = tuple(allowed_sites)
+
+	verification_rows = frappe.db.sql(
+		"""
+		SELECT
+			v.downtime_record,
+			v.department,
+			v.verification_status,
+			v.verified_by,
+			v.verified_on,
+			v.comments,
+			p.site,
+			p.report_date,
+			p.report_shift,
+			b.asset_name AS fleet
+		FROM `tabDowntime Verification Entry` v
+		INNER JOIN `tabMechanical Downtime sign-off` p
+			ON p.name = v.parent
+		INNER JOIN `tabPlant Breakdown or Maintenance` b
+			ON b.name = v.downtime_record
+		WHERE """ + " AND ".join(verification_filters) + """
+		ORDER BY p.report_date DESC, v.verified_on DESC
+		""",
+		verification_values,
+		as_dict=True,
+	)
+
+	for row in verification_rows:
+		if not row.fleet:
+			continue
+
+		source = (
+			"Production Manager"
+			if row.department == "Production"
+			else "Engineering Manager"
+		)
+
+		detail = row.comments
+
+		items.append({
+			"date": row.report_date,
+			"site": row.site,
+			"shift": row.report_shift,
+			"fleet": row.fleet,
+			"child_row": None,
+			"fixed_key": "",
+			"comments": [{
+				"source": source,
+				"comment": detail,
+			}],
+			"is_fixed": False,
+			"verification_only": True,
+		})
+
 	return items
 
 
@@ -227,6 +301,26 @@ def get_card_html(item):
 	status_text = "Fixed" if item["is_fixed"] else "Not Fixed"
 	card_class = "dcd-card-fixed" if item["is_fixed"] else "dcd-card-not-fixed"
 	checked = "checked" if item["is_fixed"] else ""
+
+	if item.get("verification_only"):
+		status_class = ""
+		status_text = "Verification Comment"
+		card_class = "dcd-card-not-fixed"
+		fixed_control = ""
+	else:
+		fixed_control = """
+		<label class="dcd-check">
+			<input type="checkbox" class="dcd-fixed-checkbox"
+				data-row="{child_row}"
+				data-key="{fixed_key}" {checked}>
+			Fixed
+		</label>
+		""".format(
+			child_row=frappe.utils.escape_html(item["child_row"]),
+			fixed_key=frappe.utils.escape_html(item["fixed_key"]),
+			checked=checked,
+		)
+
 	comments_json = frappe.utils.escape_html(frappe.as_json(item["comments"]))
 
 	return f"""
@@ -257,12 +351,7 @@ def get_card_html(item):
 					View Comment
 				</button>
 
-				<label class="dcd-check">
-					<input type="checkbox" class="dcd-fixed-checkbox"
-						data-row="{item["child_row"]}"
-						data-key="{item["fixed_key"]}" {checked}>
-					Fixed
-				</label>
+				{fixed_control}
 			</div>
 		</div>
 	"""
