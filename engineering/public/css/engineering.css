@@ -1386,3 +1386,48 @@
 .reliability-engineering-page .re-formulas .re-repeat-quality{padding:10px 12px;border-left:3px solid #b7652b;background:#fff6e9;color:#714b28}
 .reliability-engineering-page .pm-trial-note{margin:8px 4px}
 @media(max-width:767px){.reliability-engineering-page .re-formulas dl{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Machine File period filters */
+.machine-file-period-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.machine-file-period-controls .machine-file-period-control {
+    flex: 0 1 230px;
+    width: 230px;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.machine-file-period-controls .form-control {
+    height: var(--input-height, 28px);
+    min-height: var(--input-height, 28px);
+}
+
+/* Align the period controls with the standard Machine filter. */
+.machine-file-period-controls {
+    display: inline-flex;
+    vertical-align: middle;
+    flex: 0 1 auto;
+    gap: 8px;
+    margin: 0 0 0 8px;
+}
+
+.machine-file-period-controls .machine-file-period-control {
+    flex: 0 1 230px;
+}
+
+.machine-file-period-controls .frappe-control,
+.machine-file-period-controls .form-group {
+    margin-bottom: 0;
+}
+
+.machine-file-period-controls .control-label,
+.machine-file-period-controls .help-box {
+    display: none;
+}

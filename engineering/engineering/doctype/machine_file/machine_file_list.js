@@ -508,7 +508,6 @@ function mf_hide_id_filter(listview) {
 
 
 function mf_add_period_controls(listview) {
-    frappe.require("/assets/engineering/css/machine_file_filters.css");
     if (listview.machine_file_period_controls) {
         return;
     }
