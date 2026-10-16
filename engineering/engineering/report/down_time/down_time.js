@@ -135,8 +135,17 @@ function add_signoff_button(report) {
     `;
 
     $(".report-wrapper").after(html);
+    $(".downtime-signoff-action-button").prop("disabled", true);
 
     $(".downtime-signoff-action-button").off("click").on("click", function () {
+        // dt_direct_red_button_v2
+        // Record-level verification has its own handler on this red button.
+        // Never open the legacy sign-off dialog for that workflow.
+        if ($(".dt-verification-actions").length) {
+            return;
+        }
+
+        // Historical workflow retains its original sign-off process.
         const report_date = frappe.query_report.get_filter_value("report_date");
 
         if (!report_date) {
@@ -889,18 +898,35 @@ function render_downtime_cards(report) {
                 : "closed";
 
         const plant_no = row.plant_no || "";
-        const record_key = row.breakdown_docname || plant_no;
+        const record_key = row.breakdown_docname || "";
 
         html += `
             <div class="mobile-downtime-card">
-                <label class="mobile-downtime-verify">
-                    <input
-                        type="checkbox"
-                        class="mobile-downtime-verify-checkbox downtime-verify-checkbox"
-                        data-record-key="${frappe.utils.escape_html(record_key)}"
-                    >
-                    <span>Verify Downtime</span>
-                </label>
+                <div class="mobile-downtime-verify">
+                    <strong>Downtime Verification</strong>
+
+                    <label>
+                        <input
+                            type="radio"
+                            name="verify-${frappe.utils.escape_html(record_key)}"
+                            value="Verified"
+                            class="dt-preview-verification"
+                            data-record-key="${frappe.utils.escape_html(record_key)}"
+                        >
+                        Verified Downtime
+                    </label>
+
+                    <label>
+                        <input
+                            type="radio"
+                            name="verify-${frappe.utils.escape_html(record_key)}"
+                            value="Not Verified"
+                            class="dt-preview-verification"
+                            data-record-key="${frappe.utils.escape_html(record_key)}"
+                        >
+                        Not Verified Downtime
+                    </label>
+                </div>
 
                 <div class="mobile-downtime-title">
                     ${frappe.utils.escape_html(plant_no)}
@@ -972,6 +998,9 @@ function render_downtime_cards(report) {
     `;
 
     $(".report-wrapper").append(html);
+
+    render_downtime_summary_preview(data);
+    load_downtime_summary_readonly(report);
 
     $(".mobile-downtime-comment-input")
         .off("input.mobile_comment")
@@ -3546,3 +3575,766 @@ function all_downtime_records_verified() {
 })();
 
 // === SAVED HOURLY / DAILY DOWNTIME REPORTS END ===
+
+
+// Database-backed downtime verification summary.
+// LAB read-only stage: no verification submissions.
+
+
+
+function render_downtime_summary_preview(data) {
+    $(".dt-summary-preview").remove();
+
+    const total = new Set(
+        data.map(row => row.breakdown_docname).filter(Boolean)
+    ).size;
+
+    function departmentCard(department) {
+        return `
+            <div class="col-sm-6 mb-3"
+                 data-verification-department="${department}">
+                <div class="card p-3 h-100">
+                    <h5>${department}</h5>
+                    <div class="mb-2">
+                        <span class="dt-status indicator-pill orange">
+                            Open
+                        </span>
+                    </div>
+                    <h3 class="dt-count mb-1">0 / ${total}</h3>
+                    <small class="text-muted">Records verified</small>
+                    <div class="progress mt-2">
+                        <div class="dt-progress progress-bar bg-warning"
+                             role="progressbar"
+                             style="width:0%"
+                             aria-valuenow="0"
+                             aria-valuemin="0"
+                             aria-valuemax="${total}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    const html = `
+        <div class="dt-summary-preview card p-3 mb-3">
+            <!-- dt_heading_order_v3 -->
+
+
+            <h4 class="dt-main-heading dt-heading-summary">
+                2. Downtime Verification Summary
+            </h4>
+
+            <p class="text-muted dt-verification-message">
+                Loading saved downtime verification results...
+            </p>
+
+            <div class="row dt-verification-summary-row">
+                ${departmentCard("Production")}
+                ${departmentCard("Engineering")}
+            </div>
+
+            <small class="text-muted mt-2">
+                Select Verified or Not Verified for every outstanding downtime record. Not Verified records will remain outstanding.
+            </small>
+        </div>
+    `;
+
+    $(".mobile-downtime-wrapper").first().before(html);
+
+    // Do not present browser-only selections as saved decisions.
+    $(".dt-preview-verification")
+        .off("change.dt_preview")
+        .prop("checked", false)
+        .prop("disabled", true);
+}
+
+
+// Saved results are reused when the report rebuilds its machine cards.
+const downtime_summary_cache = new Map();
+
+// Administrator may test either verification department.
+let downtime_admin_department = "Engineering";
+
+
+// Unsaved verification decisions, isolated by user, period and record ID.
+const downtime_verification_draft_cache = new Map();
+
+function load_downtime_summary_readonly(report) {
+    const $panel = $(".dt-summary-preview").first();
+    if (!$panel.length) return;
+
+    $(".dt-preview-verification")
+        .off("change.dt_preview")
+        .prop("checked", false)
+        .prop("disabled", true);
+
+    const date = frappe.query_report.get_filter_value("report_date");
+    const site = frappe.query_report.get_filter_value("site");
+    const shift = frappe.query_report.get_filter_value("shift") || "";
+    const roles = frappe.user_roles || [];
+
+    const hasEngineering = [
+        "Engineering Manager", "Engineering Foreman"
+    ].some(role => roles.includes(role));
+
+    const hasProduction = [
+        "Production Manager", "Production Foreman"
+    ].some(role => roles.includes(role));
+
+    const $message = $panel.find(".dt-verification-message");
+
+    function showMessage(message, hideSummary) {
+        const $current = $(".dt-summary-preview").first();
+        $current.find(".dt-verification-message").text(message);
+
+        $current.find(
+            ".dt-verification-summary-row, " +
+            ".dt-verification-divider, " +
+            ".dt-verification-overall-row"
+        ).toggle(!hideSummary);
+    }
+
+    if (!date || !site) {
+        showMessage(__("Select a report date and site."), true);
+        return;
+    }
+
+    if (!hasEngineering && !hasProduction) {
+        showMessage(
+            __("Your account does not have a downtime verification role."),
+            true
+        );
+        return;
+    }
+
+    if (
+        hasEngineering && hasProduction &&
+        frappe.session.user !== "Administrator"
+    ) {
+        showMessage(
+            __("Conflicting Engineering and Production verification roles."),
+            true
+        );
+        return;
+    }
+
+    // dt_admin_department_selector_v1
+    const isAdministrator = frappe.session.user === "Administrator";
+
+    const department = isAdministrator
+        ? downtime_admin_department
+        : (hasEngineering ? "Engineering" : "Production");
+
+    // Only Administrator can change verification department.
+    $panel.find(".dt-admin-department-selector").remove();
+
+    if (isAdministrator) {
+        const $selector = $(`
+            <div class="dt-admin-department-selector form-group mb-3">
+                <label class="dt-main-heading dt-heading-department"><strong>1. Verification Department</strong></label>
+                <select class="form-control dt-admin-department-select">
+                    <option value="Engineering">Engineering</option>
+                    <option value="Production">Production</option>
+                </select>
+            </div>
+        `);
+
+        $selector.find("select").val(department);
+
+        $panel.prepend($selector);
+
+        $selector.find("select").on("change", function () {
+            const selected = $(this).val();
+
+            if (!["Engineering", "Production"].includes(selected)) {
+                return;
+            }
+
+            // Stop any previous submission interface immediately.
+            $(".downtime-signoff-action-button")
+                .off("click.dt_submission")
+                .prop("disabled", true);
+
+            $panel.find(".dt-verification-actions").remove();
+
+            downtime_admin_department = selected;
+
+            // Fetch this department's authoritative verification state.
+            load_downtime_summary_readonly(report);
+        });
+    }
+
+    const key = JSON.stringify([
+        frappe.session.user, date, site, shift, department
+    ]);
+
+    function stillSelected() {
+        return frappe.query_report.get_filter_value("report_date") === date &&
+            frappe.query_report.get_filter_value("site") === site &&
+            (frappe.query_report.get_filter_value("shift") || "") === shift;
+    }
+
+    function applyResult(result) {
+        if (!stillSelected()) return;
+
+        const $current = $(".dt-summary-preview").first();
+        if (!$current.length) return;
+
+        if (result.historical_workflow) {
+            $current.find(".dt-verification-actions").remove();
+            $(".downtime-signoff-action-button")
+                .off("click.dt_submission")
+                .prop("disabled", false);
+            showMessage(
+                __("Historical electronic sign-off period. " +
+                   "Existing approvals are preserved."),
+                true
+            );
+            return;
+        }
+
+        const summary = result.summary;
+        if (!summary) {
+            showMessage(__("No verification summary was returned."), true);
+            return;
+        }
+
+        ["Production", "Engineering"].forEach(function (name) {
+            const item = summary[name] || {};
+            const verified = Number(item.verified || 0);
+            const total = Number(item.total || 0);
+            const closed = item.status === "Closed";
+
+            const $card = $current.find(
+                '[data-verification-department="' + name + '"]'
+            );
+
+            $card.find(".dt-count").text(
+                verified + " / " + total
+            );
+
+            $card.find(".dt-status")
+                .text(closed ? "Closed" : "Open")
+                .removeClass("orange green")
+                .addClass(closed ? "green" : "orange");
+
+            $card.find(".dt-progress")
+                .css(
+                    "width",
+                    total ? (verified / total * 100) + "%" : "0%"
+                )
+                .toggleClass("bg-success", closed)
+                .toggleClass("bg-warning", !closed)
+                .attr("aria-valuenow", verified)
+                .attr("aria-valuemax", total);
+        });
+
+        const closed = summary.overall_status === "Closed";
+
+        $current.find(".dt-overall-status")
+            .text(closed ? "Closed" : "Open")
+            .removeClass("orange green")
+            .addClass(closed ? "green" : "orange");
+
+        $(".downtime-signoff-action-button")
+            .prop("disabled", true);
+
+        setup_downtime_submission_ui(
+            result, department, key
+        );
+
+        showMessage(
+            summary.status_outdated
+                ? __("Saved results loaded. Stored sign-off " +
+                     "status requires reconciliation.")
+                : __("Saved ERPNext verification results loaded successfully. Select Verified or Not Verified for every outstanding record."),
+            false
+        );
+    }
+
+    const cached = downtime_summary_cache.get(key);
+
+    if (cached && cached.result) {
+        applyResult(cached.result);
+        return;
+    }
+
+    if (cached && cached.pending) {
+        showMessage(
+            __("Loading saved downtime verification results..."),
+            false
+        );
+        return;
+    }
+
+    showMessage(
+        __("Loading saved downtime verification results..."),
+        false
+    );
+
+    downtime_summary_cache.clear();
+    downtime_summary_cache.set(key, { pending: true });
+
+    frappe.call({
+        method:
+            "engineering.engineering.report.down_time." +
+            "downtime_verification.get_downtime_verification_summary",
+        args: {
+            report_date: date,
+            site: site,
+            shift: shift,
+            department: department
+        },
+        callback: function (response) {
+            const entry = downtime_summary_cache.get(key);
+            if (!entry || !entry.pending) return;
+
+            if (!response.message) {
+                downtime_summary_cache.delete(key);
+                if (stillSelected()) {
+                    showMessage(
+                        __("Verification API returned no data."),
+                        true
+                    );
+                }
+                return;
+            }
+
+            downtime_summary_cache.set(key, {
+                result: response.message
+            });
+
+            applyResult(response.message);
+        },
+        error: function () {
+            const entry = downtime_summary_cache.get(key);
+            if (!entry || !entry.pending) return;
+
+            downtime_summary_cache.delete(key);
+
+            if (stillSelected()) {
+                showMessage(
+                    __("Unable to load saved verification results. " +
+                       "Check roles and site permissions."),
+                    true
+                );
+            }
+        }
+    });
+}
+
+
+// LAB verification interface: controls are rendered against the
+// authoritative outstanding record IDs returned by the server.
+function setup_downtime_submission_ui(result, department, cacheKey) {
+    const $panel = $(".dt-summary-preview").first();
+    if (!$panel.length) return;
+
+    const outstanding = new Set(
+        (result.outstanding_records || []).map(
+            item => String(item.downtime_record || "")
+        )
+    );
+
+    const available = new Set(
+        (result.all_records || []).map(
+            item => String(item.downtime_record || "")
+        )
+    );
+
+    $panel.find(".dt-verification-actions").remove();
+
+    $panel.append(`
+        <div class="dt-verification-actions mt-3">
+            <hr>
+            <h5>${frappe.utils.escape_html(department)}
+                Downtime Verification</h5>
+
+            <div class="form-group">
+                <label>Records to display</label>
+                <select class="form-control dt-verification-view">
+                    <option value="outstanding">Show Outstanding</option>
+                    <option value="all">Show All</option>
+                </select>
+            </div>
+
+            <p class="text-muted dt-verification-hint"></p>
+
+            <!-- Submission uses the existing bottom-right red button. -->
+        </div>
+    `);
+
+    const $actions = $panel.find(".dt-verification-actions");
+
+    if (!downtime_verification_draft_cache.has(cacheKey)) {
+        downtime_verification_draft_cache.set(cacheKey, new Map());
+    }
+
+    const draft = downtime_verification_draft_cache.get(cacheKey);
+
+    const $cards = $(".mobile-downtime-card").filter(function () {
+        return $(this).find(".dt-preview-verification").length > 0;
+    });
+
+    $cards.each(function () {
+        const $card = $(this);
+        const $inputs = $card.find(".dt-preview-verification");
+        const id = String($inputs.first().attr("data-record-key") || "");
+
+        $card.attr("data-verification-id", id);
+
+        $inputs.off("change.dt_preview change.dt_submission");
+
+        const saved = draft.get(id);
+
+        $inputs.prop("checked", false);
+        $inputs.prop("disabled", !outstanding.has(id));
+
+        if (outstanding.has(id) && saved && saved.status) {
+            $inputs.filter(function () {
+                return $(this).val() === saved.status;
+            }).prop("checked", true);
+        }
+
+        if (outstanding.has(id) && saved && saved.comment !== undefined) {
+            $card.find(".mobile-downtime-comment-input")
+                .val(saved.comment);
+        }
+
+        if (!outstanding.has(id)) {
+            draft.delete(id);
+        }
+
+        $card.find(".dt-verification-comment-group").remove();
+
+        if (!outstanding.has(id)) {
+            $card.find(".mobile-downtime-verify").hide();
+            $card.find(".mobile-downtime-comment-input")
+                .prop("readOnly", true);
+            $card.find(".mobile-downtime-verify").after(`
+                <p class="dt-verification-comment-group text-muted mt-2">
+                    Verified — Read-only
+                </p>
+            `);
+        } else {
+            $card.find(".mobile-downtime-verify").show();
+            $card.find(".mobile-downtime-comment-input")
+                .prop("readOnly", false);
+        }
+    });
+
+    function updateDisplay() {
+        const showAll =
+            $actions.find(".dt-verification-view").val() === "all";
+
+        $cards.each(function () {
+            const $card = $(this);
+            const id = String($card.attr("data-verification-id") || "");
+
+            $card.toggle(
+                available.has(id) &&
+                (showAll || outstanding.has(id))
+            );
+        });
+
+        $actions.find(".dt-verification-hint").text(
+            outstanding.size + " outstanding record(s) for " + department
+        );
+    }
+
+    $actions.find(".dt-verification-view")
+        .on("change", updateDisplay);
+
+    updateDisplay();
+
+    // dt_verification_submit_live
+    // Only explicitly selected, outstanding breakdown records can be sent.
+    const $save = $(".downtime-signoff-action-button").first();
+
+    if (!$save.length) {
+        console.warn("Downtime sign-off action button is missing.");
+        return;
+    }
+
+    function currentScope() {
+        const date = frappe.query_report.get_filter_value("report_date");
+        const site = frappe.query_report.get_filter_value("site");
+        const shift = frappe.query_report.get_filter_value("shift") || "";
+
+        return {
+            date: date,
+            site: site,
+            shift: shift,
+            key: JSON.stringify([
+                frappe.session.user, date, site, shift, department
+            ])
+        };
+    }
+
+    function selectedEntries() {
+        const entries = [];
+
+        $cards.each(function () {
+            const $card = $(this);
+            const id = String($card.attr("data-verification-id") || "");
+
+            if (!id || !outstanding.has(id)) return;
+
+            const $selected = $card.find(
+                ".dt-preview-verification:checked:not(:disabled)"
+            );
+
+            if (!$selected.length) return;
+
+            // Read the existing comment from this exact breakdown card.
+            const comment = String(
+                $card.find(".mobile-downtime-comment-input").val() || ""
+            ).trim();
+
+            entries.push({
+                downtime_record: id,
+                verification_status: $selected.val(),
+                comments: comment
+            });
+        });
+
+        return entries;
+    }
+
+    function updateSaveButton() {
+        const validScope = currentScope().key === cacheKey;
+        const noCategory = !frappe.query_report.get_filter_value(
+            "asset_category"
+        );
+
+        const entries = selectedEntries();
+        const allDecided = outstanding.size > 0 &&
+            entries.length === outstanding.size;
+
+        const disabled =
+            saving || !validScope || !noCategory || !allDecided;
+
+        $save.prop("disabled", disabled);
+    }
+
+    $cards.find(".dt-preview-verification")
+        .off("change.dt_submission")
+        .on("change.dt_submission", function () {
+            const $card = $(this).closest(".mobile-downtime-card");
+            const id = String($card.attr("data-verification-id") || "");
+
+            if (outstanding.has(id)) {
+                const previous = draft.get(id) || {};
+                draft.set(id, {
+                    ...previous,
+                    status: $(this).val(),
+                    comment: String(
+                        $card.find(".mobile-downtime-comment-input").val() || ""
+                    )
+                });
+            }
+
+            updateSaveButton();
+        });
+
+    $cards.find(".mobile-downtime-comment-input")
+        .off("input.dt_verification_draft")
+        .on("input.dt_verification_draft", function () {
+            const $card = $(this).closest(".mobile-downtime-card");
+            const id = String($card.attr("data-verification-id") || "");
+
+            if (!outstanding.has(id)) return;
+
+            const previous = draft.get(id) || {};
+            draft.set(id, {
+                ...previous,
+                comment: String($(this).val() || "")
+            });
+        });
+
+    $actions.find(".dt-verification-view")
+        .on("change", updateSaveButton);
+
+    // dt_freshness_check_v1
+    let saving = false;
+
+    $save.off("click.dt_submission").on("click.dt_submission", function () {
+        if (saving) return;
+
+        const scope = currentScope();
+
+        if (scope.key !== cacheKey) {
+            frappe.msgprint(
+                __("Report filters changed. Refresh before submitting.")
+            );
+            return;
+        }
+
+        if (frappe.query_report.get_filter_value("asset_category")) {
+            frappe.msgprint(
+                __("Clear Asset Category before submitting verification.")
+            );
+            return;
+        }
+
+        const entries = selectedEntries();
+
+        if (
+            outstanding.size === 0 ||
+            entries.length !== outstanding.size ||
+            new Set(entries.map(item => item.downtime_record)).size
+                !== outstanding.size
+        ) {
+            frappe.msgprint(
+                __("Select Verified or Not Verified for every outstanding machine.")
+            );
+            return;
+        }
+
+        if (entries.some(item => item.comments.length > 1000)) {
+            frappe.msgprint(
+                __("Downtime comments cannot exceed 1000 characters.")
+            );
+            return;
+        }
+
+        frappe.confirm(
+            __("By submitting this Downtime Sign-off, you confirm that you have checked the downtime records and that the information is accurate."),
+            function () {
+                if (saving) return;
+
+                if (
+                    currentScope().key !== cacheKey ||
+                    frappe.query_report.get_filter_value("asset_category")
+                ) {
+                    frappe.msgprint(
+                        __("Report filters changed. Refresh before submitting.")
+                    );
+                    return;
+                }
+
+                saving = true;
+                $save.prop("disabled", true);
+
+                function stopSaving() {
+                    saving = false;
+                    updateSaveButton();
+                }
+
+                // Recheck all currently outstanding IDs on the server
+                // before committing any selected decisions.
+                frappe.call({
+                    method:
+                        "engineering.engineering.report.down_time." +
+                        "downtime_verification.get_downtime_verification_summary",
+                    args: {
+                        report_date: scope.date,
+                        site: scope.site,
+                        shift: scope.shift,
+                        department: department
+                    },
+                    callback: function (response) {
+                        const latest = response.message;
+
+                        if (!latest || latest.historical_workflow) {
+                            stopSaving();
+                            frappe.msgprint(
+                                __("Verification state could not be confirmed. Refresh the report.")
+                            );
+                            return;
+                        }
+
+                        if (
+                            currentScope().key !== cacheKey ||
+                            frappe.query_report.get_filter_value("asset_category")
+                        ) {
+                            stopSaving();
+                            frappe.msgprint(
+                                __("Report filters changed. Refresh before submitting.")
+                            );
+                            return;
+                        }
+
+                        const latestOutstanding = new Set(
+                            (latest.outstanding_records || []).map(
+                                item => String(item.downtime_record || "")
+                            )
+                        );
+
+                        const latestAll = new Set(
+                            (latest.all_records || []).map(
+                                item => String(item.downtime_record || "")
+                            )
+                        );
+
+                        const unchanged =
+                            latestOutstanding.size === outstanding.size &&
+                            [...outstanding].every(
+                                id => latestOutstanding.has(id)
+                            ) &&
+                            latestAll.size === available.size &&
+                            [...available].every(id => latestAll.has(id));
+
+                        if (!unchanged) {
+                            stopSaving();
+                            downtime_summary_cache.clear();
+                            frappe.msgprint(
+                                __("Downtime verification changed since this report was opened. Refresh and review the latest records before submitting.")
+                            );
+                            return;
+                        }
+
+                        // The server performs final checks again under
+                        // its database lock before accepting this batch.
+                        frappe.call({
+                            method:
+                                "engineering.engineering.report.down_time." +
+                                "downtime_verification.submit_downtime_verifications",
+                            type: "POST",
+                            args: {
+                                report_date: scope.date,
+                                site: scope.site,
+                                shift: scope.shift,
+                                department: department,
+                                verifications: entries
+                            },
+                            freeze: true,
+                            freeze_message:
+                                __("Saving downtime verification..."),
+                            callback: function (saveResponse) {
+                                if (!saveResponse.message) {
+                                    stopSaving();
+                                    return;
+                                }
+
+                                downtime_verification_draft_cache.delete(
+                                    cacheKey
+                                );
+                                downtime_summary_cache.clear();
+
+                                frappe.show_alert({
+                                    message: __("Verification saved successfully."),
+                                    indicator: "green"
+                                });
+
+                                frappe.query_report.refresh();
+                            },
+                            error: function () {
+                                stopSaving();
+                            }
+                        });
+                    },
+                    error: function () {
+                        stopSaving();
+                        frappe.msgprint(
+                            __("Unable to confirm the latest verification records. Nothing was submitted. Please try again.")
+                        );
+                    }
+                });
+            }
+        );
+    });
+
+    updateSaveButton();
+}
