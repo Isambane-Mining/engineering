@@ -10,8 +10,14 @@ from frappe.utils import get_datetime
 class PlantBreakdownorMaintenance(Document):
 
     def on_update(self):
-        """Keep Breakdown History synchronized after every save."""
+        """Synchronize breakdown history and affected verification status."""
+        previous = self.get_doc_before_save()
         _sync_breakdown_history_on_update(self)
+
+        from engineering.engineering.report.down_time.downtime_verification import (
+            reconcile_signoffs_after_breakdown_change,
+        )
+        reconcile_signoffs_after_breakdown_change(self, previous)
 
 
     # --- PBOM SIGNATURE ROLE PERMISSION START ---

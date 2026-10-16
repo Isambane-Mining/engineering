@@ -1,0 +1,67 @@
+{
+  "doctype": "DocType",
+  "name": "Downtime Verification Entry",
+  "module": "Engineering",
+  "custom": 0,
+  "istable": 1,
+  "editable_grid": 0,
+  "fields": [
+    {
+      "fieldname": "downtime_record",
+      "fieldtype": "Link",
+      "label": "Downtime Record",
+      "read_only": 1,
+      "options": "Plant Breakdown or Maintenance"
+    },
+    {
+      "fieldname": "department",
+      "fieldtype": "Select",
+      "label": "Department",
+      "read_only": 1,
+      "options": "Engineering\nProduction"
+    },
+    {
+      "fieldname": "verification_status",
+      "fieldtype": "Select",
+      "label": "Verification Status",
+      "read_only": 1,
+      "options": "Verified\nNot Verified"
+    },
+    {
+      "fieldname": "verified_by",
+      "fieldtype": "Link",
+      "label": "Verified By",
+      "read_only": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "verified_on",
+      "fieldtype": "Datetime",
+      "label": "Verified On",
+      "read_only": 1
+    },
+    {
+      "fieldname": "verification_role",
+      "fieldtype": "Data",
+      "label": "Verification Role",
+      "read_only": 1
+    },
+    {
+      "fieldname": "comments",
+      "fieldtype": "Small Text",
+      "label": "Comments",
+      "read_only": 1
+    }
+  ],
+  "field_order": [
+    "downtime_record",
+    "department",
+    "verification_status",
+    "verified_by",
+    "verified_on",
+    "verification_role",
+    "comments"
+  ],
+  "permissions": [],
+  "track_changes": 1
+}
