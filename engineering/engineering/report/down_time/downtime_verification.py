@@ -3,7 +3,7 @@ from frappe import _
 from frappe.utils import getdate
 
 from engineering.engineering.report.down_time.down_time import get_data
-from engineering.engineering.report.downtime_correction_dashboard.downtime_correction_dashboard import (
+from engineering.engineering.page.downtime_correction_dashboard.downtime_correction_dashboard import (
     check_site_access,
 )
 

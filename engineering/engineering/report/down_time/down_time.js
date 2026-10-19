@@ -3583,6 +3583,7 @@ function all_downtime_records_verified() {
 
 
 function render_downtime_summary_preview(data) {
+
     $(".dt-summary-preview").remove();
 
     const total = new Set(
@@ -3634,7 +3635,7 @@ function render_downtime_summary_preview(data) {
                 ${departmentCard("Engineering")}
             </div>
 
-            <small class="text-muted mt-2">
+            <small class="text-muted mt-2 dt-verification-guidance">
                 Select Verified or Not Verified for every outstanding downtime record. Not Verified records will remain outstanding.
             </small>
         </div>
@@ -3844,11 +3845,52 @@ function load_downtime_summary_readonly(report) {
             result, department, key
         );
 
+        let dtVerificationHeadingMessage = __(
+            "Saved ERPNext verification results loaded successfully. " +
+            "Select Verified or Not Verified for every outstanding record."
+        );
+
+        if (summary.overall_status === "Closed") {
+            dtVerificationHeadingMessage = __(
+                "All downtime records have been verified successfully. " +
+                "Overall sign-off is Closed."
+            );
+        } else if (
+            summary[department] &&
+            summary[department].status === "Closed"
+        ) {
+            dtVerificationHeadingMessage = __(
+                "All {0} downtime records have been verified successfully. " +
+                "No outstanding records for this department.",
+                [department]
+            );
+        }
+
+        let dtVerificationGuidanceMessage =
+            "Select Verified or Not Verified for every outstanding downtime record. " +
+            "Not Verified records will remain outstanding.";
+
+        if (summary.overall_status === "Closed") {
+            dtVerificationGuidanceMessage =
+                "All downtime records have been verified successfully. " +
+                "No outstanding verification records remain.";
+        } else if (
+            summary[department] &&
+            summary[department].status === "Closed"
+        ) {
+            dtVerificationGuidanceMessage =
+                `All ${department} downtime records have been verified successfully. ` +
+                "No outstanding records for this department.";
+        }
+
+        $(".dt-summary-preview .dt-verification-guidance")
+            .text(dtVerificationGuidanceMessage);
+
         showMessage(
             summary.status_outdated
                 ? __("Saved results loaded. Stored sign-off " +
                      "status requires reconciliation.")
-                : __("Saved ERPNext verification results loaded successfully. Select Verified or Not Verified for every outstanding record."),
+                : dtVerificationHeadingMessage,
             false
         );
     }

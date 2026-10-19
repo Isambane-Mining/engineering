@@ -79,7 +79,7 @@ website_route_rules = [
 
 
 app_include_css = [
-    "/assets/engineering/css/engineering.css?v=20261016-1"
+    "/assets/engineering/css/engineering.css"
 ]
 
 # Work around Frappe v16.50.0 Report View export bug (with_link_titles) - TEMPORARY, REMOVE ONCE RESOLVED UPSTREAM

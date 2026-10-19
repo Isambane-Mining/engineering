@@ -657,7 +657,7 @@ def _save_downtime_signoff(
     if report_shift not in ("Day Shift", "Night Shift", "All Shifts"):
         frappe.throw(_("Please select a valid shift."))
 
-    from engineering.engineering.report.downtime_correction_dashboard.downtime_correction_dashboard import (
+    from engineering.engineering.page.downtime_correction_dashboard.downtime_correction_dashboard import (
         check_site_access,
     )
 
