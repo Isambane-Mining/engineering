@@ -474,8 +474,32 @@ def reconcile_signoffs_after_breakdown_change(doc, previous=None):
     from datetime import timedelta
     from frappe.utils import get_datetime
 
+    # Only changes affecting breakdown membership require reconciliation.
+    def membership_signature(record):
+        if record is None:
+            return None
+
+        start = (
+            record.get("breakdown_start_datetime")
+            or record.get("creation")
+        )
+
+        return (
+            record.get("location") or "",
+            str(start or ""),
+            str(record.get("resolved_datetime") or ""),
+        )
+
+    if (
+        previous is not None
+        and membership_signature(doc) == membership_signature(previous)
+    ):
+        return 0
+
     affected_sites = set()
     starts = []
+    resolved_ends = []
+    has_open_interval = False
 
     for record in (doc, previous):
         if not record:
@@ -492,6 +516,13 @@ def reconcile_signoffs_after_breakdown_change(doc, previous=None):
         if start:
             starts.append(get_datetime(start))
 
+        resolved = record.get("resolved_datetime")
+
+        if resolved:
+            resolved_ends.append(get_datetime(resolved))
+        else:
+            has_open_interval = True
+
     if not affected_sites:
         return 0
 
@@ -502,6 +533,14 @@ def reconcile_signoffs_after_breakdown_change(doc, previous=None):
         if starts else None
     )
 
+    # An open breakdown can affect later shifts indefinitely.
+    # Bound only when both previous and current intervals are closed.
+    latest_date = (
+        max(resolved_ends).date()
+        if resolved_ends and not has_open_interval
+        else None
+    )
+
     updated = 0
 
     for site in sorted(affected_sites):
@@ -509,7 +548,12 @@ def reconcile_signoffs_after_breakdown_change(doc, previous=None):
             "site": site,
             "verification_workflow_version": 1,
         }
-        if earliest_date:
+        if earliest_date and latest_date:
+            filters["report_date"] = [
+                "between",
+                [earliest_date, latest_date],
+            ]
+        elif earliest_date:
             filters["report_date"] = [">=", earliest_date]
 
         signoffs = frappe.get_all(
