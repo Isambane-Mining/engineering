@@ -1,3 +1,6 @@
+from datetime import date as _mf_period_date
+import re as _mf_period_re
+
 import frappe
 
 from frappe.model.document import Document
@@ -943,7 +946,7 @@ def get_machine_registration_movement(name):
                 fieldname
             )
 
-    parent_rows = frappe.get_all(
+    parent_rows = _mf_readable_records(
         "Asset Movement",
         filters={
             "name": ["in", parent_names],
@@ -957,7 +960,7 @@ def get_machine_registration_movement(name):
         for row in parent_rows
     }
 
-    files = frappe.get_all(
+    files = _mf_readable_records(
         "File",
         filters={
             "attached_to_doctype": "Asset Movement",
@@ -1107,28 +1110,6 @@ def get_machine_registration_movement(name):
 # MACHINE FILE MOVEMENT DETAIL END
 
 
-@frappe.whitelist()
-def refresh_machine_file(name):
-    doc = frappe.get_doc(
-        "Machine File",
-        name,
-    )
-
-    doc.check_permission("write")
-
-    _refresh_doc(doc)
-
-    doc.save(
-        ignore_permissions=True
-    )
-
-    return {
-        "name": doc.name,
-        "machine": doc.machine,
-        "last_refreshed": (
-            doc.last_refreshed
-        ),
-    }
 
 
 @frappe.whitelist()
@@ -1317,7 +1298,7 @@ def get_machine_file_register(site=None, machine_category=None, machine=None):
     if machine:
         asset_filters["name"] = machine
 
-    submitted_assets = frappe.get_all(
+    submitted_assets = _mf_readable_records(
         "Asset",
         filters=asset_filters,
         fields=[
@@ -1341,7 +1322,7 @@ def get_machine_file_register(site=None, machine_category=None, machine=None):
 
     machine_names = list(asset_map.keys())
 
-    machine_files = frappe.get_all(
+    machine_files = _mf_readable_records(
         "Machine File",
         filters={
             "machine": ["in", machine_names],
@@ -1389,7 +1370,7 @@ def _machine_file_attached_files(doctype, names):
     if not names:
         return {}
 
-    rows = frappe.get_all(
+    rows = _mf_readable_records(
         "File",
         filters={
             "attached_to_doctype": doctype,
@@ -1485,7 +1466,7 @@ def _machine_file_source_records(
                 fieldname
             )
 
-    rows = frappe.get_all(
+    rows = _mf_readable_records(
         doctype,
         filters={
             asset_field: machine,
@@ -2084,7 +2065,7 @@ def _mf_engineering_legals_files(
     if not names:
         return result
 
-    files = frappe.get_all(
+    files = _mf_readable_records(
         "File",
         filters={
             "attached_to_doctype":
@@ -2130,6 +2111,7 @@ def _mf_get_engineering_legals(
     machine,
     site,
     index_no,
+    respect_permissions=False,
 ):
     index_no = str(
         index_no
@@ -2236,7 +2218,8 @@ def _mf_get_engineering_legals(
     # Legal history follows the machine across site transfers.
     # Fleet Number and Sections determine the matching records.
 
-    rows = frappe.get_all(
+    query = _mf_readable_records if respect_permissions else frappe.get_all
+    rows = query(
         "Engineering Legals",
         filters=filters,
         fields=fields,
@@ -2592,6 +2575,7 @@ if "_mf_original_section_details" in globals():
                 doc.machine,
                 doc.site,
                 index_no,
+                respect_permissions=True,
             )
         )
 
@@ -2674,12 +2658,14 @@ def refresh_machine_file(name):
     }
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def sync_engineering_legals_to_machine_files():
     """
     Refresh all current Machine Files and link
     submitted Engineering Legals records.
     """
+
+    frappe.only_for("System Manager")
 
     names = frappe.get_all(
         "Machine File",
@@ -2747,6 +2733,8 @@ def sync_engineering_legals_to_machine_files():
 def engineering_legals_mapping_diagnostic(
     machine=None,
 ):
+
+    frappe.only_for("System Manager")
     config = (
         _mf_engineering_legals_config()
     )
@@ -2791,6 +2779,8 @@ def engineering_legals_mapping_diagnostic(
                 machine_file_name,
             )
 
+            mf.check_permission("read")
+
             for index_no in (
                 ENGINEERING_LEGALS_MACHINE_FILE_MAP
             ):
@@ -2821,130 +2811,6 @@ def engineering_legals_mapping_diagnostic(
 
 # MACHINE FILE AUTHENTICATED ATTACHMENT START
 
-@frappe.whitelist()
-def open_machine_file_attachment(file_url):
-    """
-    Securely serve an existing Frappe File.
-
-    Used by Machine File for private Engineering Legals
-    attachments instead of depending on nginx /private/files
-    or version-specific Frappe download handlers.
-    """
-
-    import mimetypes
-    import os
-
-    file_url = str(
-        file_url or ""
-    ).strip()
-
-    if not file_url:
-        frappe.throw(
-            "Attachment URL is required."
-        )
-
-    file_name = frappe.db.get_value(
-        "File",
-        {
-            "file_url": file_url
-        },
-        "name",
-    )
-
-    if not file_name:
-        frappe.throw(
-            f"File record not found for {file_url}"
-        )
-
-    file_doc = frappe.get_doc(
-        "File",
-        file_name
-    )
-
-    #
-    # Respect permission of the document the file belongs to.
-    #
-    if (
-        file_doc.attached_to_doctype
-        and file_doc.attached_to_name
-    ):
-        try:
-            attached_doc = frappe.get_doc(
-                file_doc.attached_to_doctype,
-                file_doc.attached_to_name,
-            )
-
-            if not attached_doc.has_permission(
-                "read"
-            ):
-                frappe.throw(
-                    "You do not have permission "
-                    "to view this attachment.",
-                    frappe.PermissionError,
-                )
-
-        except frappe.DoesNotExistError:
-            #
-            # File itself still exists; do not fail only because
-            # an old attachment parent was removed.
-            #
-            pass
-
-    full_path = file_doc.get_full_path()
-
-    if not os.path.isfile(
-        full_path
-    ):
-        frappe.throw(
-            "The attachment exists in ERP but the "
-            "physical file is missing from this site."
-        )
-
-    content = file_doc.get_content()
-
-    if not content:
-        frappe.throw(
-            "The attachment is empty."
-        )
-
-    filename = (
-        file_doc.file_name
-        or os.path.basename(
-            full_path
-        )
-        or "attachment"
-    )
-
-    content_type = (
-        mimetypes.guess_type(
-            filename
-        )[0]
-        or "application/octet-stream"
-    )
-
-    frappe.local.response.filename = (
-        filename
-    )
-
-    frappe.local.response.filecontent = (
-        content
-    )
-
-    frappe.local.response.type = (
-        "download"
-    )
-
-    #
-    # Tell Frappe/browser to display PDFs/images in-browser
-    # rather than forcing a save dialog.
-    #
-    frappe.local.response.display_content_as = (
-        "inline"
-    )
-
-    frappe.local.response.headers = {
-        "Content-Type": content_type
-    }
 
 # MACHINE FILE AUTHENTICATED ATTACHMENT END
 
@@ -2991,31 +2857,15 @@ def open_machine_file_attachment(file_url):
         file_name
     )
 
-    # -----------------------------------------------------
-    # PERMISSION CHECK
-    # -----------------------------------------------------
-
-    if (
-        file_doc.attached_to_doctype
-        and file_doc.attached_to_name
-    ):
+    file_doc.check_permission("read")
+    if file_doc.attached_to_doctype and file_doc.attached_to_name:
         try:
             attached_doc = frappe.get_doc(
-                file_doc.attached_to_doctype,
-                file_doc.attached_to_name,
+                file_doc.attached_to_doctype, file_doc.attached_to_name
             )
-
-            if not attached_doc.has_permission(
-                "read"
-            ):
-                frappe.throw(
-                    "You do not have permission "
-                    "to view this attachment.",
-                    frappe.PermissionError,
-                )
-
         except frappe.DoesNotExistError:
-            pass
+            frappe.throw("Attachment source is unavailable.", frappe.PermissionError)
+        attached_doc.check_permission("read")
 
     # -----------------------------------------------------
     # PHYSICAL FILE
@@ -3104,7 +2954,7 @@ def open_machine_file_attachment(file_url):
 
     frappe.local.response[
         "display_content_as"
-    ] = "inline"
+    ] = "attachment"
 
     frappe.local.response[
         "type"
@@ -3199,6 +3049,26 @@ def get_machine_breakdown_log_summary(name):
 
         values["site"] = site
 
+    permitted_filters = {"asset_name": machine}
+    if site:
+        permitted_filters["location"] = site
+    permitted_names = _mf_readable_records(
+        "Plant Breakdown or Maintenance",
+        filters=permitted_filters,
+        pluck="name",
+        limit_page_length=0,
+    )
+    if not permitted_names:
+        return {
+            "machine": machine, "site": site, "rows": [],
+            "totals": {key: 0 for key in (
+                "total_minutes", "startup_fatigue_minutes",
+                "sunday_minutes", "au_minutes",
+            )},
+        }
+    conditions.append("name IN %(permitted_names)s")
+    values["permitted_names"] = tuple(permitted_names)
+
     bounds = frappe.db.sql(
         f"""
         SELECT
@@ -3274,6 +3144,7 @@ def get_machine_breakdown_log_summary(name):
         .get_plant_breakdown_reason_details(
             filters,
             [machine],
+            allowed_names=permitted_names,
         )
     )
 
@@ -4216,7 +4087,7 @@ def get_ldv_supplier_groups(machines=None):
     ]
 
 
-    rows = frappe.get_all(
+    rows = _mf_readable_records(
         "Asset",
         filters={
             "name": [
@@ -4347,7 +4218,7 @@ def get_ldv_supplier_groups_v2(machines=None):
     asset_names = set()
 
 
-    direct = frappe.get_all(
+    direct = _mf_readable_records(
         "Asset",
         filters={
             "name": [
@@ -4366,7 +4237,7 @@ def get_ldv_supplier_groups_v2(machines=None):
 
     if "asset_name" in field_map:
 
-        by_asset_name = frappe.get_all(
+        by_asset_name = _mf_readable_records(
             "Asset",
             filters={
                 "asset_name": [
@@ -4504,7 +4375,7 @@ def get_ldv_supplier_groups_v2(machines=None):
             )
 
 
-        rows = frappe.get_all(
+        rows = _mf_readable_records(
             "Asset",
             filters={
                 "name": [
@@ -4772,7 +4643,7 @@ def get_machine_supplier_details(machines=None):
 
 
     names.update(
-        frappe.get_all(
+        _mf_readable_records(
             "Asset",
             filters={
                 "name": [
@@ -4789,7 +4660,7 @@ def get_machine_supplier_details(machines=None):
     if "asset_name" in fields:
 
         names.update(
-            frappe.get_all(
+            _mf_readable_records(
                 "Asset",
                 filters={
                     "asset_name": [
@@ -4809,7 +4680,7 @@ def get_machine_supplier_details(machines=None):
         }
 
 
-    assets = frappe.get_all(
+    assets = _mf_readable_records(
         "Asset",
         filters={
             "name": [
@@ -4959,3 +4830,177 @@ def get_machine_supplier_details(machines=None):
     }
 
 # MACHINE FILE ASSET OWNER SUPPLIER FIX END
+
+
+# Read-only Machine File period views.
+def _mf_parse_period(value):
+    value = frappe.parse_json(value) if isinstance(value, str) else value
+    value = value or {}
+    if not isinstance(value, dict):
+        frappe.throw("Invalid Machine File period.")
+    dates = []
+    for key in ("from_date", "to_date"):
+        raw = value.get(key)
+        if raw and not _mf_period_re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(raw)):
+            frappe.throw("Period dates must use YYYY-MM-DD.")
+        try:
+            dates.append(_mf_period_date.fromisoformat(raw) if raw else None)
+        except (ValueError, TypeError):
+            frappe.throw("Invalid period date.")
+    start, end = dates
+    if start and end and start > end:
+        frappe.throw("From Date cannot be after To Date.")
+    months = value.get("months") or []
+    if not isinstance(months, list):
+        frappe.throw("Months must be a list.")
+    for month in months:
+        if not isinstance(month, str) or not _mf_period_re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+            frappe.throw("Invalid selected month.")
+        if not 1 <= int(month[:4]) <= 9999:
+            frappe.throw("Invalid selected year.")
+    return start, end, set(months)
+
+
+def _mf_period_matches(value, period):
+    start, end, months = period
+    if not (start or end or months):
+        return True
+    if not value:
+        return False
+    day = getdate(value)
+    return (not start or day >= start) and (not end or day <= end) and (
+        not months or day.strftime("%Y-%m") in months
+    )
+
+
+def _mf_period_legal_matches(row, period):
+    from calendar import monthrange
+
+    start, end, months = period
+    if not (start or end or months):
+        return True
+
+    document_start = row.get("start_date")
+    document_end = row.get("expiry_date")
+    if not document_start or not document_end:
+        return _mf_period_matches(document_start, period)
+
+    first = getdate(document_start)
+    last = getdate(document_end)
+    if last < first:
+        return False
+
+    lower = max(first, start) if start else first
+    upper = min(last, end) if end else last
+    if lower > upper:
+        return False
+    if not months:
+        return True
+
+    for month in months:
+        year, number = map(int, month.split("-"))
+        month_start = _mf_period_date(year, number, 1)
+        month_end = _mf_period_date(year, number, monthrange(year, number)[1])
+        if lower <= month_end and upper >= month_start:
+            return True
+    return False
+
+
+def _mf_period_filter_rows(rows, period, field="date"):
+    return [row for row in rows or [] if _mf_period_matches(row.get(field), period)]
+
+
+def _mf_period_filter_breakdown(data, period):
+    # The canonical A&U helper returns segments per reporting day (06:00-06:00).
+    # Filter those segments, retaining its duration calculations unchanged.
+    data["rows"] = _mf_period_filter_rows(data.get("rows"), period)
+    data["totals"] = {
+        key: sum(row.get(key, 0) or 0 for row in data["rows"])
+        for key in ("total_minutes", "startup_fatigue_minutes", "sunday_minutes", "au_minutes")
+    }
+    days = [row["date"] for row in data["rows"] if row.get("date")]
+    data["from_date"] = min(days) if days else None
+    data["to_date"] = max(days) if days else None
+    return data
+
+
+@frappe.whitelist()
+def get_period_view(name, period=None):
+
+    selected = _mf_parse_period(period)
+    doc = frappe.get_doc("Machine File", name)
+    doc.check_permission("read")
+    sections = {}
+    summary = []
+    movement = None
+    breakdown = None
+
+    for index in doc.index_items or []:
+        number = str(index.index_no)
+        data = get_machine_file_section_details(name, number)
+        data["source_records"] = [
+            row for row in data.get("source_records") or []
+            if (
+                _mf_period_legal_matches(row, selected)
+                if "start_date" in row
+                else _mf_period_matches(row.get("date"), selected)
+            )
+        ]
+        data["manual_documents"] = _mf_period_filter_rows(
+            data.get("manual_documents"), selected, "document_date"
+        )
+        records = list(data["source_records"])
+        if number == "1":
+            movement = data.get("movement") or get_machine_registration_movement(name)
+            movement["rows"] = _mf_period_filter_rows(movement.get("rows"), selected)
+            data["movement"] = movement
+            records = list(movement["rows"])
+        elif number == "11":
+            breakdown = _mf_period_filter_breakdown(get_machine_breakdown_log_summary(name), selected)
+            records = list(breakdown["rows"])
+
+        documents = data["manual_documents"]
+        dates = [getdate(r["date"]) for r in records if r.get("date")]
+        dates += [getdate(r["document_date"]) for r in documents if r.get("document_date")]
+        count = len(records) + len(documents)
+        status = "ERP Records" if count else "No records in period"
+        due = None
+        legal_records = [r for r in records if "start_date" in r]
+        if legal_records:
+            latest = max(legal_records, key=lambda r: r.get("start_date") or r.get("date") or "")
+            due = latest.get("expiry_date") or None
+            status = _mf_engineering_legal_status(due) if due else "ERP Records"
+        elif documents:
+            latest = max(documents, key=lambda r: r.get("document_date") or "")
+            due = latest.get("expiry_date") or None
+            if due:
+                status = _mf_engineering_legal_status(due)
+        summary.append({
+            "index_no": number, "description": index.description,
+            "frequency": index.frequency, "source_doctype": data.get("source_doctype"),
+            "source_asset_field": data.get("source_asset_field"),
+            "record_count": count, "last_record_date": max(dates) if dates else None,
+            "next_due_date": due, "status": status,
+        })
+        data["period_filtered"] = True
+        sections[number] = data
+    return {"rows": summary, "sections": sections, "movement": movement, "breakdown": breakdown}
+
+
+def _mf_readable_records(doctype, **kwargs):
+    """Read source rows using the current user's configured permissions."""
+    if not frappe.has_permission(doctype, "read"):
+        return []
+    rows = frappe.get_list(doctype, **kwargs)
+    result = []
+    for row in rows:
+        name = row if isinstance(row, str) else row.get("name")
+        if not name:
+            continue
+        try:
+            doc = frappe.get_doc(doctype, name)
+        except frappe.DoesNotExistError:
+            continue
+        if doc.has_permission("read"):
+            result.append(row)
+    return result

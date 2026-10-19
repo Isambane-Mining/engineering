@@ -309,7 +309,7 @@ function render_machine_file_dashboard(frm) {
             frm._mf_period_view = null;
             frm._mf_period_pending = key;
             frappe.call({
-                method: "engineering.engineering.doctype.machine_file.machine_file_period.get_period_view",
+                method: "engineering.engineering.doctype.machine_file.machine_file.get_period_view",
                 args: {name: frm.doc.name, period: JSON.stringify(period)},
                 callback(r) {
                     if (frm._mf_period_pending !== key) return;
@@ -317,6 +317,7 @@ function render_machine_file_dashboard(frm) {
                     if (r.exc || !r.message) return;
                     frm._mf_period_view = r.message;
                     frm._mf_period_key = key;
+                    frm._mf_period_rendering = true;
                     frm.trigger("refresh");
                 },
                 error() {
@@ -1079,6 +1080,11 @@ frappe.ui.form.on(
         },
 
         refresh(frm) {
+            if (frm._mf_period_rendering) {
+                frm._mf_period_rendering = false;
+            } else {
+                frm._mf_period_key = null;
+            }
             apply_machine_filter(
                 frm
             );
