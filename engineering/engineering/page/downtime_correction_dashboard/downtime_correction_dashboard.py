@@ -344,13 +344,14 @@ def get_card_html(item):
         <label class="dcd-check">
             <input type="checkbox" class="dcd-fixed-checkbox"
                 data-row="{child_row}"
-                data-key="{fixed_key}" {checked}>
+                data-key="{fixed_key}" {checked} {disabled}>
             Fixed
         </label>
         """.format(
             child_row=frappe.utils.escape_html(item["child_row"]),
             fixed_key=frappe.utils.escape_html(item["fixed_key"]),
             checked=checked,
+            disabled="" if can_mark_correction_fixed() else "disabled",
         )
 
     comments_json = frappe.utils.escape_html(frappe.as_json(item["comments"]))
@@ -460,12 +461,80 @@ def get_fixed_status(fixes_json, fixed_key):
     return 1 if fixes.get(fixed_key) else 0
 
 
+FIXED_EDITOR_ROLES = frozenset({
+    "System Manager",
+    "Engineering Manager",
+    "Engineering Foreman",
+    "Production Manager",
+    "Production Foreman",
+})
+
+
+def can_mark_correction_fixed():
+    """Separate dashboard viewing from permission to edit Fixed status."""
+    return (
+        frappe.session.user == "Administrator"
+        or bool(FIXED_EDITOR_ROLES.intersection(frappe.get_roles()))
+    )
+
+
+def valid_fixed_keys_for_child(row):
+    """Rebuild keys from the saved comments, not client-supplied content."""
+    grouped = {}
+
+    comment_groups = [
+        ("Information Officer", row.date_time_io, row.comments1),
+        ("Production Manager", row.date_time_p, row.comments2),
+        ("Engineering Manager", row.date_time_e, row.comments3),
+    ]
+
+    for source, dt, comments in comment_groups:
+        if not dt or not comments:
+            continue
+
+        comment_date = getdate(dt)
+
+        for item in split_fleet_comments(comments):
+            key = (comment_date, item["fleet"])
+            grouped.setdefault(key, []).append({
+                "source": source,
+                "comment": item["comment"],
+            })
+
+    return {
+        make_fixed_key(
+            row.name,
+            "Combined",
+            date,
+            fleet,
+            frappe.as_json(comments),
+        )
+        for (date, fleet), comments in grouped.items()
+    }
+
+
 @frappe.whitelist(methods=["POST"])
 def set_fixed_status(child_row, fixed_key, fixed):
     check_dashboard_access()
+
+    if not can_mark_correction_fixed():
+        frappe.throw(
+            _("You are not authorised to change downtime correction status."),
+            frappe.PermissionError,
+        )
+
+    if str(fixed) not in ("0", "1"):
+        frappe.throw(_("Invalid Fixed status."), frappe.ValidationError)
+
     fixed = int(fixed)
 
     row = frappe.get_doc("Mechanical Downtime sign-off child", child_row)
+
+    if row.parenttype != "Mechanical Downtime sign-off":
+        frappe.throw(
+            _("Invalid downtime correction record."),
+            frappe.PermissionError,
+        )
 
     parent_site = frappe.db.get_value(
         "Mechanical Downtime sign-off",
@@ -473,7 +542,19 @@ def set_fixed_status(child_row, fixed_key, fixed):
         "site",
     )
 
+    if not parent_site:
+        frappe.throw(
+            _("Downtime correction site could not be verified."),
+            frappe.PermissionError,
+        )
+
     check_site_access(parent_site)
+
+    if fixed_key not in valid_fixed_keys_for_child(row):
+        frappe.throw(
+            _("This correction is no longer valid. Refresh the dashboard."),
+            frappe.ValidationError,
+        )
 
     fixes = frappe.parse_json(row.fixes or "{}") or {}
 
