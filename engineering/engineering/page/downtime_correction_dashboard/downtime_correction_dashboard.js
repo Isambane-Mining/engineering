@@ -173,10 +173,7 @@ frappe.pages["downtime-correction-dashboard"].on_page_load = function (wrapper) 
     ready = true;
     wrapper.dcd_refresh = refresh;
 
-    frappe.require(
-        "/assets/engineering/css/downtime_correction_dashboard.css",
-        refresh
-    );
+    refresh();
 };
 
 frappe.pages["downtime-correction-dashboard"].on_page_show = function (wrapper) {
