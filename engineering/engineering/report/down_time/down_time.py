@@ -657,7 +657,7 @@ def _save_downtime_signoff(
     if report_shift not in ("Day Shift", "Night Shift", "All Shifts"):
         frappe.throw(_("Please select a valid shift."))
 
-    from engineering.engineering.report.downtime_correction_dashboard.downtime_correction_dashboard import (
+    from engineering.engineering.page.downtime_correction_dashboard.downtime_correction_dashboard import (
         check_site_access,
     )
 
@@ -707,6 +707,12 @@ def _save_downtime_signoff(
         ))
 
     parent = get_or_create_signoff_parent(report_date, site, report_shift)
+
+    if int(parent.get('verification_workflow_version') or 0) == 1:
+        frappe.throw(
+            _('This sign-off uses record-level downtime verification.')
+        )
+
     row = get_or_create_signoff_row(parent, report_date, signoff_shift)
 
     if signoff_section == "Engineering" and row.date_time_e and row.engineering_user:

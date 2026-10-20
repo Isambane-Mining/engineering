@@ -1,0 +1,51 @@
+{
+  "doctype": "Page",
+  "name": "downtime-correction-dashboard",
+  "page_name": "downtime-correction-dashboard",
+  "title": "Downtime Correction Dashboard",
+  "module": "Engineering",
+  "standard": "Yes",
+  "system_page": 0,
+  "icon": "dashboard",
+  "docstatus": 0,
+  "idx": 0,
+  "creation": "2026-10-19 15:31:38.700035",
+  "modified": "2026-10-19 15:31:38.700035",
+  "owner": "Administrator",
+  "modified_by": "Administrator",
+  "content": null,
+  "script": null,
+  "style": null,
+  "roles": [
+    {
+      "role": "System Manager"
+    },
+    {
+      "role": "Production Manager"
+    },
+    {
+      "role": "Production User"
+    },
+    {
+      "role": "Engineering Supervisor"
+    },
+    {
+      "role": "Production Foreman"
+    },
+    {
+      "role": "Production Supervisor"
+    },
+    {
+      "role": "Information Officer"
+    },
+    {
+      "role": "Engineering Foreman"
+    },
+    {
+      "role": "Engineering Manager"
+    },
+    {
+      "role": "Engineering User"
+    }
+  ]
+}

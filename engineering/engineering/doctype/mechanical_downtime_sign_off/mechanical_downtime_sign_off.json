@@ -10,7 +10,9 @@
   "report_date",
   "report_shift",
   "status",
-  "signed_report_excel"
+  "signed_report_excel",
+  "downtime_verifications",
+  "verification_workflow_version"
  ],
  "fields": [
   {
@@ -54,6 +56,21 @@
    "options": "Day Shift\nNight Shift\nAll Shifts",
    "reqd": 0,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "downtime_verifications",
+   "fieldtype": "Table",
+   "label": "Downtime Verifications",
+   "options": "Downtime Verification Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "verification_workflow_version",
+   "fieldtype": "Int",
+   "label": "Verification Workflow Version",
+   "default": "0",
+   "hidden": 1,
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

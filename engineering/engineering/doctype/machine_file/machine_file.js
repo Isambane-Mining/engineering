@@ -1,3 +1,32 @@
+
+function mf_selected_period() {
+    return frappe.machine_file_period || {from_date: "", to_date: "", months: [], labels: []};
+}
+
+function mf_has_period() {
+    const p = mf_selected_period();
+    return Boolean(p.from_date || p.to_date || (p.months || []).length);
+}
+
+function mf_period_call(frm, options) {
+    if (!mf_has_period()) return frappe.call(options);
+    const view = frm._mf_period_view;
+    if (!view) {
+        frappe.msgprint(__("The selected period is still loading. Please try again."));
+        return;
+    }
+    const method = options.method.split(".").pop();
+    let data;
+    if (method === "get_machine_file_section_details") {
+        data = view.sections[String(options.args.index_no)];
+    } else if (method === "get_machine_registration_movement") {
+        data = view.movement;
+    } else if (method === "get_machine_breakdown_log_summary") {
+        data = view.breakdown;
+    }
+    options.callback({message: data || {}});
+}
+
 const MACHINE_FILE_INDEX = [
     ["1", "Machine Registration & Movement", ""],
     ["2", "Equipment Technical Information as per TMM COP16 & Vision Diagram", ""],
@@ -268,6 +297,41 @@ function set_machine_file_full_width(frm) {
 }
 
 function render_machine_file_dashboard(frm) {
+    if (mf_has_period() && !frm.is_new()) {
+        const period = mf_selected_period();
+        const key = JSON.stringify([frm.doc.name, frm.doc.modified, period]);
+        if (frm._mf_period_key !== key) {
+            const wrapper = frm.fields_dict.index_dashboard.$wrapper;
+            wrapper.empty().append($('<div class="text-muted"></div>').text(
+                __("Loading records for the selected period...")
+            ));
+            if (frm._mf_period_pending === key) return;
+            frm._mf_period_view = null;
+            frm._mf_period_pending = key;
+            frappe.call({
+                method: "engineering.engineering.doctype.machine_file.machine_file.get_period_view",
+                args: {name: frm.doc.name, period: JSON.stringify(period)},
+                callback(r) {
+                    if (frm._mf_period_pending !== key) return;
+                    frm._mf_period_pending = null;
+                    if (r.exc || !r.message) return;
+                    frm._mf_period_view = r.message;
+                    frm._mf_period_key = key;
+                    frm._mf_period_rendering = true;
+                    frm.trigger("refresh");
+                },
+                error() {
+                    if (frm._mf_period_pending !== key) return;
+                    frm._mf_period_pending = null;
+                    wrapper.empty().append($('<div class="text-danger"></div>').text(
+                        __("Could not load the selected period. Return to the register and check the filters.")
+                    ));
+                }
+            });
+            return;
+        }
+    }
+
     const field =
         frm.fields_dict.index_dashboard;
 
@@ -312,8 +376,8 @@ function render_machine_file_dashboard(frm) {
         return;
     }
 
-    const rows =
-        frm.doc.index_items || [];
+    const rows = mf_has_period() && frm._mf_period_view
+        ? frm._mf_period_view.rows : (frm.doc.index_items || []);
 
     let current = 0;
     let dueSoon = 0;
@@ -763,7 +827,7 @@ function render_machine_file_dashboard(frm) {
                     <div
                         class="mf-card-label"
                     >
-                        Missing
+                        ${mf_has_period() ? "No records in period" : "Missing"}
                     </div>
                 </div>
 
@@ -799,6 +863,20 @@ function render_machine_file_dashboard(frm) {
         </div>
     `);
 
+
+    if (mf_has_period()) {
+        const period = mf_selected_period();
+        const description = [
+            ...(period.labels || []),
+            period.from_date ? __("From") + " " + frappe.datetime.str_to_user(period.from_date) : "",
+            period.to_date ? __("To") + " " + frappe.datetime.str_to_user(period.to_date) : ""
+        ].filter(Boolean).join(" | ");
+        $wrapper.prepend($('<div class="alert alert-info"></div>').text(
+            __("Selected period") + ": " + description + ". " +
+            __("Dates and counts reflect this period; expiry status is evaluated today.")
+        ));
+        $wrapper.find(".mf-view-records").hide();
+    }
 
     $wrapper
         .find(".mf-refresh-file")
@@ -1002,6 +1080,11 @@ frappe.ui.form.on(
         },
 
         refresh(frm) {
+            if (frm._mf_period_rendering) {
+                frm._mf_period_rendering = false;
+            } else {
+                frm._mf_period_key = null;
+            }
             apply_machine_filter(
                 frm
             );
@@ -1836,6 +1919,14 @@ function mfsec_attachments(files) {
         $content,
         data
     ) {
+        if (data.period_filtered && !(data.source_records || []).length &&
+                !(data.manual_documents || []).length && !((data.movement || {}).rows || []).length) {
+            $content.empty().append($('<div class="text-muted p-3"></div>').text(
+                __("No records for the selected period.")
+            ));
+            return;
+        }
+
 
         const has_movement =
             data.movement
@@ -2235,7 +2326,7 @@ function mfsec_attachments(files) {
         `);
 
 
-        frappe.call({
+        mf_period_call(frm, {
 
             method:
                 "engineering.engineering.doctype.machine_file.machine_file.get_machine_file_section_details",
@@ -2847,8 +2938,8 @@ function mfsec_attachments(files) {
                             color:#6b7280;
                         "
                     >
-                        No qualifying breakdown
-                        or maintenance records found.
+                        ${mf_has_period() ? "No records for the selected period." :
+                            "No qualifying breakdown or maintenance records found."}
                     </td>
                 </tr>
             `;
@@ -3353,7 +3444,7 @@ function mfsec_attachments(files) {
             `);
 
 
-            frappe.call({
+            mf_period_call(frm, {
 
                 method:
                     "engineering.engineering.doctype.machine_file.machine_file.get_machine_breakdown_log_summary",
@@ -3566,7 +3657,7 @@ function mfsec_attachments(files) {
                     border-radius:6px;
                     background:#fff;
                 ">
-                    No movement records found.
+                    ${mf_has_period() ? "No records for the selected period." : "No movement records found."}
                 </div>
             `;
         }
@@ -3834,7 +3925,7 @@ function mfsec_attachments(files) {
                 </div>
             `);
 
-            frappe.call({
+            mf_period_call(frm, {
                 method:
                     "engineering.engineering.doctype.machine_file.machine_file.get_machine_registration_movement",
 

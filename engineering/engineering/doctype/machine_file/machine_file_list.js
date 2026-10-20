@@ -165,7 +165,24 @@ function mf_get_category_config(category) {
 }
 // END MACHINE FILE CATEGORY CONFIG
 
+
+function mf_position_period_controls(listview) {
+    const $row = listview.$machine_file_period_controls;
+    if (!$row) return;
+
+    const machineControl = listview.page.fields_dict.machine;
+    const $machine = machineControl
+        ? machineControl.$wrapper
+        : $(listview.page.wrapper)
+            .find('.frappe-control[data-fieldname="machine"]').first();
+
+    if ($machine && $machine.length) {
+        $row.insertAfter($machine);
+    }
+}
+
 function mf_render_grouped_register(listview) {
+    mf_position_period_controls(listview);
     const wrapper = mf_get_wrapper(listview);
 
     const site = mf_get_filter_value(listview, "site") || "";
@@ -489,6 +506,96 @@ function mf_hide_id_filter(listview) {
     }
 }
 
+
+function mf_add_period_controls(listview) {
+    if (listview.machine_file_period_controls) {
+        return;
+    }
+
+    // Period state is carried into Machine File without creating database filters.
+    const $row = $('<div class="row machine-file-period-controls"></div>');
+    listview.$machine_file_period_controls = $row;
+    $row.insertBefore(mf_get_wrapper(listview));
+    mf_position_period_controls(listview);
+
+    function addControl(df) {
+        df.placeholder = df.label;
+        df.onchange = () => {
+            const controls = listview.machine_file_period_controls;
+            const labels = controls.month_year ? controls.month_year.get_value() || [] : [];
+            const months = labels.map(label => {
+                const parts = String(label).split(" - ");
+                const month = Array.from({length: 12}, (_, n) =>
+                    new Date(2000, n, 1).toLocaleString("en-GB", {month: "long"})
+                ).indexOf(parts[0]) + 1;
+                return `${parts[1]}-${String(month).padStart(2, "0")}`;
+            });
+            frappe.machine_file_period = {
+                from_date: controls.from_date ? controls.from_date.get_value() || "" : "",
+                to_date: controls.to_date ? controls.to_date.get_value() || "" : "",
+                months: months,
+                labels: labels
+            };
+        };
+        const $column = $('<div class="machine-file-period-control"></div>').appendTo($row);
+        return frappe.ui.form.make_control({
+            parent: $column,
+            df: df,
+            render_input: true
+        });
+    }
+
+    const controls = {};
+    listview.machine_file_period_controls = controls;
+
+    controls.from_date = addControl({
+        fieldname: "mf_from_date",
+        label: __("From Date"),
+        fieldtype: "Date"
+    });
+
+    controls.to_date = addControl({
+        fieldname: "mf_to_date",
+        label: __("To Date"),
+        fieldtype: "Date"
+    });
+
+    controls.month_year = addControl({
+        fieldname: "mf_month_year",
+        label: __("Month and Year"),
+        fieldtype: "MultiSelectList",
+        get_data(txt) {
+            const search = String(txt || "").trim();
+            const yearMatch = search.match(/\b\d{4}\b/);
+            const year = yearMatch
+                ? Number(yearMatch[0])
+                : new Date().getFullYear();
+
+            if (year < 1000 || year > 9999) {
+                return [];
+            }
+
+            const monthSearch = search
+                .replace(/\b\d{4}\b/g, "")
+                .replace(/[-–]/g, "")
+                .trim()
+                .toLowerCase();
+
+            return Array.from({ length: 12 }, (_, month) => {
+                const monthName = new Date(year, month, 1)
+                    .toLocaleString("en-GB", { month: "long" });
+                return {
+                    value: `${monthName} - ${year}`,
+                    description: ""
+                };
+            }).filter(option =>
+                !monthSearch ||
+                option.value.toLowerCase().includes(monthSearch)
+            );
+        }
+    });
+}
+
 frappe.listview_settings["Machine File"] = {
     add_fields: [
         "machine",
@@ -499,6 +606,8 @@ frappe.listview_settings["Machine File"] = {
     ],
 
     onload(listview) {
+
+        mf_add_period_controls(listview);
 
         mf_hide_id_filter(listview);
 

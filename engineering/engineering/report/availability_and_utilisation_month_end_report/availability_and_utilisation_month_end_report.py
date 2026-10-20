@@ -863,7 +863,7 @@ def get_required_downtime_minutes_for_breakdown(
     }
 
 
-def get_plant_breakdown_reason_details(filters, asset_names):
+def get_plant_breakdown_reason_details(filters, asset_names, allowed_names=None):
 	if not asset_names:
 		return {}
 
@@ -944,6 +944,12 @@ def get_plant_breakdown_reason_details(filters, asset_names):
 		)
 
 		values["location"] = location
+
+	if allowed_names is not None:
+		if not allowed_names:
+			return {}
+		conditions.append("name IN %(allowed_names)s")
+		values["allowed_names"] = tuple(allowed_names)
 
 	rows = frappe.db.sql(
 		f"""
