@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        branch: [jorrie, juan, kosie, cornet, eben]
+        branch: [jorrie, juan, kosie, cornet, eben, marco]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
