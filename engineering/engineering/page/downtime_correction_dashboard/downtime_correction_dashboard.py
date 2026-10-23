@@ -64,7 +64,7 @@ def check_site_access(site):
 
 
 @frappe.whitelist()
-def get_page_html(from_date=None, to_date=None, site=None):
+def get_page_html(from_date=None, to_date=None, site=None, fixed_status=None):
     check_dashboard_access()
 
     from_date = getdate(from_date or add_days(nowdate(), -7))
@@ -76,10 +76,15 @@ def get_page_html(from_date=None, to_date=None, site=None):
     if site and not frappe.db.exists("Location", site):
         frappe.throw(_("Invalid Site."))
 
-    return get_dashboard_html(get_items(from_date, to_date, site))
+    if fixed_status not in (None, "", "All", "Fixed", "Not Fixed"):
+        frappe.throw(_("Invalid fixed status filter."))
+
+    return get_dashboard_html(
+        get_items(from_date, to_date, site, fixed_status)
+    )
 
 
-def get_items(from_date, to_date, site=None):
+def get_items(from_date, to_date, site=None, fixed_status=None):
     conditions = ["c.parenttype = 'Mechanical Downtime sign-off'"]
     values = {}
 
@@ -209,7 +214,8 @@ def get_items(from_date, to_date, site=None):
             p.site,
             p.report_date,
             p.report_shift,
-            b.asset_name AS fleet
+            b.asset_name AS fleet,
+            b.breakdown_start_datetime AS breakdown_start_datetime
         FROM `tabDowntime Verification Entry` v
         INNER JOIN `tabMechanical Downtime sign-off` p
             ON p.name = v.parent
@@ -222,6 +228,8 @@ def get_items(from_date, to_date, site=None):
         as_dict=True,
     )
 
+    verification_cards = {}
+
     for row in verification_rows:
         if not row.fleet:
             continue
@@ -232,23 +240,59 @@ def get_items(from_date, to_date, site=None):
             else "Engineering Manager"
         )
 
-        detail = row.comments
+        key = (
+            row.downtime_record,
+            str(row.report_date),
+            row.site or "",
+            row.report_shift or "",
+        )
 
-        items.append({
-            "date": row.report_date,
-            "site": row.site,
-            "shift": row.report_shift,
-            "fleet": row.fleet,
-            "child_row": None,
-            "fixed_key": "",
-            "comments": [{
-                "source": source,
-                "comment": detail,
-            }],
-            "is_fixed": False,
-            "verification_only": True,
-            "breakdown_name": row.downtime_record,
+        if key not in verification_cards:
+            verification_cards[key] = {
+                "date": row.report_date,
+                "site": row.site,
+                "shift": row.report_shift,
+                "fleet": row.fleet,
+                "child_row": None,
+                "fixed_key": "",
+                "comments": [],
+                "is_fixed": False,
+                "verification_only": True,
+                "breakdown_name": row.downtime_record,
+                "breakdown_start_datetime": row.breakdown_start_datetime,
+            }
+
+        verifier = row.verified_by or ""
+        verifier_name = (
+            frappe.db.get_value("User", verifier, "full_name")
+            or verifier
+        ) if verifier else ""
+
+        display_source = (
+            f"{source} ({verifier_name})"
+            if verifier_name
+            else source
+        )
+
+        verification_cards[key]["comments"].append({
+            "source": display_source,
+            "comment": row.comments,
         })
+
+    items.extend(verification_cards.values())
+
+    if fixed_status == "Fixed":
+        items = [
+            item for item in items
+            if item.get("is_fixed")
+            and not item.get("verification_only")
+        ]
+    elif fixed_status == "Not Fixed":
+        items = [
+            item for item in items
+            if not item.get("is_fixed")
+            and not item.get("verification_only")
+        ]
 
     return items
 
@@ -381,6 +425,7 @@ def get_card_html(item):
                 <button class="btn btn-xs btn-default dcd-view"
                     data-fleet="{frappe.utils.escape_html(item["fleet"])}"
                     data-date="{item["date"]}"
+                    data-start="{frappe.utils.escape_html(str(item.get("breakdown_start_datetime") or ""))}"
                     data-comments="{comments_json}">
                     View Comment
                 </button>
