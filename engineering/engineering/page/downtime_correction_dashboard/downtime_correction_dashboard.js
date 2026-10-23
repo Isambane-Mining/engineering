@@ -34,6 +34,15 @@ frappe.pages["downtime-correction-dashboard"].on_page_load = function (wrapper) 
         change: () => ready && refresh(),
     });
 
+    const fixedStatus = page.add_field({
+        fieldname: "fixed_status",
+        label: __("Fixed Status"),
+        fieldtype: "Select",
+        options: ["All", "Fixed", "Not Fixed"],
+        default: "All",
+        change: () => ready && refresh(),
+    });
+
     const controller =
         "engineering.engineering.page.downtime_correction_dashboard.downtime_correction_dashboard";
 
@@ -60,6 +69,7 @@ frappe.pages["downtime-correction-dashboard"].on_page_load = function (wrapper) 
                 from_date,
                 to_date,
                 site: site.get_value() || "",
+                fixed_status: fixedStatus.get_value() || "All",
             },
             callback: function (r) {
                 if (r.exc) {
@@ -140,7 +150,8 @@ frappe.pages["downtime-correction-dashboard"].on_page_load = function (wrapper) 
             message: `
                 <div class="dcd-popup">
                     <div><b>${__("Fleet")}:</b> ${frappe.utils.escape_html(btn.attr("data-fleet") || "")}</div>
-                    <div><b>${__("Date")}:</b> ${frappe.utils.escape_html(btn.attr("data-date") || "")}</div>
+                    <div><b>${__("Breakdown/Maintenance Start Time")}:</b> ${frappe.utils.escape_html(btn.attr("data-start") || "—")}</div>
+                    <div><b>${__("Verified Date")}:</b> ${frappe.utils.escape_html(btn.attr("data-date") || "")}</div>
                     <hr>
                     ${blocks}
                 </div>
