@@ -1,0 +1,38 @@
+{
+ "doctype": "DocType",
+ "name": "Machine Reliability Category",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "field_order": [
+  "category",
+  "keywords",
+  "test_sections"
+ ],
+ "fields": [
+  {
+   "fieldname": "category",
+   "label": "Problem Category",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "keywords",
+   "label": "Keywords",
+   "fieldtype": "Small Text",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Comma-separated words or phrases. Whole words; case-insensitive."
+  },
+  {
+   "fieldname": "test_sections",
+   "label": "Relevant Test / Inspection Sections",
+   "fieldtype": "Small Text",
+   "description": "Exact Engineering Legals section names, one per line. Do not include services, schedules or staff authorisations."
+  }
+ ],
+ "permissions": [],
+ "istable": 1,
+ "editable_grid": 1
+}

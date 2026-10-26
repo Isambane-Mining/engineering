@@ -1,0 +1,47 @@
+{
+ "doctype": "DocType",
+ "name": "Machine Reliability Settings",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "field_order": [
+  "help",
+  "categories"
+ ],
+ "fields": [
+  {
+   "fieldname": "help",
+   "label": "About this report",
+   "fieldtype": "HTML",
+   "options": "<p>Use the ten standard categories. Edit their keywords and test sections here. The report uses a selected category first and searches keywords for records with a blank category. Extra keywords extend the search. Keywords do not confirm a diagnosis or accident cause. Services come from Machine Service Records.</p>"
+  },
+  {
+   "fieldname": "categories",
+   "label": "Problem Categories",
+   "fieldtype": "Table",
+   "options": "Machine Reliability Category"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Engineering User",
+   "read": 1,
+   "write": 0
+  }
+ ],
+ "issingle": 1
+}

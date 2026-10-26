@@ -1287,7 +1287,7 @@
 .re-shell *{box-sizing:border-box}
 .re-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 0 16px}
 .re-eyebrow{color:#198488;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
-.re-header h1{font-size:clamp(28px,4vw,40px);line-height:1.1;letter-spacing:-.04em;margin:6px 0 4px;font-weight:800}
+.re-header h2{font-size:23px;line-height:1.2;letter-spacing:-.03em;margin:6px 0 4px;font-weight:750}
 .re-header p,.re-focus p{margin:0;color:#617784;font-size:13px;line-height:1.5}
 .re-period{font-size:12px;color:#54717d;background:#e2eded;border-radius:20px;padding:7px 12px;white-space:nowrap}
 .re-filters{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr)) minmax(120px,auto);align-items:end;gap:12px;padding:14px;border:1px solid #d6e3e6;border-radius:16px;background:#fff;box-shadow:0 8px 30px rgba(22,59,73,.05)}
@@ -1333,10 +1333,6 @@
 /* End Reliability Engineering */
 
 /* Problem Machines: independent view of the reliability report. */
-.re-tabs{display:flex;gap:6px;margin:0 0 14px;border-bottom:1px solid #cfdee2}
-.re-tabs button{padding:12px 16px;border:0;border-bottom:3px solid transparent;background:transparent;color:#617784;font-weight:700;cursor:pointer}
-.re-tabs button[aria-selected=true]{border-color:#16858a;color:#164b58;background:#e7f3f3}
-.re-tabs button:focus-visible{outline:3px solid #72c4c4;outline-offset:-3px}
 .re-analysis-tab[hidden],.re-problems-tab[hidden],.pm-results[hidden]{display:none}
 .re-problems-tab .pm-filters{grid-template-columns:repeat(4,minmax(0,1fr))}
 .pm-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
@@ -1373,7 +1369,7 @@
 @media(max-width:767px){.re-problems-tab .pm-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.pm-site{grid-column:1/-1}
 .pm-charts{grid-template-columns:minmax(0,1fr)}.pm-cards{grid-template-columns:minmax(0,1fr)}
 .re-problems-tab .pm-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.re-problems-tab .pm-summary strong{font-size:20px}
-.re-tabs button{padding:12px 9px;font-size:12px;flex:1}.pm-frequency{min-height:280px}}
+.pm-frequency{min-height:280px}}
 
 /* Shared reliability help; no calculation or ranking behavior. */
 .reliability-engineering-page .re-formulas{margin:14px 0}
@@ -1624,3 +1620,72 @@
 	padding: 12px;
 	color: #0f172a;
 }
+
+/* Three peer reports keep their own controls and data state. */
+.re-combined-shell{width:100%;max-width:1600px;min-width:0;margin:0 auto}
+.re-combined-shell>[hidden]{display:none!important}
+.re-combined-heading{padding:10px 4px 16px;color:#183746}
+.re-combined-heading h1{font-size:clamp(25px,3vw,32px);font-weight:750;letter-spacing:-.03em;line-height:1.2;margin:6px 0 0}
+.re-combined-tabs{display:flex;gap:6px;border-bottom:1px solid #d6e3e6;padding:0 4px;margin:0 0 14px}
+.re-combined-tabs button{background:transparent;border:0;border-bottom:3px solid transparent;padding:12px 16px;font-size:14px;font-weight:650;color:#617784;cursor:pointer;border-radius:6px 6px 0 0}
+.re-combined-tabs button:hover{background:#edf5f5;color:#164b58}
+.re-combined-tabs button[aria-selected=true]{color:#164b58;border-bottom-color:#16858a;background:#e7f3f3}
+.re-combined-tabs button:focus-visible{outline:2px solid #16858a;outline-offset:-2px}
+.re-machine-host,.re-analysis-host{min-width:0}
+.re-machine-host .mr-shell{padding-top:4px}
+.re-analysis-host .re-shell,.re-combined-shell>.re-problems-tab{padding:4px 4px 24px}
+.re-combined-error{padding:18px;color:#835614}
+@media(max-width:600px){.re-combined-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px}.re-combined-tabs button{font-size:11px;padding:10px 5px;line-height:1.4;overflow-wrap:break-word}.re-combined-heading{padding-bottom:12px}}
+
+/* Daily Engine tyre occurrences: two large averages and one compact count. */
+.daily-damage-kpi-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(205px,.37fr)!important;gap:12px;margin-bottom:12px;align-items:stretch}
+.daily-damage-kpi-row>.frappe-card{min-width:0;height:100%;border-radius:9px}
+.daily-tyre-kpi{padding:12px 14px;border:1px solid #d8dde2;border-left:5px solid #6b7280;background:#f8fafc}
+.daily-tyre-title{font-size:11px;font-weight:700;text-transform:uppercase;color:#596273;line-height:1.4}
+.daily-tyre-body{display:flex;align-items:center;gap:12px;margin-top:3px}
+.daily-tyre-icon{width:34px;height:38px;flex-shrink:0}
+.daily-tyre-value{font-size:28px;font-weight:800;line-height:1.05;color:#111827;font-variant-numeric:tabular-nums}
+.daily-tyre-subtitle{font-size:10px;line-height:1.4;color:#6b7280;margin-top:3px}
+.daily-au-average{padding:14px}
+.daily-au-average strong{display:block;font-size:26px;line-height:1.3;font-weight:900}
+@media(max-width:900px){.daily-damage-kpi-row{grid-template-columns:repeat(2,minmax(0,1fr))!important}.daily-damage-kpi-row>.daily-tyre-kpi{grid-column:1/-1}.daily-tyre-body{gap:10px}.daily-tyre-subtitle{font-size:11px}}
+@media(max-width:480px){.daily-damage-kpi-row{grid-template-columns:minmax(0,1fr)!important;gap:8px}.daily-damage-kpi-row>.daily-tyre-kpi{grid-column:auto}}
+.mr-page{--mr-ink:#203c40;--mr-muted:#617174;--mr-border:#dce5e5;--mr-bg:#f3f7f7;--mr-red:#c94343;--mr-orange:#db8a23;--mr-blue:#327ab9;--mr-green:#27835c;color:var(--mr-ink)}
+.mr-page [hidden]{display:none!important}.mr-shell{max-width:1600px;margin:0 auto;padding:4px 4px 28px}.mr-header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0 18px}.mr-header h1{font-size:25px;letter-spacing:-.6px;margin:4px 0}.mr-header p,.mr-panel p{color:var(--mr-muted);font-size:12px;margin:4px 0 10px}.mr-eyebrow{font-size:10px;letter-spacing:1.7px;font-weight:700;color:#417878}.mr-filter-panel{padding:14px;background:var(--mr-bg);border:1px solid var(--mr-border);border-radius:10px;display:flex;align-items:flex-end;gap:10px}.mr-filters{flex:1;display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px 12px}.mr-filters .frappe-control{margin:0!important}.mr-filters .control-label{font-size:11px}.mr-filters .help-box{display:none}.mr-refresh{margin-bottom:2px}.mr-status{font-size:12px;padding:12px 0;min-height:42px}.mr-marker:focus-visible,.mr-record-link:focus-visible{outline:2px solid #245f94;outline-offset:3px}.mr-cards{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:12px;margin-bottom:16px}.mr-card{padding:14px;background:var(--card-bg,#fff);border:1px solid var(--mr-border);border-radius:9px;display:flex;flex-direction:column;gap:6px}.mr-card>span{font-size:12px;color:var(--mr-muted)}.mr-card strong{font-size:27px;line-height:1.2;font-weight:650}.mr-card small{font-size:10px;color:var(--mr-muted);line-height:1.45}.mr-panel{background:var(--card-bg,#fff);border:1px solid var(--mr-border);border-radius:10px;padding:16px;margin-bottom:16px}.mr-panel h2{font-size:15px;margin:0 0 8px;font-weight:650}.mr-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}.mr-mode{display:flex;gap:4px;flex-shrink:0}.mr-mode .active{background:#dceceb;color:#245b58}.mr-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;margin:10px 0 12px}.mr-legend span:before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--event-color)}.mr-page .failure{--event-color:var(--mr-red)}.mr-page .additional{--event-color:var(--mr-orange)}.mr-page .test{--event-color:var(--mr-blue)}.mr-page .service{--event-color:var(--mr-green)}.mr-timeline-note{font-size:11px;color:var(--mr-muted);margin-bottom:10px}.mr-timeline{max-height:510px;overflow:auto}.mr-timeline-scroll{min-width:650px}.mr-lane{display:grid;grid-template-columns:150px 1fr;border-top:1px solid #ecf0f0;align-items:center}.mr-lane-label{font-size:12px;font-weight:650;padding:10px 6px}.mr-lane-label small{display:block;font-size:9px;font-weight:400;color:var(--mr-muted);margin-top:5px}.mr-track{position:relative;background:linear-gradient(transparent 20px,#e5eded 20px,#e5eded 21px,transparent 21px);margin-right:15px}.mr-marker{position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid var(--card-bg,#fff);box-shadow:0 0 0 1px var(--event-color);background:var(--event-color);transform:translateX(-50%);cursor:pointer}.mr-marker:hover{transform:translateX(-50%) scale(1.3);z-index:2}.mr-unpositioned{font-size:12px;margin-top:10px}.mr-unpositioned summary{cursor:pointer;padding:8px}.mr-checks{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.mr-checks span{background:var(--mr-bg);border:1px solid var(--mr-border);padding:5px 9px;border-radius:5px;font-size:11px}.mr-table-wrap{overflow-x:auto;max-height:550px}.mr-table{width:100%;font-size:11px;border-collapse:collapse}.mr-table th{background:var(--mr-bg);font-weight:600;position:sticky;top:0;z-index:1;white-space:nowrap}.mr-table td,.mr-table th{padding:9px 10px;border-bottom:1px solid var(--mr-border);vertical-align:top;text-align:left}.mr-table td{min-width:80px;max-width:330px;white-space:pre-wrap;overflow-wrap:anywhere}.mr-table td:nth-child(3),.mr-table td:nth-child(4){min-width:150px}.mr-record-link{border:0;background:none;color:#286a7c;padding:0;cursor:pointer;text-decoration:underline}.mr-empty{padding:28px 10px;text-align:center;color:var(--mr-muted);font-size:12px;background:var(--mr-bg);border-radius:6px}.mr-footnote{color:var(--mr-muted);font-size:11px;line-height:1.6;padding:0 4px}.mr-record-detail{display:grid;grid-template-columns:150px 1fr;gap:8px 14px;font-size:12px}.mr-record-detail dd{white-space:pre-wrap;overflow-wrap:anywhere}.mr-record-detail dt{color:#617174}
+@media(min-width:1400px){.mr-filters{grid-template-columns:repeat(7,minmax(115px,1fr))}}
+@media(max-width:800px){.mr-filters{grid-template-columns:repeat(2,minmax(110px,1fr))}.mr-cards{grid-template-columns:repeat(2,minmax(110px,1fr))}.mr-filter-panel{align-items:stretch;flex-direction:column}.mr-header{align-items:flex-start}.mr-header h1{font-size:22px}.mr-panel{padding:12px}.mr-panel-head{flex-direction:column}.mr-record-detail{grid-template-columns:110px 1fr}.mr-legend{gap:12px}}
+
+/* Compact summary; shared table styling serves timeline events without readings. */
+.mr-page .mr-shell{padding:4px 4px 24px}
+.mr-page .mr-header{padding:10px 0 14px}
+.mr-page .mr-header h1{font-size:23px}
+.mr-page .mr-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.mr-page .mr-card{padding:12px 14px;gap:5px;min-height:114px;justify-content:flex-start}
+.mr-page .mr-card>span{font-size:12px;line-height:1.4;font-weight:550}
+.mr-page .mr-card strong{font-size:25px;line-height:1.2;font-variant-numeric:tabular-nums}
+.mr-page .mr-card small{font-size:11px;line-height:1.45;margin-top:auto}
+.mr-page .mr-panel{min-width:0;padding:14px}
+.mr-page .mr-calculation-help{font-size:12px;color:var(--mr-muted);margin-top:10px}
+.mr-page .mr-calculation-help summary{cursor:pointer;font-weight:550;padding:4px 0}
+.mr-page .mr-calculation-help p{margin:8px 0 0;line-height:1.6}
+.mr-page .mr-table-wrap{max-width:100%;max-height:430px;border:1px solid var(--mr-border);border-radius:6px;overflow:auto}
+.mr-page .mr-table{font-size:12px;line-height:1.5}
+.mr-page .mr-table th{font-size:11px;color:var(--mr-muted);padding:9px 10px;white-space:normal;min-width:70px}
+.mr-page .mr-table td{padding:9px 10px;min-width:65px;max-width:250px}
+.mr-page .mr-table tbody tr:nth-child(even){background:var(--mr-bg)}
+.mr-page .mr-table tbody tr:hover{background:#eaf3f3}
+.mr-page .mr-table [data-column="date"]{min-width:106px;max-width:112px;font-variant-numeric:tabular-nums}
+.mr-page .mr-table [data-column="fleet"]{min-width:70px;max-width:85px;font-weight:550}
+.mr-page .mr-table [data-column="reason"]{min-width:175px;max-width:250px}
+.mr-page .mr-table [data-column="source"]{min-width:65px}
+
+@media(max-width:600px){.mr-page .mr-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mr-page .mr-card{padding:10px;min-height:116px}.mr-page .mr-card>span{min-height:34px;font-size:11px}.mr-page .mr-card strong{font-size:23px}.mr-page .mr-card small{font-size:10px}.mr-page .mr-header{gap:10px}.mr-page .mr-header h1{font-size:21px}.mr-page .mr-panel{padding:12px}}
+.mr-page .mr-table td[data-column="fleet"]{white-space:nowrap}
+
+/* One dashboard with consistent gaps between filters, cards and timeline. */
+.mr-page #mr-overview{display:flex;flex-direction:column;gap:14px}
+.mr-page #mr-overview>.mr-cards,.mr-page #mr-overview>.mr-panel{margin-bottom:0}
+.mr-page .mr-card{min-height:108px}
+.mr-page .mr-status{padding:10px 0;min-height:38px}
+.mr-page .mr-footnote{margin-top:14px}
+@media(max-width:600px){.mr-page #mr-overview{gap:12px}.mr-page .mr-card{min-height:108px}.mr-page .mr-filter-panel{padding:12px}}

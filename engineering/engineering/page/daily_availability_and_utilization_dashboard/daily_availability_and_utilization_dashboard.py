@@ -22,6 +22,9 @@ from engineering.engineering.page.daily_availability_and_utilization_dashboard.s
     fetch_short_haul_hours,
     short_haul_percentage,
 )
+from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import (
+    fetch_tyre_damage_records, damage_counts, au_kpi_row,
+)
 
 
 _ = frappe._
@@ -863,6 +866,7 @@ def execute(filters=None):
         hours_asset,
         asset_ownership,
         chart_categories,
+        tyre_damage_records=fetch_tyre_damage_records(source_rows, location, start_date, end_date, hours_asset),
     )
 
     columns = [{"label": "", "fieldname": "noop", "fieldtype": "Data", "width": 1}]
@@ -1662,6 +1666,7 @@ def build_dashboard_html(
     hours_asset=None,
     asset_ownership="Isambane & Excavo Assets",
     chart_categories=None,
+    tyre_damage_records=None,
 ):
     site_safe = esc(location)
     summary_type_safe = esc(summary_type or "Average Per Machine")
@@ -1669,6 +1674,7 @@ def build_dashboard_html(
 
 
     ownership_average_sections = ownership_average_sections or []
+    tyre_counts = damage_counts(tyre_damage_records)
 
     au_target_filter = getattr(
         frappe.local,
@@ -1838,6 +1844,7 @@ def build_dashboard_html(
         ownership_machine_charts = []
 
         for category in ownership_chart_categories:
+            ownership_machine_charts.append(au_kpi_row(category, avgs.get(category) or {}, tyre_counts.get(category)))
             for ownership_section in ownership_average_sections:
                 ownership_scope = (
                     ownership_section.get(
@@ -1887,7 +1894,8 @@ def build_dashboard_html(
         )
 
     else:
-        chart_html = build_selected_summary_chart_html(
+        chart_html = ''.join(au_kpi_row(category, avgs.get(category) or {}, tyre_counts.get(category))
+                             for category in (chart_categories or UI_CATEGORIES)) + build_selected_summary_chart_html(
             summary_type,
             location,
             source_rows or [],
@@ -2001,6 +2009,7 @@ def build_dashboard_html(
                     f"{UI_TITLES.get(category, category)}"
                 ),
                 planned_shift_hours=planned_shift_hours,
+                tyre_damage_counts=damage_counts(tyre_damage_records, machine=machine),
             )
         elif hours_source_rows:
             category_groups = {}
@@ -2042,10 +2051,16 @@ def build_dashboard_html(
                         )
                     )
 
+                category_kpis = build_hours_based_performance_html(
+                    category_rows, start_date, end_date,
+                    planned_shift_hours=planned_shift_hours,
+                    tyre_damage_counts=tyre_counts, summary_only=True,
+                ) if category in tyre_counts else ''
                 grouped_sections.append(f"""
 <div style="margin:8px 0 18px;padding:10px 14px;background:#dbeafe;color:#1e3a8a;font-size:14px;font-weight:900;">
     {category_title} · {len(category_rows)} asset(s)
 </div>
+{category_kpis}
 <div style="padding-left:16px;">
     {"".join(asset_sections)}
 </div>
@@ -2060,6 +2075,7 @@ def build_dashboard_html(
             start_date,
             end_date,
             planned_shift_hours=planned_shift_hours,
+            tyre_damage_counts=tyre_counts,
         )
 
     return f'''
