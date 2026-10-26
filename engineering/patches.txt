@@ -18,3 +18,9 @@ engineering.patches.drop_orphaned_fleet_virtual_columns
 engineering.patches.ensure_fleet_management_dashboard
 engineering.patches.update_open_breakdown_email_recipients_v1
 engineering.patches.seed_engineering_legals_sharepoint_config
+
+engineering.patches.seed_machine_reliability_settings
+
+engineering.patches.combine_reliability_navigation
+
+engineering.patches.simplify_machine_reliability_categories

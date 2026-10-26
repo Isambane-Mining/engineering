@@ -21,6 +21,8 @@
   "hours_breakdown_starts",
   "breakdown_start_datetime",
   "breakdown_reason",
+  "problem_category",
+  "problem_subcategory",
   "failure_classification",
   "mechanic_breakdown_maintenance_start_time",
   "location1",
@@ -230,6 +232,24 @@
    "fieldtype": "Small Text",
    "label": "Breakdown/Maintenance Reason",
    "reqd": 1
+  },
+  {
+   "fieldname": "problem_category",
+   "label": "Problem Category",
+   "fieldtype": "Select",
+   "options": "\nBrakes\nSteering\nEngine / Starting\nHydraulics\nElectrical\nCooling\nTransmission / Drivetrain\nTyres / Wheels\nAir Conditioning\nOther",
+   "default": "",
+   "reqd": 0,
+   "description": "Optional. Choose the main problem reported. Leave blank if unsure."
+  },
+  {
+   "default": "",
+   "depends_on": "eval:doc.problem_category == 'Tyres / Wheels'",
+   "fieldname": "problem_subcategory",
+   "fieldtype": "Select",
+   "label": "Problem Subcategory",
+   "options": "\nTyre Damage",
+   "reqd": 0
   },
   {
    "depends_on": "eval:doc.downtime_type == 'Breakdown'",

@@ -1,0 +1,29 @@
+{
+ "doctype": "Page",
+ "name": "machine-reliability",
+ "page_name": "machine-reliability",
+ "module": "Engineering",
+ "standard": "Yes",
+ "title": "Machine Reliability",
+ "system_page": 0,
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Engineering Manager"
+  },
+  {
+   "role": "Engineering Area Manager"
+  },
+  {
+   "role": "Engineering User"
+  },
+  {
+   "role": "Engineering Foreman"
+  },
+  {
+   "role": "Engineering Plant Manager"
+  }
+ ]
+}

@@ -16,8 +16,7 @@ describe('LAB Problem Machines',()=>{
   });
   cy.viewport(1440,1000);
   cy.visit('/app/reliability-engineering');
-  cy.get('.re-analysis-tab').should('be.visible');
-  cy.get('#re-problems-tab').click();
+  cy.get('#re-combined-problems-tab').click();
   cy.get('[data-fieldname="pm_top"] select').should('have.value','5');
   setFilter('from','2026-08-01');setFilter('to','2026-08-31');setFilter('site','Klipfontein');
   cy.get('.pm-table tbody tr').should('have.length',5);
@@ -41,9 +40,9 @@ describe('LAB Problem Machines',()=>{
   });
   cy.get('.pm-table-wrap').should('be.visible');
   cy.screenshot('problem-machines-desktop',{capture:'viewport'});
-  cy.get('#re-analysis-tab').click();cy.get('.re-analysis-tab').should('be.visible');
+  cy.get('#re-combined-analysis-tab').click();cy.get('.re-analysis-tab').should('be.visible');
   cy.get('[data-fieldname="measurement"] select').should('have.value','Overview');
-  cy.get('#re-problems-tab').click();cy.get('.pm-table tbody tr').should('have.length',10);
+  cy.get('#re-combined-problems-tab').click();cy.get('.pm-table tbody tr').should('have.length',10);
  });
  it('uses cards on phones and tablets without page overflow',()=>{
   [375,768,1024].forEach(width=>{
@@ -56,17 +55,29 @@ describe('LAB Problem Machines',()=>{
   cy.viewport(375,900);cy.get('.pm-card').first().scrollIntoView({offset:{top:-80,left:0}});cy.screenshot('problem-machines-mobile-cards',{capture:'viewport'});
  });
  it('keeps populated first-tab filters and drilldown working independently',()=>{
-  cy.get('#re-analysis-tab').click();
-  cy.get('.re-analysis-tab').then(root=>{
+  // Problem Machines is the first opened view. Prepare analysis while hidden
+  // and verify its chart recovers the available width when shown.
+  cy.get('.re-analysis-tab').then(async root=>{
    const page=root.closest('.reliability-engineering-page')[0].reliabilityEngineering;
-   return Promise.all([page.from.set_value('2026-08-01'),page.to.set_value('2026-08-31'),page.location.set_value('Koppie'),page.asset.set_value('EX015')]);
+   page.initializing=true;
+   await page.from.set_value('2026-08-01');
+   await page.to.set_value('2026-08-31');
+   await page.location.set_value('Koppie');
+   await page.asset.set_value('EX015');
+   page.initializing=false;
+   await page.load();
+  });
+  cy.get('#re-combined-analysis-tab').click();
+  cy.get('.re-chart svg').should(chart=>{
+   expect(chart[0].getBoundingClientRect().width).greaterThan(100);
+   expect(chart[0].getBoundingClientRect().height).greaterThan(100);
   });
   cy.get('.re-table tbody tr').should('have.length.greaterThan',0);
   cy.get('.re-kpis').should('contain','Breakdowns');
   cy.get('.re-table tbody tr').first().click();
   cy.get('.re-show-all').should('exist').click();
   cy.get('.re-breakdowns .re-event').should('have.length.greaterThan',0);
-  cy.get('#re-problems-tab').click();
+  cy.get('#re-combined-problems-tab').click();
   cy.get('.pm-summary').should('contain','Klipfontein');
   cy.get('.pm-count').should('contain','44');
   cy.get('.re-problems-tab').then(root=>root.closest('.reliability-engineering-page')[0].reliabilityEngineering.load());
@@ -83,9 +94,9 @@ describe('LAB Problem Machines',()=>{
     .and('contain','MTBF =').and('contain','MTTR =').and('contain','Problem Score =');
    cy.get('.pm-trial-note').should('contain','Top 1–3');
    cy.get('.pm-cards').should('contain','Unavailable').and('contain','recurrence unverified');
-   cy.get('#re-analysis-tab').click();
+   cy.get('#re-combined-analysis-tab').click();
    cy.get('.re-analysis-tab .re-formulas').should('contain','BDFR =').and('contain','% Repeat Breakdown =');
-   cy.get('#re-problems-tab').click();
+   cy.get('#re-combined-problems-tab').click();
   });
  });
  it('changes sites and dates, and handles empty and invalid ranges',()=>{

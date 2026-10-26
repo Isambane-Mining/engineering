@@ -1,14 +1,90 @@
 frappe.pages["reliability-engineering"].on_page_load = function (wrapper) {
-    wrapper.reliabilityEngineering = new ReliabilityEngineeringPage(wrapper);
+    wrapper.reliabilityCombined = new CombinedReliabilityPage(wrapper);
+};
+frappe.pages["reliability-engineering"].on_page_show = function (wrapper) {
+    wrapper.reliabilityCombined?.activateRequestedTab();
 };
 
-class ReliabilityEngineeringPage {
+class CombinedReliabilityPage {
     constructor(wrapper) {
-        this.wrapper = $(wrapper).addClass("reliability-engineering-page");
+        this.wrapper = wrapper;
+        this.reports = ['machine', 'analysis', 'problems'];
         this.page = frappe.ui.make_app_page({parent: wrapper, title: __("Reliability Engineering"), single_column: true});
+        $(wrapper).addClass('reliability-engineering-page');
+        this.page.main.html(`<div class="re-combined-shell">
+            <header class="re-combined-heading"><div class="re-eyebrow">${__('ENGINEERING')}</div><h1>${__('Reliability Engineering')}</h1></header>
+            <nav class="re-combined-tabs" role="tablist" aria-label="${__('Reliability reports')}">
+                <button type="button" id="re-combined-machine-tab" role="tab" aria-controls="re-combined-machine-panel" aria-selected="true" tabindex="0" data-report="machine">${__('Machine Reliability')}</button>
+                <button type="button" id="re-combined-analysis-tab" role="tab" aria-controls="re-combined-analysis-panel" aria-selected="false" tabindex="-1" data-report="analysis">${__('Breakdown Analysis')}</button>
+                <button type="button" id="re-combined-problems-tab" role="tab" aria-controls="re-combined-problems-panel" aria-selected="false" tabindex="-1" data-report="problems">${__('Problem Machines')}</button>
+            </nav>
+            <section id="re-combined-machine-panel" role="tabpanel" aria-labelledby="re-combined-machine-tab"><div class="re-machine-host"><p role="status">${__('Loading Machine Reliability…')}</p></div></section>
+            <section id="re-combined-analysis-panel" class="re-analysis-tab" role="tabpanel" aria-labelledby="re-combined-analysis-tab" hidden><div class="re-analysis-host"></div></section>
+            <section id="re-combined-problems-panel" class="re-problems-tab re-shell" role="tabpanel" aria-labelledby="re-combined-problems-tab" hidden></section>
+        </div>`);
+        this.machineHost = this.page.main.find('.re-machine-host');
+        this.analysisHost = this.page.main.find('.re-analysis-host');
+        this.problemsHost = this.page.main.find('.re-problems-tab');
+        this.page.main.on('click', '.re-combined-tabs [data-report]', event => this.select(event.currentTarget.dataset.report));
+        this.page.main.on('keydown', '.re-combined-tabs [data-report]', event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const index = this.reports.indexOf(event.currentTarget.dataset.report);
+            const next = (index + (event.key === 'ArrowLeft' ? -1 : 1) + this.reports.length) % this.reports.length;
+            const name = event.key === 'Home' ? this.reports[0] : event.key === 'End' ? this.reports.at(-1) : this.reports[next];
+            this.select(name);
+            this.page.main.find(`#re-combined-${name}-tab`).trigger('focus');
+        });
+        this.select('machine');
+    }
+
+    activateRequestedTab() {
+        const requested = frappe.route_options?.reliability_tab;
+        if (this.reports.includes(requested)) {
+            delete frappe.route_options.reliability_tab;
+            this.select(requested);
+        }
+    }
+
+    select(name) {
+        if (!this.reports.includes(name)) return;
+        this.page.main.find('.re-combined-tabs [data-report]').each((_, element) => {
+            const active = element.dataset.report === name;
+            $(element).attr({'aria-selected': String(active), tabindex: active ? '0' : '-1'});
+        });
+        this.reports.forEach(report => this.page.main.find(`#re-combined-${report}-panel`).prop('hidden', name !== report));
+        if (name === 'machine') this.ensureMachine();
+        else {
+            if (!this.wrapper.reliabilityEngineering) this.wrapper.reliabilityEngineering = new ReliabilityEngineeringPage(this.wrapper, {main: this.analysisHost}, this.problemsHost);
+            if (name === 'problems') this.wrapper.reliabilityEngineering.problems.activate();
+        }
+        // Existing chart resize listeners handle a previously hidden panel.
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    async ensureMachine() {
+        if (this.wrapper.machineReliability || this.machineLoading) return;
+        this.machineLoading = true;
+        try {
+            // Keep the original Page role restriction as well as API permissions.
+            await frappe.call({method: 'frappe.desk.desk_page.getpage', args: {name: 'machine-reliability'}});
+            await frappe.require('/assets/engineering/js/machine_reliability_dashboard.js');
+            this.wrapper.machineReliability = new engineering.MachineReliabilityDashboard(this.wrapper, this.machineHost);
+        } catch (error) {
+            this.machineHost.html(`<p class="re-combined-error" role="status">${__('Unable to open Machine Reliability. Check your page and data access. You can select Breakdown Analysis or Problem Machines above.')}</p>`);
+        } finally {
+            this.machineLoading = false;
+        }
+    }
+}
+
+class ReliabilityEngineeringPage {
+    constructor(wrapper, page, problemsRoot) {
+        this.wrapper = $(wrapper).addClass("reliability-engineering-page");
+        this.page = page;
         this.requestToken = 0;
         this.build();
-        this.buildTabs();
+        this.buildPanels(problemsRoot);
         this.initialize();
     }
 
@@ -36,40 +112,16 @@ class ReliabilityEngineeringPage {
             <p>${__("Main recurring problem uses the classification with the most known repeats, then the most events. Unclassified reason summaries are labelled recurrence unverified; matching free-text wording does not establish repeat failures. Breakdown hours include valid completed repair intervals. Zero operating hours cannot establish exposure; Problem Machines withholds MTBF and BDFR for scoring when exposure is unavailable.")}</p></details>`;
     }
 
-    buildTabs() {
+    buildPanels(problemsRoot) {
         const shell = this.page.main.find(".re-shell");
-        shell.children().not(".re-header").wrapAll('<div class="re-analysis-tab" role="tabpanel" id="re-analysis-panel" aria-labelledby="re-analysis-tab"></div>');
-        shell.find(".re-analysis-tab").append(this.formulaHelp());
-        shell.find(".re-header").after(`<div class="re-tabs" role="tablist" aria-label="${__("Analysis views")}">
-            <button type="button" id="re-analysis-tab" role="tab" aria-selected="true" aria-controls="re-analysis-panel" data-tab="analysis">${__("Breakdown Analysis")}</button>
-            <button type="button" id="re-problems-tab" role="tab" aria-selected="false" aria-controls="re-problems-panel" tabindex="-1" data-tab="problems">${__("Problem Machines")}</button></div>`);
-        shell.append('<div class="re-problems-tab" role="tabpanel" id="re-problems-panel" aria-labelledby="re-problems-tab" hidden></div>');
-        this.problems = new ProblemMachinesPanel(shell.find(".re-problems-tab"), this);
-        const select = name => {
-            shell.find(".re-tabs button").each((index, button) => {
-                const active = button.dataset.tab === name;
-                $(button).attr({"aria-selected": String(active), tabindex: active ? "0" : "-1"});
-            });
-            shell.find(".re-analysis-tab").prop("hidden", name !== "analysis");
-            shell.find(".re-problems-tab").prop("hidden", name !== "problems");
-            if (name === "problems") this.problems.activate();
-            shell.find(".re-period").prop("hidden", name === "problems");
-        };
-        shell.on("click", ".re-tabs button", event => select(event.currentTarget.dataset.tab));
-        shell.on("keydown", ".re-tabs button", event => {
-            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-            event.preventDefault();
-            const name = event.key === "Home" ? "analysis" : event.key === "End" ? "problems" :
-                event.currentTarget.dataset.tab === "analysis" ? "problems" : "analysis";
-            select(name);
-            shell.find(`.re-tabs [data-tab="${name}"]`).trigger("focus");
-        });
+        shell.append(this.formulaHelp());
+        this.problems = new ProblemMachinesPanel(problemsRoot, this);
     }
 
     build() {
         this.page.main.html(`<div class="re-shell">
             <header class="re-header"><div><div class="re-eyebrow">${__("ENGINEERING INTELLIGENCE")}</div>
-            <h1>${__("Reliability Engineering")}</h1><p>${__("Failure frequency, repair time and verified operating hours")}</p></div>
+            <h2>${__("Breakdown Analysis")}</h2><p>${__("Failure frequency, repair time and verified operating hours")}</p></div>
             <span class="re-period"></span></header>
             <div class="re-filters"><div class="re-from"></div><div class="re-to"></div>
             <div class="re-location"></div><div class="re-asset"></div><div class="re-measurement"></div>
@@ -339,7 +391,9 @@ class ProblemMachinesPanel {
     async activate() {
         await this.ready;
         if (!this.data) await this.load();
-        else this.render();
+        // Keep the chart mounted when returning to unchanged results. Resize
+        // listeners handle visibility changes without destroying its SVG.
+        else if (this.data !== this.renderedData) this.render();
     }
 
     async load() {
@@ -384,6 +438,7 @@ class ProblemMachinesPanel {
     render() {
         if (!this.data) return;
         const rows = this.data.ranking;
+        this.renderedData = this.data;
         this.root.find(".pm-status").empty();
         this.root.find(".pm-results").prop("hidden", false);
         this.root.find(".pm-count").text(`${rows.length} ${__("of")} ${this.data.total_machines} ${__("machines with breakdowns")}`);

@@ -1398,6 +1398,8 @@ def build_hours_based_performance_html(
     end_date,
     heading_override=None,
     planned_shift_hours=None,
+    tyre_damage_counts=None,
+    summary_only=False,
 ):
     machine_days = {}
 
@@ -1713,11 +1715,11 @@ def build_hours_based_performance_html(
             or UI_TITLES.get(category, category)
         )
 
-        charts.append(f'''
-<div style="margin-bottom:28px;">
-    <div style="font-size:14px;font-weight:900;margin-bottom:10px;">{category_title} — Daily Average per Machine</div>
-
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
+        from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import tyre_damage_card
+        tyre_card = tyre_damage_card(category, tyre_damage_counts.get(category)) if tyre_damage_counts is not None else ''
+        kpi_class = 'daily-damage-kpi-row' if tyre_card else ''
+        kpi_html = f'''
+    <div class="{kpi_class}" style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
         <div class="frappe-card" style="padding:14px;border-left:5px solid #2563eb;">
             <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Working Hours — Selected Period</div>
             <div style="font-size:26px;font-weight:900;color:#2563eb;">{period_avg_work:.2f}h</div>
@@ -1726,7 +1728,17 @@ def build_hours_based_performance_html(
             <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Breakdown Hours — Selected Period</div>
             <div style="font-size:26px;font-weight:900;color:#dc2626;">{period_avg_breakdown:.2f}h</div>
         </div>
+        {tyre_card}
     </div>
+'''
+        if summary_only:
+            charts.append(kpi_html)
+            continue
+        charts.append(f'''
+<div style="margin-bottom:28px;">
+    <div style="font-size:14px;font-weight:900;margin-bottom:10px;">{category_title} — Daily Average per Machine</div>
+
+    {kpi_html}
 
     <div style="display:flex;gap:18px;flex-wrap:wrap;padding:9px 12px;margin-bottom:12px;border:1px solid #d8dde2;border-radius:8px;background:#fff;font-size:12px;font-weight:700;">
         <span style="color:#2563eb;">━━ Working Hours — Day + Night</span>
