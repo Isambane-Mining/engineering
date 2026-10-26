@@ -1,6 +1,6 @@
 import frappe
 from frappe.model.document import Document
-from engineering.engineering.page.machine_reliability.calculations import terms
+from engineering.engineering.page.machine_reliability.machine_reliability import terms
 
 
 TYRES_WHEELS_CATEGORY = 'Tyres / Wheels'

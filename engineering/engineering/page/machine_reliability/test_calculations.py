@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from engineering.engineering.page.machine_reliability import calculations as c
+from engineering.engineering.page.machine_reliability import machine_reliability as c
 
 
 def row(name, start='2026-08-01 00:00:00', end='2026-08-01 04:00:00', meter=100, fleet='A', reason='brakes failed', resolution='', kind='Breakdown'):

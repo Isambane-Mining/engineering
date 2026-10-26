@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 import frappe
-from engineering.engineering.page.machine_reliability import calculations as c
+from engineering.engineering.page.machine_reliability import machine_reliability as c
 from engineering.engineering.page.machine_reliability import machine_reliability as api
 from engineering.engineering.page.machine_reliability.test_calculations import row
 

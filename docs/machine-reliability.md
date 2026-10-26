@@ -45,7 +45,7 @@ API integration tests read LAB history and temporarily create a user and Locatio
 - `engineering/engineering/doctype/machine_reliability_category/`: `__init__.py`, `machine_reliability_category.json`, `machine_reliability_category.py`.
 - `engineering/patches/seed_machine_reliability_settings.py` and `engineering/patches.txt`.
 - `engineering/engineering/workspace/engineering/engineering.json`.
-- `engineering/public/css/machine_reliability.css`.
+- `engineering/public/css/engineering.css`.
 - `tests/ui/machine_reliability.config.cjs` and `tests/ui/machine_reliability.cy.js`.
 - `docs/machine-reliability.md` and `docs/superpowers/plans/2026-10-21-machine-reliability.md`.
 
@@ -53,7 +53,6 @@ API integration tests read LAB history and temporarily create a user and Locatio
 
 Reliability Engineering has one main tab navigation with three peer views: Machine Reliability (default), Breakdown Analysis and Problem Machines. The Reliability Engineering heading stays above the tabs. Machine Reliability remains a single Overview dashboard inside its tab. It retains all seven filters, six compact KPI cards, the interactive date/machine-hour timeline, source-record dialogs, and data-quality checks. Events without machine-hour readings remain available in the timeline's expandable list. Breakdown Analysis and Problem Machines reuse the existing report implementations without nested tabs. Each dashboard keeps its own filters and results when switching tabs; unchanged Problem Machines results keep their existing chart mounted.
 
-The reusable Machine Reliability frontend is in `engineering/public/js/machine_reliability_dashboard.js`; the existing Reliability Engineering page coordinates mounting all three views. Keyboard navigation supports Left/Right arrows, Home and End across all three tabs. Before mounting Machine Reliability, it checks the original Machine Reliability Page access. Backend APIs still enforce their existing permissions. The navigation patch `engineering/patches/combine_reliability_navigation.py` consolidates Engineering workspace links without replacing unrelated content.
 
 Detailed Records markup, tab handlers, table pagination state and unused table renderers/styles have been removed from the frontend. Shared table styling is retained for the timeline's list of events without readings. Shared backend calculations and APIs, including detailed records and frequency projections, remain unchanged for compatibility and tests. No calculation, keyword or permission rule changed.
 
@@ -63,10 +62,9 @@ The known IS545 difference between the original export (23 complaints, 18 usable
 
 - `engineering/engineering/page/reliability_engineering/reliability_engineering.js`: coordinator and optional mount for the existing analysis.
 - `engineering/engineering/page/machine_reliability/machine_reliability.js`: legacy route redirect.
-- `engineering/public/js/machine_reliability_dashboard.js`: existing Machine Reliability implementation as a reusable dashboard.
+- `engineering/engineering/page/reliability_engineering/reliability_engineering.js`: existing Machine Reliability implementation as a reusable dashboard.
 - `engineering/public/css/engineering.css`: outer tabs and responsive spacing.
 - `engineering/engineering/workspace/engineering/engineering.json`: single combined report entry.
-- `engineering/patches.txt`, `engineering/patches/combine_reliability_navigation.py`, `engineering/patches/test_combine_reliability_navigation.py`: workspace update and regression tests.
 - `tests/ui/machine_reliability.cy.js`, `tests/ui/problem_machines.cy.js`: combined entry, independent filters, redirects, access, timeline and responsive checks.
 - `docs/machine-reliability.md`: entry point and integration notes.
 

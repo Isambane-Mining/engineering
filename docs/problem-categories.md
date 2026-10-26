@@ -16,9 +16,8 @@ Other finds explicit manual choices or its configured terms; it is not an automa
 - `engineering/engineering/doctype/plant_breakdown_or_maintenance/test_problem_category.py`
 - `engineering/engineering/doctype/machine_reliability_settings/machine_reliability_settings.py` and `.json`
 - `engineering/engineering/doctype/machine_reliability_category/machine_reliability_category.json`
-- `engineering/engineering/page/machine_reliability/calculations.py`, `machine_reliability.py` and `test_problem_categories.py`
-- `engineering/public/js/machine_reliability_dashboard.js`
-- `engineering/patches/simplify_machine_reliability_categories.py`, `test_simplify_machine_reliability_categories.py` and `engineering/patches.txt`
+- `engineering/engineering/page/machine_reliability/machine_reliability.py`, `machine_reliability.py` and `test_problem_categories.py`
+- `engineering/engineering/page/reliability_engineering/reliability_engineering.js`
 - `tests/ui/problem_categories.cy.js`
 - `docs/machine-reliability.md` and this document
 

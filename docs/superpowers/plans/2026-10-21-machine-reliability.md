@@ -2,7 +2,7 @@
 
 Approved scope: user prompt and in-chat investigation, including the two standing-time and per-machine adjustments. LAB only; existing juan branch; no production deployment.
 
-1. Implement and test pure keyword matching, recorded durations, unique downtime and per-Asset failure gaps in page/machine_reliability/calculations.py.
+1. Implement and test pure keyword matching, recorded durations, unique downtime and per-Asset failure gaps in page/machine_reliability/machine_reliability.py.
 2. Add editable Single Machine Reliability Settings with category child rows, seeded keywords and inspection mappings. Never create breakdowns or rewrite source data.
 3. Add permission-aware live-data APIs, historical-site fleet lookup, bounded queries, exact summaries, paginated tables and explicit chart limits.
 4. Build responsive Desk Page with three tabs, interactive date/hour timelines, per-machine comparison and source links; add Engineering navigation.
