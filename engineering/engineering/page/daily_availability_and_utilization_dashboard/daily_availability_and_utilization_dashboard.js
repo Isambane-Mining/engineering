@@ -39,6 +39,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
         this.method = "engineering.engineering.page.daily_availability_and_utilization_dashboard.daily_availability_and_utilization_dashboard.get_dashboard_html";
         this.pdf_method = "engineering.engineering.page.daily_availability_and_utilization_dashboard.daily_availability_and_utilization_dashboard.download_dashboard_pdf";
         this.downtime_method = "engineering.engineering.page.daily_availability_and_utilization_dashboard.daily_availability_and_utilization_dashboard.get_machine_downtime_details";
+        this.tyre_details_method = "engineering.engineering.page.daily_availability_and_utilization_dashboard.daily_availability_and_utilization_dashboard.get_tyre_breakdown_details";
         this.loading = false;
         this.initializing = true;
         this.active_dashboard_tab = "hours";
@@ -618,6 +619,29 @@ class DailyAvailabilityAndUtilizationDashboardPage {
 
     bind_dashboard_actions() {
         this.body
+            .off("click.tyre_breakdown", ".daily-tyre-kpi")
+            .on("click.tyre_breakdown", ".daily-tyre-kpi", (event) => {
+                const card = $(event.currentTarget);
+                if (card.data("count") === "—") {
+                    frappe.msgprint(__("Breakdown read permission is required."));
+                    return;
+                }
+                this.open_tyre_breakdown_popup(
+                    card.attr("data-category"),
+                    Number(card.attr("data-count"))
+                );
+            });
+
+        this.body
+            .off("keydown.tyre_breakdown", ".daily-tyre-kpi")
+            .on("keydown.tyre_breakdown", ".daily-tyre-kpi", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    $(event.currentTarget).trigger("click");
+                }
+            });
+
+        this.body
             .off("click.daily_dashboard_tab", ".daily-dashboard-tab-button")
             .on("click.daily_dashboard_tab", ".daily-dashboard-tab-button", (event) => {
                 const tab = $(event.currentTarget).data("tab");
@@ -645,6 +669,178 @@ class DailyAvailabilityAndUtilizationDashboardPage {
             );
     }
 
+
+
+    open_tyre_breakdown_popup(category, expected_count) {
+        if (!["ADT", "Dozer"].includes(category)) {
+            return;
+        }
+
+        const values = this.get_values();
+        const esc = (value) => frappe.utils.escape_html(String(value ?? ""));
+        const date_part = (value) => {
+            if (!value) return "—";
+            const date = String(value).slice(0, 10).split("-");
+            return date.length === 3
+                ? `${date[2]}-${date[1]}-${date[0]}` : esc(value);
+        };
+        const time_part = (value) =>
+            value ? esc(String(value).slice(11, 16)) : "—";
+        const hours = (value) =>
+            value === null || value === undefined
+                ? "—" : `${Number(value).toFixed(2)}h`;
+
+        frappe.call({
+            method: this.tyre_details_method,
+            args: {
+                category,
+                location: values.location,
+                start_date: values.start_date,
+                end_date: values.end_date,
+                machine_scope: values.machine_scope,
+                asset_ownership: values.asset_ownership,
+                au_target_filter: values.au_target_filter,
+                hours_asset: values.hours_asset
+            },
+            freeze: true,
+            freeze_message: __("Loading tyre breakdowns..."),
+            callback: (response) => {
+                const data = response.message || {};
+                const rows = data.rows || [];
+                const count = Number(data.total_records || 0);
+
+                if (count !== expected_count) {
+                    frappe.show_alert({
+                        message: __("Dashboard data changed. Refresh to update the KPI."),
+                        indicator: "orange"
+                    });
+                }
+
+                const dialog = new frappe.ui.Dialog({
+                    title: __(`${category} Tyre Related Breakdowns`),
+                    size: "extra-large"
+                });
+
+                const card = (label, value, accent) => `
+                    <div style="border:1px solid #e2e8f0;border-top:3px solid ${accent};
+                        background:white;border-radius:9px;padding:14px;min-width:0;">
+                        <div style="font-size:12px;color:#64748b;font-weight:600;">${label}</div>
+                        <div style="font-size:25px;font-weight:800;color:${accent};">
+                            ${value}</div>
+                    </div>`;
+
+                const table_rows = rows.map((row) => `
+                    <tr data-name="${esc(row.name)}" style="cursor:pointer;">
+                        <td>${date_part(row.start)}</td>
+                        <td><strong>${esc(row.fleet)}</strong></td>
+                        <td style="white-space:normal;min-width:180px;">${esc(row.reason || "No reason captured")}</td>
+                        <td>${time_part(row.start)}</td>
+                        <td>${time_part(row.resolved)}</td>
+                        <td style="text-align:right;font-weight:700;">${hours(row.standing_hours)}</td>
+                        <td><span style="background:${row.status === "Closed" ? "#dcfce7" : "#fee2e2"};
+                            color:${row.status === "Closed" ? "#166534" : "#991b1b"};
+                            border-radius:20px;padding:4px 9px;font-size:11px;font-weight:700;">
+                            ${esc(row.status)}</span></td>
+                    </tr>
+                `).join("");
+
+                dialog.$body.html(`
+                    <div class="tyre-breakdown-popup">
+                        <p style="color:#64748b;font-size:12px;margin-bottom:15px;">
+                            ${esc(values.location)} ·
+                            ${date_part(values.start_date)} to ${date_part(values.end_date)}
+                            · ${esc(values.machine_scope)}
+                        </p>
+                        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+                            gap:10px;margin-bottom:18px;">
+                            ${card("Total Records", count, "#2563eb")}
+                            ${card("Total Standing Hours", hours(data.total_standing_hours || 0), "#dc2626")}
+                            ${card("Avg. Standing Hours", hours(data.average_standing_hours), "#2563eb")}
+                        </div>
+                        <div style="font-size:14px;font-weight:700;margin-bottom:10px;">
+                            Breakdown Details
+                        </div>
+                        <div style="overflow:auto;max-height:55vh;border:1px solid #e2e8f0;border-radius:8px;">
+                            <table class="table table-bordered tyre-breakdown-table"
+                                style="font-size:12px;margin-bottom:0;min-width:780px;">
+                                <thead style="background:#f1f5f9;">
+                                    <tr>
+                                        <th data-sort="start" style="cursor:pointer;">Date ↕</th>
+                                        <th data-sort="fleet" style="cursor:pointer;">Fleet No ↕</th>
+                                        <th>Breakdown Reason</th>
+                                        <th>Start Time</th>
+                                        <th>Resolved Time</th>
+                                        <th data-sort="standing_hours" style="cursor:pointer;">Standing Hours ↕</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${table_rows || `<tr><td colspan="7"
+                                        style="text-align:center;padding:25px;color:#64748b;">
+                                        No classified tyre-related breakdowns found
+                                        for these filters.</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p style="margin-top:12px;font-size:11px;color:#64748b;">
+                            Only breakdowns classified as Tyres / Wheels → Tyre Damage.
+                            Standing hours exclude records without a valid resolved duration.
+                            Click a row to open its original breakdown.
+                        </p>
+                        <div style="display:flex;justify-content:flex-end;gap:8px;">
+                            <button class="btn btn-default tyre-close">Close</button>
+                            <button class="btn btn-primary tyre-full-list"
+                                ${rows.length ? "" : "disabled"}>
+                                Open Full Breakdown List
+                            </button>
+                        </div>
+                    </div>
+                `);
+
+                dialog.$body.on("click", ".tyre-close", () => dialog.hide());
+
+                dialog.$body.on("click", "tbody tr[data-name]", (event) => {
+                    frappe.set_route(
+                        "Form", "Plant Breakdown or Maintenance",
+                        $(event.currentTarget).attr("data-name")
+                    );
+                    dialog.hide();
+                });
+
+                dialog.$body.on("click", ".tyre-full-list", () => {
+                    frappe.route_options = {
+                        name: ["in", rows.map((row) => row.name)]
+                    };
+                    frappe.set_route("List", "Plant Breakdown or Maintenance");
+                    dialog.hide();
+                });
+
+                let ascending = true;
+                dialog.$body.on("click", "th[data-sort]", (event) => {
+                    const key = $(event.currentTarget).data("sort");
+                    const sorted = [...rows].sort((a, b) => {
+                        const va = a[key] ?? "";
+                        const vb = b[key] ?? "";
+                        const result = key === "standing_hours"
+                            ? Number(va || 0) - Number(vb || 0)
+                            : String(va).localeCompare(String(vb));
+                        return ascending ? result : -result;
+                    });
+                    ascending = !ascending;
+                    const tbody = dialog.$body.find("tbody");
+                    const by_name = {};
+                    tbody.find("tr[data-name]").each(function() {
+                        by_name[$(this).attr("data-name")] = $(this);
+                    });
+                    sorted.forEach((row) => {
+                        if (by_name[row.name]) tbody.append(by_name[row.name]);
+                    });
+                });
+
+                dialog.show();
+            }
+        });
+    }
 
     open_machine_downtime_popup(machine) {
         const values = this.get_values();

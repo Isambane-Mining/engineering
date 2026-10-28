@@ -79,14 +79,14 @@ def tyre_damage_card(category, count):
         return ''
     value = '—' if count is None else str(int(count))
     title = 'Read access to breakdown records is required.' if count is None else 'Unique Breakdown records classified as Tyres / Wheels and Tyre Damage. Unclassified historical records are excluded.'
-    return f'''<div class="frappe-card daily-tyre-kpi" data-category="{category}" data-count="{value}" title="{title}">
-        <div class="daily-tyre-title">{category} Tyre Damages</div>
+    return f'''<div class="frappe-card daily-tyre-kpi" data-category="{category}" data-count="{value}" title="{title}" role="button" tabindex="0" style="cursor:pointer;transition:box-shadow .2s,border-color .2s;">
+        <div class="daily-tyre-title">{category} Tyre Related Breakdowns</div>
         <div class="daily-tyre-body"><svg class="daily-tyre-icon" viewBox="0 0 40 44" aria-hidden="true" focusable="false">
             <ellipse cx="20" cy="22" rx="15" ry="20" fill="#6b7280" stroke="#4b5563" stroke-width="2"/>
             <ellipse cx="23" cy="22" rx="10" ry="18" fill="#9ca3af" stroke="#374151" stroke-width="2"/>
             <ellipse cx="23" cy="22" rx="5" ry="12" fill="#e5e7eb" stroke="#4b5563" stroke-width="2"/>
             <path d="M9 9l6 3M6 17l7 2M6 26l7-1M10 35l5-3" stroke="#d1d5db" stroke-width="2"/>
-        </svg><div><div class="daily-tyre-value">{value}</div><div class="daily-tyre-subtitle">Classified tyre damage breakdowns</div></div></div></div>'''
+        </svg><div><div class="daily-tyre-value">{value}</div><div class="daily-tyre-subtitle">Click to view related breakdowns</div></div></div></div>'''
 
 
 def au_kpi_row(category, values, count):
