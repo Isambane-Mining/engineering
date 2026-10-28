@@ -205,6 +205,8 @@ def get_items(from_date, to_date, site=None, fixed_status=None):
     verification_rows = frappe.db.sql(
         """
         SELECT
+            v.name AS verification_entry,
+            v.correction_fixed,
             v.downtime_record,
             v.department,
             v.verification_status,
@@ -256,7 +258,8 @@ def get_items(from_date, to_date, site=None, fixed_status=None):
                 "child_row": None,
                 "fixed_key": "",
                 "comments": [],
-                "is_fixed": False,
+                "is_fixed": True,
+                "verification_entry": row.verification_entry,
                 "verification_only": True,
                 "breakdown_name": row.downtime_record,
                 "breakdown_start_datetime": row.breakdown_start_datetime,
@@ -274,6 +277,11 @@ def get_items(from_date, to_date, site=None, fixed_status=None):
             else source
         )
 
+        verification_cards[key]["is_fixed"] = (
+            verification_cards[key]["is_fixed"]
+            and bool(row.correction_fixed)
+        )
+
         verification_cards[key]["comments"].append({
             "source": display_source,
             "comment": row.comments,
@@ -285,13 +293,11 @@ def get_items(from_date, to_date, site=None, fixed_status=None):
         items = [
             item for item in items
             if item.get("is_fixed")
-            and not item.get("verification_only")
         ]
     elif fixed_status == "Not Fixed":
         items = [
             item for item in items
             if not item.get("is_fixed")
-            and not item.get("verification_only")
         ]
 
     return items
@@ -379,10 +385,17 @@ def get_card_html(item):
     checked = "checked" if item["is_fixed"] else ""
 
     if item.get("verification_only"):
-        status_class = ""
-        status_text = "Verification Comment"
-        card_class = "dcd-card-not-fixed"
-        fixed_control = ""
+        fixed_control = """
+        <label class="dcd-check">
+            <input type="checkbox" class="dcd-verification-fixed-checkbox"
+                data-entry="{entry}" {checked} {disabled}>
+            Fixed
+        </label>
+        """.format(
+            entry=frappe.utils.escape_html(item["verification_entry"]),
+            checked=checked,
+            disabled="" if can_mark_correction_fixed() else "disabled",
+        )
     else:
         fixed_control = """
         <label class="dcd-check">
@@ -613,5 +626,97 @@ def set_fixed_status(child_row, fixed_key, fixed):
         fixes.pop(fixed_key, None)
 
     row.db_set(FIXES_FIELD, frappe.as_json(fixes), update_modified=False)
+
+    return {"ok": 1}
+
+
+@frappe.whitelist(methods=["POST"])
+def set_verification_correction_fixed(verification_entry, fixed):
+    check_dashboard_access()
+
+    if not can_mark_correction_fixed():
+        frappe.throw(
+            _("You are not authorised to change downtime correction status."),
+            frappe.PermissionError,
+        )
+
+    if str(fixed) not in ("0", "1"):
+        frappe.throw(_("Invalid Fixed status."), frappe.ValidationError)
+
+    target = frappe.db.sql(
+        """
+        SELECT
+            v.name,
+            v.parent,
+            v.downtime_record,
+            p.site,
+            p.report_date,
+            p.report_shift,
+            p.verification_workflow_version
+        FROM `tabDowntime Verification Entry` v
+        INNER JOIN `tabMechanical Downtime sign-off` p
+            ON p.name = v.parent
+        WHERE v.name = %(entry)s
+          AND v.parenttype = 'Mechanical Downtime sign-off'
+          AND v.parentfield = 'downtime_verifications'
+          AND TRIM(COALESCE(v.comments, '')) != ''
+        """,
+        {"entry": verification_entry},
+        as_dict=True,
+    )
+
+    if len(target) != 1:
+        frappe.throw(_("Invalid verification correction."), frappe.ValidationError)
+
+    target = target[0]
+    check_site_access(target.site)
+
+    if int(target.verification_workflow_version or 0) != 1:
+        frappe.throw(_("Verification workflow is not enabled."))
+
+    rows = frappe.db.sql(
+        """
+        SELECT v.name
+        FROM `tabDowntime Verification Entry` v
+        INNER JOIN `tabMechanical Downtime sign-off` p
+            ON p.name = v.parent
+        WHERE v.parenttype = 'Mechanical Downtime sign-off'
+          AND v.parentfield = 'downtime_verifications'
+          AND p.verification_workflow_version = 1
+          AND v.downtime_record = %(breakdown)s
+          AND p.site = %(site)s
+          AND p.report_date = %(date)s
+          AND COALESCE(p.report_shift, '') = %(shift)s
+          AND TRIM(COALESCE(v.comments, '')) != ''
+        """,
+        {
+            "breakdown": target.downtime_record,
+            "site": target.site,
+            "date": target.report_date,
+            "shift": target.report_shift or "",
+        },
+        as_dict=True,
+    )
+
+    if not rows or target.name not in {row.name for row in rows}:
+        frappe.throw(_("Correction records are no longer valid."))
+
+    from frappe.utils import now
+
+    fixed_value = int(fixed)
+    update = {
+        "correction_fixed": fixed_value,
+    }
+
+    if fixed_value:
+        update["correction_fixed_by"] = frappe.session.user
+        update["correction_fixed_on"] = now()
+
+    for row in rows:
+        frappe.db.set_value(
+            "Downtime Verification Entry",
+            row.name,
+            update,
+        )
 
     return {"ok": 1}

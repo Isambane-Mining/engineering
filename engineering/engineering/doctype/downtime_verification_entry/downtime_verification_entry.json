@@ -51,6 +51,26 @@
       "fieldtype": "Small Text",
       "label": "Comments",
       "read_only": 1
+    },
+    {
+      "fieldname": "correction_fixed",
+      "fieldtype": "Check",
+      "label": "Correction Fixed",
+      "default": "0",
+      "read_only": 1
+    },
+    {
+      "fieldname": "correction_fixed_by",
+      "fieldtype": "Link",
+      "label": "Correction Fixed By",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "correction_fixed_on",
+      "fieldtype": "Datetime",
+      "label": "Correction Fixed On",
+      "read_only": 1
     }
   ],
   "field_order": [
@@ -60,7 +80,10 @@
     "verified_by",
     "verified_on",
     "verification_role",
-    "comments"
+    "comments",
+    "correction_fixed",
+    "correction_fixed_by",
+    "correction_fixed_on"
   ],
   "permissions": [],
   "track_changes": 1

@@ -181,6 +181,35 @@ frappe.pages["downtime-correction-dashboard"].on_page_load = function (wrapper) 
         });
     });
 
+
+    $holder.on("change", ".dcd-verification-fixed-checkbox", function () {
+        const checkbox = $(this);
+        const fixed = checkbox.is(":checked") ? 1 : 0;
+
+        checkbox.prop("disabled", true);
+
+        frappe.call({
+            method: `${controller}.set_verification_correction_fixed`,
+            type: "POST",
+            args: {
+                verification_entry: checkbox.attr("data-entry"),
+                fixed,
+            },
+            callback: function (r) {
+                if (!r.exc && r.message && r.message.ok) {
+                    refresh();
+                } else {
+                    checkbox.prop("checked", !fixed);
+                    checkbox.prop("disabled", false);
+                }
+            },
+            error: function () {
+                checkbox.prop("checked", !fixed);
+                checkbox.prop("disabled", false);
+            },
+        });
+    });
+
     ready = true;
     wrapper.dcd_refresh = refresh;
 
