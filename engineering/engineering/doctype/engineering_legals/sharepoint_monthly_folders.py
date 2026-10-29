@@ -6,6 +6,8 @@ from urllib.parse import quote
 import frappe
 import requests
 
+from engineering.controllers.engineering_legals_rules import get_sharepoint_site_mapping
+
 from engineering.engineering.doctype.engineering_legals_sharepoint_config.engineering_legals_sharepoint_config import (
     get_graph_access_token,
     get_sharepoint_config,
@@ -321,7 +323,7 @@ def ensure_month_folders(
 
     ensure(ROOT_FOLDER, month_folder)
 
-    for site_name in SITES:
+    for site_name in dict.fromkeys(SITES + list(get_sharepoint_site_mapping().values())):
         site_path = (
             month_path + "/" + site_name
         )

@@ -1,0 +1,120 @@
+{
+ "doctype": "DocType",
+ "name": "Engineering Legals Site Section Rule",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "field_order": [
+  "section",
+  "vehicle_type",
+  "lifting_type",
+  "active",
+  "no_expiry",
+  "expiry_value",
+  "expiry_unit",
+  "fleet_required",
+  "start_date_policy",
+  "brake_wear_required",
+  "report_category",
+  "counting_mode",
+  "sharepoint_subfolder"
+ ],
+ "fields": [
+  {
+   "fieldname": "section",
+   "label": "Section",
+   "fieldtype": "Link",
+   "options": "Engineering Legals Sections",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "vehicle_type",
+   "label": "Vehicle Condition",
+   "fieldtype": "Select",
+   "options": "\nLDV\nTMM",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "lifting_type",
+   "label": "Lifting Condition",
+   "fieldtype": "Select",
+   "options": "\nInspection\nCertificate",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "active",
+   "label": "Active",
+   "fieldtype": "Check",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "no_expiry",
+   "label": "No Expiry",
+   "fieldtype": "Check",
+   "default": "0",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "expiry_value",
+   "label": "Expiry Value",
+   "fieldtype": "Int",
+   "depends_on": "eval:!doc.no_expiry",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "expiry_unit",
+   "label": "Expiry Unit",
+   "fieldtype": "Select",
+   "options": "\nDays\nMonths\nYears",
+   "depends_on": "eval:!doc.no_expiry",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "fleet_required",
+   "label": "Fleet Required",
+   "fieldtype": "Check",
+   "default": "1"
+  },
+  {
+   "fieldname": "start_date_policy",
+   "label": "Start Date Policy",
+   "fieldtype": "Select",
+   "options": "Required\nOptional\nClear",
+   "default": "Required",
+   "reqd": 1
+  },
+  {
+   "fieldname": "brake_wear_required",
+   "label": "Brake Wear Type Required",
+   "fieldtype": "Check",
+   "default": "0"
+  },
+  {
+   "fieldname": "report_category",
+   "label": "Monthly Report Category",
+   "fieldtype": "Select",
+   "options": "01. Automatic Fire Suppression\n02. Condition Monitoring\n03. Dynamic Brake Testing\n04. Earth Leakage Testing & CoC\n05. Equipment list\n06. FRCS Compliance\n07. Load Testing\n08. Maintenance Schedules\n09. PDS-MPI Maintenance\n10. Pressure Vessels\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "counting_mode",
+   "label": "Monthly Counting Mode",
+   "fieldtype": "Select",
+   "options": "Active Until Expiry\nSaved In Month",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sharepoint_subfolder",
+   "label": "SharePoint Subfolder",
+   "fieldtype": "Data"
+  }
+ ],
+ "actions": [],
+ "links": [],
+ "states": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "istable": 1,
+ "permissions": []
+}

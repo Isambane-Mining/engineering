@@ -10,21 +10,8 @@ frappe.query_reports["Engineering Legals Report"] = {
     {
       fieldname: "section",
       label: "Section",
-      fieldtype: "Select",
-      options: [
-        "",
-        "Brake Test",
-        "Fire Suppression",
-        "FRCS",
-        "Lifting Equipment",
-        "Machine Service Records",
-        "NDT",
-        "PDS",
-        "Service Schedule",
-        "Tyre Inspection Report",
-        "Wearcheck",
-        "Illumination Baseline"
-      ].join("\n")
+      fieldtype: "Link",
+      options: "Engineering Legals Sections"
     },
     {
       fieldname: "asset",

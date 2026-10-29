@@ -595,6 +595,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Engineering Legals Site Configuration",
+   "link_count": 0,
+   "link_to": "Engineering Legals Site Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "SharePoint Config",
    "link_count": 0,
    "link_to": "Engineering Legals SharePoint Config",
