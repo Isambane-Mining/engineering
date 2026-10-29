@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import mimetypes
 import os
-from datetime import datetime
 from urllib.parse import quote
 
 import frappe
 import requests
 from frappe.utils import get_first_day, getdate, nowdate
+
+from engineering.controllers.engineering_legals_rules import (
+    get_record_sharepoint_parts, get_sharepoint_site_mapping,
+)
 
 from engineering.engineering.report.engineering_legals_monthly_summary.engineering_legals_monthly_summary import (
     execute as execute_monthly_summary,
@@ -21,8 +24,6 @@ from engineering.engineering.doctype.engineering_legals_sharepoint_config.engine
 )
 from engineering.engineering.doctype.engineering_legals.engineering_legals import (
     NEW_SHAREPOINT_ROOT,
-    NEW_SHAREPOINT_SECTION_MAPPING,
-    NEW_SHAREPOINT_SITE_MAPPING,
     _ensure_sharepoint_folder,
     _get_sharepoint_drive_id,
     _get_sharepoint_site_id,
@@ -219,8 +220,7 @@ def _upload_to_month(
     site = (getattr(doc, "site", None) or "").strip()
     section = (getattr(doc, "sections", None) or "").strip()
 
-    new_site = NEW_SHAREPOINT_SITE_MAPPING.get(site)
-    category_parts = NEW_SHAREPOINT_SECTION_MAPPING.get(section)
+    new_site, category_parts = get_record_sharepoint_parts(doc)
 
     if not new_site:
         return {
@@ -397,7 +397,7 @@ def sync_active_legals_for_month(
     # 1. Ask the dashboard for the exact records it counts.
     # --------------------------------------------------------
 
-    for site in NEW_SHAREPOINT_SITE_MAPPING.keys():
+    for site in get_sharepoint_site_mapping():
 
         report_result = execute_monthly_summary({
             "site": site,
@@ -452,15 +452,7 @@ def sync_active_legals_for_month(
 
                         continue
 
-                    new_site = NEW_SHAREPOINT_SITE_MAPPING.get(
-                        (doc.site or "").strip()
-                    )
-
-                    category_parts = (
-                        NEW_SHAREPOINT_SECTION_MAPPING.get(
-                            (doc.sections or "").strip()
-                        )
-                    )
+                    new_site, category_parts = get_record_sharepoint_parts(doc)
 
                     if not new_site:
                         results["skipped"] += 1
