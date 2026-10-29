@@ -8,20 +8,22 @@ The caller supplies `subject`, `text`, `html`, and `attachments`. Each of exactl
 
 Frappe resolves the default outgoing Email Account. It must have email `juan@isambane.co.za`, OAuth authentication, a connected app, a Microsoft Outlook/Office 365 SMTP host, outgoing/default enabled, and no Always BCC. Passwordless/no-auth and Frappe Mail routes are rejected. The actual queue sender, account and recipient are checked before sending.
 
-`frappe.sendmail` builds the queue; Frappe sends through its own OAuth transport. Success returns only `{"status":"sent","queue_id":"..."}` after both queue and sole recipient are Sent. Sent means the outgoing server accepted the message, not proof of inbox placement. Failed delivery queues are marked Error to stop background retries, and the endpoint returns a generic failure. If a connection times out after sending, reconcile the Email Queue before another manual attempt. No tokens/passwords or raw upstream diagnostics are returned to Node. A request-scoped traceback formatter redacts OAuth locals, a scoped Sentry hub suppresses delivery telemetry, and an Error Log before-insert hook discards delivery exception text/metadata. Other request contexts are unchanged.
+`frappe.sendmail` builds the queue; Frappe sends through its native OAuth protocol. Success returns only `{"status":"sent","queue_id":"..."}` after both queue and sole recipient are Sent. Sent means the outgoing server accepted the message, not proof of inbox placement. Failed delivery queues are marked Error before the framework commits their diagnostics, preventing background retries. The endpoint returns a generic failure. If a connection times out after sending, reconcile the Email Queue before another manual attempt.
+
+The public POST endpoint delegates to `engineering.controllers.fleet_health_email`; delivery protection lives in `engineering.controllers.fleet_health_privacy`. The old privacy module re-exports its existing public helpers. No global Error Log hook is registered. A request-local account and Connected App suppress native token-refresh diagnostics, while an SMTP subclass uses the native XOAUTH2 primitive without its raw-error logger. It preserves TLS/SSL and closes connections safely, including repeated after-response cleanup. Optional IMAP sent-folder copies remain best effort, using the same private OAuth protection. Cached accounts and framework classes are never modified.
+
+Native queue processing commits Sending before any token refresh, which can itself commit. A queue-instance status wrapper replaces raw errors and marks Error before a failure commit. Request-scoped traceback redaction, Sentry event suppression and removal of delivery message-log entries prevent diagnostics escaping through those channels. Validation, permission and delivery errors skip native Error Log snapshots, which could otherwise store confidential request arguments. These protections apply to this endpoint; other email and Error Log behavior is unchanged.
 
 ## Offline tests
 
 From `/home/juan/juan-bench/apps/engineering`:
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 /home/juan/juan-bench/env/bin/python -m unittest engineering.api.test_fleet_health_email engineering.api.test_fleet_health_privacy
+PYTHONDONTWRITEBYTECODE=1 /home/juan/juan-bench/env/bin/python tests/run_controller_regressions.py
 ```
 
-These tests isolate DB/transport calls and never send email. Cross-repository verification also builds daily and partial weekly artifacts with the Node renderer, passes their payload through this endpoint and real LAB Frappe queue building, checks both attachment MIME parts and envelope, mocks the final transport, then rolls back the test queues.
+This runner blocks site initialization, database access, real email, HTTP and queue scheduling. Synthetic transport tests exercise token refresh failures, SMTP and IMAP OAuth, queue failure commits, Sentry isolation, HTTP message logs, Error Log snapshot suppression and cleanup failures. No email is sent. Earlier deployment verification described in repository history is separate from this offline controller review.
 
 ## LAB operations
 
-Pull the feature branch into the LAB `juan` checkout with `git pull --ff-only upstream codex/lab-fleet-health-mail`. Preserve unrelated pycache changes. Run `bench --site juan.isambane.co.za clear-cache` for the Error Log hook. No schema migration or asset build is needed. Reload only `juan-bench-web:juan-bench-frappe-web` using supervisor, then update the MCP LAB checkout from `codex/lab-frappe-mail` and restart only `isambane-erp-intelligence.service`.
-
-Run both agent dry runs, then one forced daily test under the timer's `flock` lock. Verify the returned queue ID in the LAB Email Queue and its sole recipient before installing/enabling the two LAB timers. All changes are LAB-only; never run these operations against production.
+Deployment requires separate approval. This controller review does not migrate, update the running LAB checkout, clear caches, restart services, enable timers or send live email. A later approved LAB deployment must invalidate cached hooks and restart the relevant Python processes so the removed Error Log hook is no longer cached. No schema change is included. Live delivery acceptance must be verified separately with the authorized recipient.

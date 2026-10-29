@@ -40,3 +40,9 @@ Files updated for this simplification:
 - This document and `docs/problem-categories.md`.
 
 Existing working dashboard integration, shared hours renderer and card CSS are reused without changes in this iteration. No production access, commit, push or merge.
+
+## Controller review
+
+Classification, permitted queries and unique counting now live in `engineering/controllers/tyre_damage.py`. The page's `tyre_damage.py` retains HTML rendering and re-exports the existing helper names for import compatibility. Dashboard HTTP endpoints, response shapes and permissions are unchanged.
+
+The isolated dashboard tests now provide deterministic Engine rows, MPP shift hours, report date, permission results and classified breakdowns. They exercise the real aggregation and HTML rendering, including production/spare filtering and nonzero counts. This replaces missing live-site fixtures; production calculations are unchanged. All nine tyre tests pass offline. The broader review and its pre-existing test failures are recorded in `docs/eben-controller-review.md`; the earlier deployment results above are historical, not actions taken for this review.

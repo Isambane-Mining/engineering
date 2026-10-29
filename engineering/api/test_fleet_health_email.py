@@ -12,27 +12,29 @@ class TestFleetHealthEmail(unittest.TestCase):
         self.assertIsNotNone(spec, "The restricted Fleet Health endpoint is missing")
         from engineering.api import fleet_health_email
         self.api = fleet_health_email
+        from engineering.controllers import fleet_health_email as controller
+        self.controller = controller
         self.account = SimpleNamespace(name="LAB OAuth", email_id="juan@isambane.co.za",
             enable_outgoing=1, default_outgoing=1, auth_method="OAuth",
             smtp_server="smtp.office365.com", always_bcc="", connected_app="Microsoft")
         self.queue = SimpleNamespace(name="test-queue", status="Not Sent", email_account="LAB OAuth",
             sender="LAB <juan@isambane.co.za>", recipients=[SimpleNamespace(recipient="juan@isambane.co.za", status="Sent")],
-            send=Mock(), reload=Mock(), db_set=Mock())
-        self.queue.send.side_effect = lambda: setattr(self.queue, "status", "Sent")
+            send=Mock(), reload=Mock(), db_set=Mock(), update_status=Mock())
+        self.queue.send.side_effect = lambda **kwargs: setattr(self.queue, "status", "Sent")
         self.frappe = SimpleNamespace(local=SimpleNamespace(site="juan.isambane.co.za"),
             session=SimpleNamespace(user="erp.intelligence@isambane.co.za"),
             request=SimpleNamespace(method="POST"), PermissionError=PermissionError,
             ValidationError=ValueError, throw=lambda message, exc=ValueError: self.fail_with(message, exc),
             sendmail=Mock(return_value=self.queue), are_emails_muted=lambda: False,
             get_hooks=Mock(return_value=[]))
-        self.fp = patch.object(self.api, "frappe", self.frappe)
-        self.ap = patch.object(self.api.EmailAccount, "find_default_outgoing", return_value=self.account)
+        self.fp = patch.object(self.controller, "frappe", self.frappe)
+        self.ap = patch.object(self.controller.EmailAccount, "find_default_outgoing", return_value=self.account)
         self.fp.start(); self.ap.start()
         self.addCleanup(self.fp.stop); self.addCleanup(self.ap.stop)
-        self.payload = dict(subject="Daily Fleet Health — Koppie — 1 July 2026",
-            text="24 machines checked", html="<h2>Daily Fleet Health — Koppie</h2>", attachments=[
+        self.payload = {"subject": "Daily Fleet Health — Koppie — 1 July 2026",
+            "text": "24 machines checked", "html": "<h2>Daily Fleet Health — Koppie</h2>", "attachments": [
                 self.attachment("daily-fleet-health-koppie-2026-07-01.pdf", "application/pdf", b"%PDF-1.7\nfixture\n%%EOF\n"),
-                self.attachment("daily-fleet-health-koppie-2026-07-01.html", "text/html", b"<!doctype html><html><head><title>Daily Fleet Health</title></head><body>Report</body></html>")])
+                self.attachment("daily-fleet-health-koppie-2026-07-01.html", "text/html", b"<!doctype html><html><head><title>Daily Fleet Health</title></head><body>Report</body></html>")]}
 
     @staticmethod
     def fail_with(message, exc):
@@ -40,7 +42,7 @@ class TestFleetHealthEmail(unittest.TestCase):
 
     @staticmethod
     def attachment(name, mime, content):
-        return dict(filename=name, content_type=mime, content_base64=base64.b64encode(content).decode())
+        return {"filename": name, "content_type": mime, "content_base64": base64.b64encode(content).decode()}
 
     def send(self):
         return self.api.send_fleet_health_email(**self.payload)
@@ -147,6 +149,13 @@ class TestFleetHealthEmail(unittest.TestCase):
         self.queue.send.side_effect = RuntimeError("upstream private diagnostic")
         with self.assertRaisesRegex(ValueError, "^Fleet Health delivery failed\\.$"):
             self.send()
+
+    def test_failed_status_cleanup_cannot_expose_a_second_private_exception(self):
+        self.queue.send.side_effect = RuntimeError("synthetic-smtp-secret")
+        self.queue.db_set.side_effect = RuntimeError("synthetic-database-secret")
+        with self.assertRaisesRegex(ValueError, "^Fleet Health delivery failed\\.$") as error:
+            self.send()
+        self.assertTrue(error.exception.skip_error_log)
 
     def test_framework_cmd_must_match_the_endpoint(self):
         self.payload["cmd"] = "engineering.api.fleet_health_email.send_fleet_health_email"

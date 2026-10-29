@@ -22,9 +22,8 @@ from engineering.engineering.page.daily_availability_and_utilization_dashboard.s
     fetch_short_haul_hours,
     short_haul_percentage,
 )
-from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import (
-    fetch_tyre_damage_records, damage_counts, au_kpi_row,
-)
+from engineering.controllers.tyre_damage import fetch_tyre_damage_records, damage_counts
+from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import au_kpi_row
 
 
 _ = frappe._
@@ -6877,7 +6876,7 @@ def get_tyre_breakdown_details(
     """Drill down into exactly the records counted by the dashboard KPI."""
     from frappe.utils import get_datetime, getdate
 
-    from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import (
+    from engineering.controllers.tyre_damage import (
         CATEGORIES,
         fetch_tyre_damage_records,
     )

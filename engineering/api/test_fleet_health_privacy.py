@@ -15,7 +15,7 @@ class TestFleetHealthPrivacy(unittest.TestCase):
     def setUp(self):
         self.assertIsNotNone(importlib.util.find_spec("engineering.api.fleet_health_privacy"),
                              "Scoped Fleet Health privacy protection is missing")
-        from engineering.api import fleet_health_privacy
+        from engineering.controllers import fleet_health_privacy
         self.privacy = fleet_health_privacy
 
     def auth_failure_trace(self):

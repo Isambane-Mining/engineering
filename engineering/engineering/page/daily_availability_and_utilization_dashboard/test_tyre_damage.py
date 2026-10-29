@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch
 import frappe
+from copy import deepcopy
+from types import SimpleNamespace
 from engineering.engineering.page.daily_availability_and_utilization_dashboard import tyre_damage as tyre
 
 
@@ -60,7 +62,39 @@ class TestTyreDamageSources(unittest.TestCase):
             self.assertIsNone(tyre.fetch_tyre_damage_records([dict(indent=3,asset_name='A',shift_date='2026-07-01')],'Site','2026-07-01','2026-07-02'))
 
 
-class TestTyreDamageLiveDashboard(unittest.TestCase):
+class DashboardFixtures(unittest.TestCase):
+    """Real Engine aggregation/rendering with only external reads replaced."""
+    def setUp(self):
+        from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
+        self.source = [dict(indent=3, asset_category=category, asset_name=machine,
+                            shift_date='2026-07-01', shift='Day', work_hours=6,
+                            pbm_total_downtime=4, planned_maintenance_hours=1,
+                            required_hours=12, is_spare_swing_unit=spare)
+                       for category, machine, spare in [('ADT', 'IS587', 0), ('Dozer', 'DZ1', 1)]]
+        def breakdowns(*args, **kwargs):
+            location = next(f[2] for f in kwargs['filters'] if f[0] == 'location')
+            return [frappe._dict(name=name, asset_name=asset, asset_category=category,
+                                 breakdown_start_datetime='2026-07-01 12:00:00',
+                                 location=location, downtime_type='Breakdown',
+                                 problem_category='Tyres / Wheels', problem_subcategory='Tyre Damage')
+                    for name, asset, category in [('damage-1', 'A1', 'ADT'), ('damage-2', 'A2', 'Dozer')]]
+        patches = [
+            patch.object(dashboard.au_engine, 'get_data', side_effect=lambda filters: deepcopy(self.source)),
+            patch.object(dashboard, 'nowdate', return_value='2026-08-01'),
+            patch.object(dashboard, 'get_monthly_production_shift_hours', return_value={'2026-07-01': {'day': 12, 'night': 12}}),
+            patch.object(dashboard, 'fetch_short_haul_hours', return_value={}),
+            patch.object(dashboard, 'get_site_colour_map', return_value={}),
+            patch.object(frappe, 'has_permission', return_value=True),
+            patch.object(frappe, 'get_list', side_effect=breakdowns),
+            patch.object(frappe, 'get_all', return_value=[frappe._dict(name='A1', asset_name='IS587'), frappe._dict(name='A2', asset_name='DZ1')]),
+            patch.object(frappe, 'db', SimpleNamespace(sql=lambda *args, **kwargs: self.fail('Unexpected database access'))),
+        ]
+        for context in patches:
+            context.start()
+            self.addCleanup(context.stop)
+
+
+class TestTyreDamageLiveDashboard(DashboardFixtures):
     def test_live_filters_and_scope_partition(self):
         from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
         results = {}
@@ -74,7 +108,7 @@ class TestTyreDamageLiveDashboard(unittest.TestCase):
             self.assertTrue({x['name'] for x in selected}.issubset(results[scope]))
         self.assertEqual(results['Production + Swing/Spare Machines'],results['Production Machines']|results['Swing/Spare Machines'])
         self.assertFalse(results['Production Machines']&results['Swing/Spare Machines'])
-        self.assertEqual(len(results['Production + Swing/Spare Machines']),0)
+        self.assertEqual(len(results['Production + Swing/Spare Machines']),2)
 
     def test_per_asset_display_retains_one_category_total_on_each_tab(self):
         from bs4 import BeautifulSoup
@@ -84,7 +118,7 @@ class TestTyreDamageLiveDashboard(unittest.TestCase):
         for panel in soup.select('.daily-dashboard-tab-panel'):
             cards=panel.select('.daily-tyre-kpi')
             self.assertEqual(len(cards),2)
-            self.assertEqual({c['data-category']:c['data-count'] for c in cards},{'ADT':'0','Dozer':'0'})
+            self.assertEqual({c['data-category']:c['data-count'] for c in cards},{'ADT':'1','Dozer':'1'})
 
     def test_live_counts_match_both_tabs(self):
         from bs4 import BeautifulSoup
@@ -93,13 +127,13 @@ class TestTyreDamageLiveDashboard(unittest.TestCase):
         after=dashboard.execute(filters)[2]
         after_soup=BeautifulSoup(after,'html.parser')
         counts={panel['data-panel']:{x['data-category']:x['data-count'] for x in panel.select('.daily-tyre-kpi')} for panel in after_soup.select('.daily-dashboard-tab-panel')}
-        self.assertEqual(counts,{'hours':{'ADT':'0','Dozer':'0'},'au':{'ADT':'0','Dozer':'0'}})
+        self.assertEqual(counts,{'hours':{'ADT':'1','Dozer':'1'},'au':{'ADT':'1','Dozer':'1'}})
         for panel in after_soup.select('.daily-dashboard-tab-panel'):
             for card in panel.select('.daily-tyre-kpi'):
                 self.assertEqual(len(card.parent.select(':scope > .frappe-card')),3)
 
 
-class TestTyreDamageRendering(unittest.TestCase):
+class TestTyreDamageRendering(DashboardFixtures):
     def test_shared_hours_graph_and_original_cards_do_not_change(self):
         import re
         from bs4 import BeautifulSoup

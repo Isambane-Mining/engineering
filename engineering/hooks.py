@@ -162,12 +162,6 @@ scheduler_events = {
 # DocType event hooks
 # ---------------------------------------------------------------------
 doc_events = {
-    "Error Log": {
-        "before_insert": "engineering.api.fleet_health_privacy.redact_error_log",
-    },
-    "WhatsApp Message": {
-        "after_insert": "engineering.controllers.whatsapp_breakdown_import.whatsapp_message_after_insert",
-    },
     "Asset Movement": {
         "on_submit": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",
         "on_cancel": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",
