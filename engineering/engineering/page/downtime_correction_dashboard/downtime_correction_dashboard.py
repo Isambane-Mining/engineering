@@ -525,6 +525,7 @@ FIXED_EDITOR_ROLES = frozenset({
     "Engineering Foreman",
     "Production Manager",
     "Production Foreman",
+    "Production User",
 })
 
 
