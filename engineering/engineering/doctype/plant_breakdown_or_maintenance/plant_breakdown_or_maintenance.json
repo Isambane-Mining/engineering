@@ -255,7 +255,8 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Failure Classification",
-   "options": "Breakdown Failure Classification"
+   "options": "Breakdown Failure Classification",
+   "mandatory_depends_on": "eval:doc.downtime_type == \"Breakdown\""
   },
   {
    "fieldname": "column_break_zygn",
