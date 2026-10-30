@@ -24,101 +24,11 @@ MONTHS = {
 }
 
 
-CATEGORY_CONFIG = [
-    {
-        "category": "01. Automatic Fire Suppression",
-        "mode": "active_until_expiry",
-        "sections": [
-            "Fire Suppression",
-        ],
-    },
-    {
-        "category": "02. Condition Monitoring",
-        "mode": "active_until_expiry",
-        "sections": [
-            "Illumination Baseline",
-            "Noise Level Baseline & Measurement",
-            "NDT",
-            "Machine NDT",
-        ],
-    },
-    {
-        "category": "03. Dynamic Brake Testing",
-        "mode": "active_until_expiry",
-        "sections": [
-            "Brake Test",
-            "Brake Tester Calibration Certificate",
-            "Brake Test Authorisations",
-        ],
-    },
-    {
-        "category": "04. Earth Leakage Testing & CoC",
-        "mode": "active_until_expiry",
-        "sections": [
-            "CoC for Containers, Offices, Workshops",
-            "Multi-meter Calibration Certificate",
-            "Authorised LV Person",
-            "Earth Leakage Testing",
-
-            # Older ERP section name retained for historical records.
-            "Earth Leakage",
-        ],
-    },
-    {
-        "category": "05. Equipment list",
-        "mode": "saved_in_month",
-        "sections": [
-            "Equipment Technical Information",
-            "Equipment List",
-        ],
-    },
-    {
-        "category": "06. FRCS Compliance",
-        "mode": "active_until_expiry",
-        "sections": [
-            "FRCS",
-        ],
-    },
-    {
-        "category": "07. Load Testing",
-        "mode": "active_until_expiry",
-        "sections": [
-            "Lifting Equipment",
-            "Load Test Certificate",
-        ],
-    },
-    {
-        "category": "08. Maintenance Schedules",
-        "mode": "saved_in_month",
-        "sections": [
-            "Machine Service Records",
-            "Service Schedule",
-            "Wearcheck",
-            "Brake Wear Measurements",
-            "Tyre Inspection Report",
-            "C-Track Inspection",
-            "Maintenance Inspections",
-        ],
-    },
-    {
-        "category": "09. PDS-MPI Maintenance",
-        "mode": "saved_in_month",
-        "sections": [
-            "PDS",
-            "PDS Installation",
-        ],
-    },
-    {
-        "category": "10. Pressure Vessels",
-        "mode": "active_until_expiry",
-        "sections": [
-            "Pressure Vessels",
-
-            # Older ERP section name retained for historical records.
-            "Pressure Vessel",
-        ],
-    },
-]
+from engineering.controllers.engineering_legals_rules import (
+    CATEGORY_CONFIG,
+    optional_snapshot_fields,
+    record_reporting_rule,
+)
 
 
 def execute(filters=None):
@@ -145,16 +55,19 @@ def execute(filters=None):
     data = []
     total = 0
 
-    for config in CATEGORY_CONFIG:
+    category_configs = list(CATEGORY_CONFIG)
+    if any((record_reporting_rule(record) or {}).get("category") == "Other" for record in legal_records):
+        category_configs.append(dict(category="Other", mode="saved_in_month", sections=[]))
+
+    for config in category_configs:
         matching_records = []
 
         for record in legal_records:
-            section = (record.sections or "").strip()
-
-            if section not in config["sections"]:
+            reporting = record_reporting_rule(record)
+            if not reporting or reporting["category"] != config["category"]:
                 continue
 
-            if config["mode"] == "active_until_expiry":
+            if reporting["mode"] == "active_until_expiry":
                 if is_active_during_month(
                     record,
                     month_start,
@@ -162,7 +75,7 @@ def execute(filters=None):
                 ):
                     matching_records.append(record)
 
-            elif config["mode"] == "saved_in_month":
+            elif reporting["mode"] == "saved_in_month":
                 if is_saved_in_month(
                     record,
                     month_start,
@@ -226,16 +139,19 @@ def execute(filters=None):
 
         total += completed
 
+        modes = {record_reporting_rule(record)["mode"] for record in matching_records}
+        mode = next(iter(modes)) if len(modes) == 1 else "mixed" if modes else config["mode"]
+        sections = sorted(set(config["sections"]) | {record.sections for record in matching_records})
         data.append({
             "category": config["category"],
-            "frequency_rule": get_frequency_label(config["mode"]),
+            "frequency_rule": get_frequency_label(mode),
             "completed": completed,
             "site": site or "All Sites",
             "tmm": tmm_count,
             "ldv": ldv_count,
             "drills": drill_count,
-            "mode": config["mode"],
-            "sections_json": frappe.as_json(config["sections"]),
+            "mode": mode,
+            "sections_json": frappe.as_json(sections),
             "record_names_json": frappe.as_json(record_names),
             "missing_items_json": frappe.as_json(missing_items),
 
@@ -602,7 +518,7 @@ def get_legal_records(site=None):
             "creation",
             "vehicle_type",
             "fleet_number",
-        ],
+        ] + optional_snapshot_fields(),
         order_by="sections asc, start_date asc",
     )
 
@@ -683,6 +599,8 @@ def is_saved_in_month(record, month_start, month_end):
 
 
 def get_frequency_label(mode):
+    if mode == "mixed":
+        return "Per recorded document rule"
     if mode == "active_until_expiry":
         return "Carried forward until expiry"
 
@@ -911,47 +829,11 @@ def get_machine_legal_status_rows(
     fleet_numbers = [row.name for row in assets]
 
     active_legal_groups = {
-        "fire_suppression": {
-            "Fire Suppression",
-        },
-        "brake_tested": {
-            "Brake Test",
-            "Brake Tester Calibration Certificate",
-            "Brake Test Authorisations",
-        },
-        "frcs": {
-            "FRCS",
-        },
-        "load_testing": {
-            "Lifting Equipment",
-            "Load Test Certificate",
-        },
-        "pressure_vessels": {
-            "Pressure Vessels",
-            "Pressure Vessel",
-        },
-    }
-
-    condition_monitoring_sections = {
-        "Illumination Baseline",
-        "Noise Level Baseline & Measurement",
-        "NDT",
-        "Machine NDT",
-    }
-
-    maintenance_sections = {
-        "Machine Service Records",
-        "Service Schedule",
-        "Wearcheck",
-        "Brake Wear Measurements",
-        "Tyre Inspection Report",
-        "C-Track Inspection",
-        "Maintenance Inspections",
-    }
-
-    pds_mpi_sections = {
-        "PDS",
-        "PDS Installation",
+        "fire_suppression": "01. Automatic Fire Suppression",
+        "brake_tested": "03. Dynamic Brake Testing",
+        "frcs": "06. FRCS Compliance",
+        "load_testing": "07. Load Testing",
+        "pressure_vessels": "10. Pressure Vessels",
     }
 
     legal_by_fleet = {
@@ -980,7 +862,7 @@ def get_machine_legal_status_rows(
                 "start_date",
                 "expiry_date",
                 "creation",
-            ],
+            ] + optional_snapshot_fields(),
         )
 
         for legal in legal_rows:
@@ -1013,27 +895,29 @@ def get_machine_legal_status_rows(
                     <= month_end
                 )
 
-            if is_active:
-                if section in condition_monitoring_sections:
+            reporting = record_reporting_rule(legal)
+            if not reporting:
+                continue
+            selected = is_active if reporting["mode"] == "active_until_expiry" else is_saved_in_selected_month
+            if selected:
+                if reporting["category"] == "02. Condition Monitoring":
                     legal_by_fleet[fleet_number][
                         "condition_monitoring_sections"
                     ].add(section)
 
-                for status_key, sections in (
-                    active_legal_groups.items()
-                ):
-                    if section in sections:
+                for status_key, category in active_legal_groups.items():
+                    if reporting["category"] == category:
                         legal_by_fleet[fleet_number][
                             status_key
                         ] = True
 
-            if is_saved_in_selected_month:
-                if section in maintenance_sections:
+            if selected:
+                if reporting["category"] == "08. Maintenance Schedules":
                     legal_by_fleet[fleet_number][
                         "maintenance_sections"
                     ].add(section)
 
-                if section in pds_mpi_sections:
+                if reporting["category"] == "09. PDS-MPI Maintenance":
                     legal_by_fleet[fleet_number][
                         "pds_mpi"
                     ] = True

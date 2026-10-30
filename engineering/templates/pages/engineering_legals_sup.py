@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from erpnext.controllers.website_list_for_contact import get_customers_suppliers
+from engineering.controllers.engineering_legals_rules import supplier_sites
 
 
 def _get_draft_name():
@@ -46,7 +47,7 @@ def get_context(context):
 
     context.sections_options = _get_sections_options()
     context.asset_options = _get_asset_options()
-    context.site_options = ["Gwab", "Klipfontein"]
+    context.site_options = supplier_sites()
 
     draft = _get_editable_draft() if frappe.request.method != "POST" else None
 
@@ -57,6 +58,7 @@ def get_context(context):
         "fleet_number": frappe.form_dict.get("fleet_number") or (draft.fleet_number if draft else ""),
         "vehicle_type": frappe.form_dict.get("vehicle_type") or (draft.vehicle_type if draft else ""),
         "lifting_type": frappe.form_dict.get("lifting_type") or (draft.lifting_type if draft else ""),
+        "brake_wear_type": frappe.form_dict.get("brake_wear_type") or (getattr(draft, "brake_wear_type", "") if draft else ""),
         "attach_paper": frappe.form_dict.get("attach_paper") or (draft.attach_paper if draft else ""),
         "start_date": frappe.form_dict.get("start_date") or (draft.start_date if draft else ""),
         "expiry_date": frappe.form_dict.get("expiry_date") or (draft.expiry_date if draft else ""),
@@ -76,20 +78,8 @@ def _handle_post(context):
         frappe.throw(_("Section is required."))
     if not site:
         frappe.throw(_("Site is required."))
-    if not fleet_number:
-        frappe.throw(_("Fleet Number is required."))
     if not attach_paper:
         frappe.throw(_("Attach Paper is required."))
-    if not start_date:
-        frappe.throw(_("Document Start Date is required."))
-        
-    _validate_supplier_asset_access(fleet_number)
-
-    if sections in ["Brake Test", "PDS"] and not vehicle_type:
-        frappe.throw(_("Vehicle Type is required for {0}.").format(sections))
-
-    if sections == "Lifting Equipment" and not lifting_type:
-        frappe.throw(_("Lifting Type is required for Lifting Equipment."))
 
     file_name = frappe.db.get_value("File", {"file_url": attach_paper}, "name")
     if not file_name:
@@ -119,9 +109,10 @@ def _handle_post(context):
     doc.fleet_number = fleet_number
     doc.vehicle_type = vehicle_type or None
     doc.lifting_type = lifting_type or None
+    doc.brake_wear_type = (frappe.form_dict.get("brake_wear_type") or "").strip() or None
     doc.attach_paper = attach_paper
     doc.start_date = start_date
-    doc.expiry_date = frappe.form_dict.get("expiry_date") or None
+    # The draft controller calculates expiry; never trust the browser's preview.
 
     if draft_name:
         doc.save(ignore_permissions=True)

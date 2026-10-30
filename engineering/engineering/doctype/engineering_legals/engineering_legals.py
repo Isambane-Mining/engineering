@@ -99,141 +99,16 @@ class EngineeringLegals(Document):
         sync_engineering_legals_from_doc(self, "on_update")
 
     def validate(self):
-        """
-        Server-side source of truth.
-        - expiry_date is ALWAYS recalculated from start_date + section rules
-        - invalid combinations are blocked
-        - conditional fields are cleared when not relevant
-        - expiry is never carried over and never user-editable
-        """
-        from frappe.utils import add_months
+        from engineering.controllers.engineering_legals_rules import apply_document_rules, authorize_capture
 
-        # Always reset first (prevents stale carry-over)
-        self.expiry_date = None
-
-        # Core fields must exist (server enforcement)
-        if not self.sections:
-            frappe.throw("Section is required.")
-
+        if "Supplier" in frappe.get_roles():
+            authorize_capture(self)
+            before = self.get_doc_before_save()
+            if before:
+                # Reassigning another supplier's record to an owned asset must not grant access.
+                authorize_capture(before)
+        apply_document_rules(self)
         section = (self.sections or "").strip()
-
-        # FLEET NUMBER REQUIREMENT RULE - START
-        fleet_optional_sections = {
-            "Brake Tester Calibration Certificate",
-            "Brake Test Authorisations",
-            "CoC for Containers, Offices, Workshops",
-            "Multi-meter Calibration Certificate",
-            "Authorised LV Person",
-            "Earth Leakage Testing",
-            "Pressure Vessels",
-        }
-
-        if (
-            section not in fleet_optional_sections
-            and not self.fleet_number
-        ):
-            frappe.throw(
-                "Fleet Number is required for this Section."
-            )
-        # FLEET NUMBER REQUIREMENT RULE - END
-
-
-        no_start_date_sections = {
-            "Machine Service Records",
-            "Service Schedule",
-            "Wearcheck",
-            "Brake Wear Measurements",
-        }
-
-        if section not in no_start_date_sections and not self.start_date:
-            frappe.throw("Start Date is required.")
-
-        if section == "Brake Test":
-            if not self.vehicle_type:
-                frappe.throw("Vehicle Type (LDV/TMM) is required for this Section.")
-
-            months = 1 if self.vehicle_type == "TMM" else 3
-            self.expiry_date = add_months(self.start_date, months)
-
-        elif section == "PDS":
-            if not self.vehicle_type:
-                frappe.throw("Vehicle Type (LDV/TMM) is required for this Section.")
-
-            months = 3 if self.vehicle_type == "TMM" else 4
-            self.expiry_date = add_months(self.start_date, months)
-
-        elif section == "FRCS":
-            self.expiry_date = add_months(self.start_date, 3)
-
-        elif section in (
-            "Brake Tester Calibration Certificate",
-            "Brake Test Authorisations",
-            "Multi-meter Calibration Certificate",
-            "Authorised LV Person",
-            "Pressure Vessels",
-        ):
-            self.expiry_date = add_months(self.start_date, 12)
-
-        elif section == "CoC for Containers, Offices, Workshops":
-            self.expiry_date = add_months(self.start_date, 1)
-
-        elif section == "Earth Leakage Testing":
-            self.expiry_date = add_months(self.start_date, 3)
-
-        elif section == "Lifting Equipment":
-            if not self.lifting_type:
-                frappe.throw("Lifting Type (Inspection/Certificate) is required for this Section.")
-
-            months = 3 if self.lifting_type == "Inspection" else 12
-            self.expiry_date = add_months(self.start_date, months)
-
-        elif section in ("NDT", "Machine NDT"):
-            self.expiry_date = add_months(self.start_date, 12)
-
-        elif section == "C-Track Inspection":
-            self.expiry_date = add_months(self.start_date, 1)
-
-        elif section == "Fire Suppression":
-            self.expiry_date = add_months(self.start_date, 3)
-
-        elif section == "Tyre Inspection Report":
-            self.expiry_date = add_months(self.start_date, 1)
-
-        elif section == "Illumination Baseline":
-            self.expiry_date = add_months(self.start_date, 24)
-
-        elif section == "Noise Level Baseline & Measurement":
-            self.expiry_date = add_months(self.start_date, 24)
-
-        elif section == "Brake Wear Measurements":
-            if not self.brake_wear_type:
-                frappe.throw("Brake Wear Type (ADT/FEL) is required for this Section.")
-            self.start_date = None
-            self.expiry_date = None
-
-        elif section in (
-            "Machine Service Records",
-            "Service Schedule",
-            "Wearcheck",
-            "Equipment Technical Information",
-            "Maintenance Inspections",
-            "PDS Installation",
-        ):
-            self.expiry_date = None
-
-        else:
-            frappe.throw(f"Unknown Section: {section}")
-
-
-        # Clear irrelevant fields so nothing stale gets saved (imports/API too)
-        if section not in ("Brake Test", "PDS"):
-            self.vehicle_type = None
-
-        if section != "Lifting Equipment":
-            self.lifting_type = None
-
-        if section != "Brake Wear Measurements":
-            self.brake_wear_type = None
 
         # -----------------------------
         # HSEC integration requirements
@@ -507,11 +382,9 @@ def _get_new_sharepoint_folder_parts(doc: Document) -> Optional[list[str]]:
     Only sites and sections configured in the new structure are uploaded
     here. All records still upload to the legacy path as well.
     """
-    site = (getattr(doc, "site", None) or "").strip()
-    section = (getattr(doc, "sections", None) or "").strip()
+    from engineering.controllers.engineering_legals_rules import get_record_sharepoint_parts
 
-    new_site = NEW_SHAREPOINT_SITE_MAPPING.get(site)
-    category_parts = NEW_SHAREPOINT_SECTION_MAPPING.get(section)
+    new_site, category_parts = get_record_sharepoint_parts(doc)
 
     if not new_site or not category_parts:
         return None
