@@ -1,0 +1,62 @@
+{
+ "doctype": "DocType",
+ "name": "Monthly TMM Assurance Action",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "istable": 1,
+ "field_order": [
+  "cause",
+  "action",
+  "owner_name",
+  "due_date",
+  "status",
+  "breakdown_reference"
+ ],
+ "fields": [
+  {
+   "fieldname": "cause",
+   "fieldtype": "Data",
+   "label": "Category",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Small Text",
+   "label": "Action",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "owner_name",
+   "fieldtype": "Data",
+   "label": "Owner",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nIn progress\nCompleted",
+   "default": "Open",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "breakdown_reference",
+   "label": "Breakdown Reference",
+   "fieldtype": "Link",
+   "options": "Plant Breakdown or Maintenance",
+   "in_list_view": 1
+  }
+ ],
+ "permissions": []
+}

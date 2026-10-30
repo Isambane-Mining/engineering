@@ -1,0 +1,120 @@
+{
+ "doctype": "DocType",
+ "name": "Monthly TMM Assurance Actions",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "field_order": [
+  "site",
+  "reporting_month",
+  "equipment_group",
+  "actions"
+ ],
+ "fields": [
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "options": "Location",
+   "label": "Site",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reporting_month",
+   "fieldtype": "Date",
+   "label": "Reporting Month",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "equipment_group",
+   "fieldtype": "Select",
+   "options": "ADTs\nExcavators\nDrills\nGraders\nFELs\nDozers\nAncillary",
+   "label": "Equipment Group",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "actions",
+   "fieldtype": "Table",
+   "options": "Monthly TMM Assurance Action",
+   "label": "Actions"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Engineering User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Engineering Foreman",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Engineering Supervisor",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Production Manager",
+   "read": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Production User",
+   "read": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Production Foreman",
+   "read": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Production Supervisor",
+   "read": 1,
+   "print": 1,
+   "report": 1
+  }
+ ],
+ "track_changes": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
