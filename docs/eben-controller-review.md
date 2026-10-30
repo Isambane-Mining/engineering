@@ -20,7 +20,7 @@ From the feature worktree, using the installed bench Python:
 /home/juan/juan-bench/env/bin/python -B tests/run_controller_regressions.py
 ```
 
-**79 tests pass**, including all nine tyre tests, API compatibility, validation, scoped privacy, token-refresh failures, native XOAUTH2 wire format, SSL/TLS, best-effort sent copies, queue commit ordering, cleanup failures and adjacent calculation/ownership regressions. This runner blocks site initialization, database access, HTTP, SMTP connections and background scheduling unless a test supplies an explicit synthetic fixture.
+**81 tests pass**, including all nine tyre tests, API compatibility, validation, scoped privacy, token-refresh failures, native XOAUTH2 wire format, SSL/TLS, best-effort sent copies, queue commit ordering, cleanup failures and adjacent calculation/ownership regressions. This runner blocks site initialization, database access, HTTP, SMTP connections and background scheduling unless a test supplies an explicit synthetic fixture.
 
 The broader audit is deliberately opt-in:
 
@@ -28,7 +28,7 @@ The broader audit is deliberately opt-in:
 /home/juan/juan-bench/env/bin/python -B tests/run_controller_regressions.py --extended
 ```
 
-It runs **106 tests: 88 pass, five fail and 13 error**. Four failures also reproduce on the untouched base and concern existing Short Haul graph markup/percentages:
+It runs **108 tests: 90 pass, five fail and 13 error**. Four failures also reproduce on the untouched base and concern existing Short Haul graph markup/percentages:
 
 - `test_no_short_haul_keeps_single_bar_and_small_value_hover`
 - `test_stack_and_real_tooltip_values_are_not_capped`
@@ -53,3 +53,11 @@ Current Summary and Analysis pass **70 isolated Python tests and 34 JavaScript t
 ## Remaining limits
 
 The private transport intentionally relies on installed Frappe's native OAuth primitives and queue ordering. Rerun these tests when upgrading Frappe. Optional IMAP copy failures remain best effort, consistent with native behavior, without retaining sensitive upstream diagnostics. SMTP acceptance is not proof of inbox delivery. A later approved deployment needs hook-cache invalidation and process reload, followed by authorized LAB acceptance checks; this PR does not execute those actions.
+
+## PR #137 integration and privacy compatibility decision
+
+PR #137 is `juan` into `main`; PR #139 contains the controller review commit `3e78953e81b805e852eff6bf992d2374ff4b82e4` against `juan`. Integrating that exact commit by fast-forward preserves its history without pulling in Legals PR #138 or permission work. No change is merged into `main`.
+
+The privacy API file is intentionally retained as an eight-line compatibility shim. Searches of Engineering, the installed bench apps and the available MCP release source found no new runtime consumers after the controller moves. The old import path was used by the email module and the removed Error Log hook, however, and cached hooks or out-of-repository Python consumers may still resolve it. Deleting the file would break those imports; there is no HTTP endpoint to remove because its helpers were never whitelisted. The shim contains no business logic, credential access or hook registration. A regression verifies that reloading it neither installs formatters nor creates a Sentry hub or loads an account. Actual delivery protection remains in the controller, imported directly by email business logic.
+
+The integration adds one additional privacy fix: unexpected exceptions before private delivery also become generic ValidationErrors with `skip_error_log`, suppressing confidential request snapshots and upstream exception chaining. Known validation and permission exceptions keep their existing messages and types. A synthetic regression first reproduced the unhandled failure, then passed after this fix. The relevant tests, protected Legals suites, compilation, targeted lint and final change scope are rechecked before pushing `juan`. The original LAB worktree is not switched or deployed. PR #139 becomes superseded once its exact commit is included in `juan`.

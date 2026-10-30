@@ -28,8 +28,10 @@ class TestFleetHealthEmail(unittest.TestCase):
             sendmail=Mock(return_value=self.queue), are_emails_muted=lambda: False,
             get_hooks=Mock(return_value=[]))
         self.fp = patch.object(self.controller, "frappe", self.frappe)
+        self.api_fp = patch.object(self.api, "frappe", self.frappe)
         self.ap = patch.object(self.controller.EmailAccount, "find_default_outgoing", return_value=self.account)
-        self.fp.start(); self.ap.start()
+        self.fp.start(); self.api_fp.start(); self.ap.start()
+        self.addCleanup(self.api_fp.stop)
         self.addCleanup(self.fp.stop); self.addCleanup(self.ap.stop)
         self.payload = {"subject": "Daily Fleet Health — Koppie — 1 July 2026",
             "text": "24 machines checked", "html": "<h2>Daily Fleet Health — Koppie</h2>", "attachments": [

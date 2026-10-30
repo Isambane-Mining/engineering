@@ -61,6 +61,46 @@ class TestControllerBoundaries(unittest.TestCase):
         self.assertNotIn("WhatsApp Message", hooks.doc_events)
         self.assertIn("Asset Movement", hooks.doc_events)
 
+    def test_privacy_compatibility_import_does_not_activate_delivery_protection(self):
+        from engineering.api import fleet_health_privacy as api
+        from engineering.controllers import fleet_health_privacy as controller
+
+        with (
+            patch.object(controller, "_install_formatter") as formatter,
+            patch.object(controller, "Hub") as hub,
+            patch.object(frappe, "get_doc") as get_doc,
+        ):
+            importlib.reload(api)
+        formatter.assert_not_called()
+        hub.assert_not_called()
+        get_doc.assert_not_called()
+        for name in api.__all__:
+            self.assertIs(getattr(api, name), getattr(controller, name))
+            self.assertNotIn(getattr(api, name), frappe.whitelisted)
+
+    def test_unexpected_failure_cannot_snapshot_private_request_payload(self):
+        from frappe.utils import error
+
+        from engineering.api import fleet_health_email as api
+        from engineering.controllers import fleet_health_email as controller
+
+        with (
+            patch.object(
+                controller,
+                "send_fleet_health_email",
+                side_effect=RuntimeError("synthetic-private-diagnostic"),
+            ),
+            self.assertRaisesRegex(
+                frappe.ValidationError, "^Fleet Health delivery failed\\.$"
+            ) as caught,
+        ):
+            api.send_fleet_health_email(attachments="synthetic-private-attachment")
+        self.assertTrue(caught.exception.skip_error_log)
+        self.assertTrue(caught.exception.__suppress_context__)
+        with patch.object(error, "log_error") as logger:
+            error.log_error_snapshot(caught.exception)
+        logger.assert_not_called()
+
     def test_validation_failure_cannot_snapshot_private_request_payload(self):
         from engineering.api import fleet_health_email as api
         from engineering.controllers import fleet_health_email as controller

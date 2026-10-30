@@ -17,3 +17,6 @@ def send_fleet_health_email(
         # Developer-mode error snapshots include request arguments and attachments.
         error.skip_error_log = True
         raise
+    except Exception:  # noqa: BLE001 - never snapshot confidential endpoint arguments.
+        # Includes unexpected failures before the controller enters private delivery.
+        raise controller.delivery_error(frappe.ValidationError) from None
