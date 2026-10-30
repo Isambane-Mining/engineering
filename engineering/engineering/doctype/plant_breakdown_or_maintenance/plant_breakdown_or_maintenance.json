@@ -240,7 +240,7 @@
    "fieldtype": "Select",
    "label": "Problem Category",
    "mandatory_depends_on": "eval:doc.downtime_type === 'Breakdown' && doc.__islocal",
-   "options": "\nBrakes\nSteering\nEngine / Starting\nHydraulics\nElectrical\nCooling\nTransmission / Drivetrain\nTyres / Wheels\nAir Conditioning\nOther"
+   "options": "\nBrakes\nSteering\nEngine / Starting\nHydraulics\nElectrical\nCooling\nTransmission / Drivetrain\nTyres / Wheels\nAir Conditioning\nOther\nFRCS\nStop Blocks\nMachine Locks\nBowl Lock Pins\nBrake Test\nSteps / Handrail"
   },
   {
    "depends_on": "eval:doc.downtime_type === 'Breakdown' && doc.problem_category === 'Tyres / Wheels'",

@@ -367,8 +367,9 @@ def parse_whatsapp_breakdown_message(doc):
 
 
 @frappe.whitelist()
-def create_or_update_breakdown(log_name):
+def create_or_update_breakdown(log_name, problem_category=None):
     log = frappe.get_doc("WhatsApp Breakdown Message Log", log_name)
+    log.check_permission("read")
 
     if log.status not in ["Parsed", "Created Breakdown", "Updated Breakdown"]:
         frappe.throw(f"Message must be Parsed before creating/updating breakdown. Current status: {log.status}")
@@ -386,12 +387,20 @@ def create_or_update_breakdown(log_name):
         log.target_shift = get_shift_from_datetime(log.message_datetime)
 
     if log.detected_action == "Book Down":
-        return create_breakdown_from_log(log)
+        return create_breakdown_from_log(log, problem_category=problem_category)
 
     if log.detected_action == "Book Back":
         return update_breakdown_from_log(log)
 
     frappe.throw(f"Unsupported action: {log.detected_action}")
+
+
+@frappe.whitelist()
+def requires_breakdown_category(log_name):
+    """Let capture UI reuse the server's existing maintenance determination."""
+    log = frappe.get_doc('WhatsApp Breakdown Message Log', log_name)
+    log.check_permission('read')
+    return log.detected_action == 'Book Down' and get_downtime_type_from_log(log) == 'Breakdown'
 
 
 def get_downtime_type_from_log(log):
@@ -412,7 +421,7 @@ def get_downtime_type_from_log(log):
     return "Breakdown"
 
 
-def create_breakdown_from_log(log):
+def create_breakdown_from_log(log, problem_category=None):
     start_dt = combine_date_and_time(
         log.message_datetime,
         log.detected_start_time,
@@ -422,6 +431,13 @@ def create_breakdown_from_log(log):
     breakdown.location = log.target_site
     breakdown.shift = log.target_shift
     breakdown.downtime_type = get_downtime_type_from_log(log)
+    if breakdown.downtime_type == 'Breakdown':
+        from engineering.engineering.problem_categories import validate_problem_category
+        try:
+            validate_problem_category(problem_category, is_new=True)
+        except ValueError as exc:
+            frappe.throw(str(exc))
+        breakdown.problem_category = problem_category
     breakdown.asset_name = log.detected_plant_no
     breakdown.breakdown_start_datetime = start_dt
     breakdown.breakdown_reason = log.detected_reason or log.raw_message
@@ -432,7 +448,7 @@ def create_breakdown_from_log(log):
     else:
         breakdown.hours_breakdown_starts = 0
 
-    breakdown.insert(ignore_permissions=True)
+    breakdown.insert()
 
     log.linked_breakdown = breakdown.name
     log.status = "Created Breakdown"

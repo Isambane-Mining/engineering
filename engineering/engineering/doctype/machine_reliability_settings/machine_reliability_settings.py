@@ -1,6 +1,7 @@
 import frappe
 from frappe.model.document import Document
 from engineering.engineering.page.machine_reliability.machine_reliability import terms
+from engineering.engineering.problem_categories import PROBLEM_CATEGORIES, BASE_PROBLEM_CATEGORIES
 
 
 TYRES_WHEELS_CATEGORY = 'Tyres / Wheels'
@@ -19,7 +20,6 @@ DEFAULT_CATEGORIES = [
     ('Air Conditioning', 'aircon, air con, air conditioning, air conditioner', ''),
     ('Other', 'other, miscellaneous, unknown fault, oil leak, oil leaks, oil leaking, lubrication, lubricate, grease, low oil pressure, pds, proximity, collision warning, fire suppression, seat belt, seatbelt, emergency stop', 'Wearcheck\nPDS\nFire Suppression\nFRCS'),
 ]
-PROBLEM_CATEGORIES = tuple(category for category, _, _ in DEFAULT_CATEGORIES)
 
 
 class MachineReliabilitySettings(Document):
@@ -43,5 +43,6 @@ class MachineReliabilitySettings(Document):
                 if section and (section == 'Machine Service Records' or not frappe.db.exists('Engineering Legals Sections', section)):
                     frappe.throw('Choose existing test / inspection sections; services are counted separately.')
 
-        if {row.category for row in self.categories} != set(PROBLEM_CATEGORIES):
-            frappe.throw('Keep the ten standard Problem Categories. You can edit their keywords and test sections.')
+        configured = {row.category for row in self.categories}
+        if not set(BASE_PROBLEM_CATEGORIES).issubset(configured) or not configured.issubset(PROBLEM_CATEGORIES):
+            frappe.throw('Keep the existing standard Problem Categories. Additional controlled categories may have explicitly configured keywords and test sections.')

@@ -5,6 +5,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import get_datetime
+from engineering.engineering.problem_categories import PROBLEM_CATEGORIES, validate_problem_category
 
 
 class PlantBreakdownorMaintenance(Document):
@@ -63,6 +64,30 @@ class PlantBreakdownorMaintenance(Document):
 
     def validate(self):
         self.enforce_signature_role_permissions()
+        if self.downtime_type == 'Breakdown':
+            previous = self.get_doc_before_save()
+            try:
+                validate_problem_category(self.problem_category, is_new=bool(self.is_new()) or
+                    bool(previous and previous.downtime_type != 'Breakdown'),
+                    previous=previous.problem_category if previous else None)
+            except ValueError as exc:
+                frappe.throw(str(exc))
+
+    def _validate_selects(self):
+        # Frappe normally rejects an obsolete Select value even on an unrelated
+        # edit. Preserve only an unchanged historical category; validate all other
+        # Select fields normally. Corrections must choose a canonical category.
+        previous = self.get_doc_before_save()
+        legacy = (not self.is_new() and previous and
+                  self.problem_category == previous.problem_category and
+                  self.problem_category not in PROBLEM_CATEGORIES)
+        value = self.problem_category
+        try:
+            if legacy:
+                self.problem_category = None
+            super()._validate_selects()
+        finally:
+            self.problem_category = value
 
 
     def before_insert(self):
