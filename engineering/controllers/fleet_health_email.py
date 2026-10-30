@@ -1,4 +1,4 @@
-"""Private LAB Fleet Health delivery boundary. Never register this as an MCP tool."""
+"""Private Fleet Health delivery boundary. Never register this as an MCP tool."""
 
 import base64
 import binascii
@@ -17,13 +17,56 @@ from engineering.controllers.fleet_health_privacy import (
     send_private_queue,
 )
 
-LAB_SITE = "juan.isambane.co.za"
-RECIPIENT = "juan@isambane.co.za"
+def _fleet_health_recipients():
+    """Resolve configured recipients; disabled Users are never eligible."""
+    meta = frappe.get_meta("Fleet Management Settings")
+    if not meta.has_field("fleet_health_recipients"):
+        return []
+
+    settings = frappe.get_single("Fleet Management Settings")
+    recipients = []
+    seen = set()
+
+    for row in settings.get("fleet_health_recipients") or []:
+        # This endpoint currently generates Koppie reports only.
+        # Blank Location means company-wide access.
+        location = (getattr(row, "location", None) or "").strip()
+        if location and location.casefold() != "koppie":
+            continue
+
+        user = row.user
+        if not user:
+            continue
+
+        record = frappe.db.get_value(
+            "User", user, ["enabled", "email"], as_dict=True
+        )
+        if not record or not record.enabled or not record.email:
+            continue
+
+        email = record.email.strip()
+        parsed_name, parsed_email = parseaddr(email)
+        if (
+            not email
+            or parsed_name
+            or parsed_email != email
+            or "@" not in email
+            or any(c.isspace() or ord(c) < 33 for c in email)
+            or email.lower() in seen
+        ):
+            continue
+
+        seen.add(email.lower())
+        recipients.append(email)
+
+    return recipients
+
+
 METHOD = "engineering.api.fleet_health_email.send_fleet_health_email"
 MAX_BYTES = 10 * 1024 * 1024
 MAX_ENCODED = 4 * ((MAX_BYTES + 2) // 3)
 NAME = re.compile(
-    r"(daily|weekly)-fleet-health-koppie-(\d{4}-\d{2}-\d{2})(?:-to-(\d{4}-\d{2}-\d{2}))?\.(pdf|html)"
+    r"(daily|weekly)-fleet-health-[a-z0-9-]+-(\d{4}-\d{2}-\d{2})(?:-to-(\d{4}-\d{2}-\d{2}))?\.(pdf|html)"
 )
 
 
@@ -175,12 +218,16 @@ def send_fleet_health_email(
     subject=None, text=None, html=None, attachments=None, **kwargs
 ):
     """Send exactly two generated reports; return only confirmed queue delivery evidence."""
-    if frappe.local.site != LAB_SITE or frappe.session.user not in {
-        "erp.intelligence@isambane.co.za",
-        "Administrator",
-    }:
+    if (
+        frappe.session.user == "Guest"
+        or frappe.session.user != "Administrator"
+        and (
+            not frappe.db.get_value("User", frappe.session.user, "enabled")
+            or not frappe.has_role("System Manager")
+        )
+    ):
         frappe.throw(
-            "Fleet Health delivery is restricted to the LAB service account.",
+            "Not authorized to send Fleet Health reports.",
             frappe.PermissionError,
         )
     if getattr(frappe, "request", None) and frappe.request.method != "POST":
@@ -193,7 +240,7 @@ def send_fleet_health_email(
         or len(subject) > 200
         or any(ord(c) < 32 for c in subject)
         or not re.fullmatch(
-            r"(?:\[PARTIAL\] )?(?:Daily|Weekly) Fleet Health — Koppie — .+", subject
+            r"(?:\[PARTIAL\] )?(?:Daily|Weekly) Fleet Health — [^—\r\n]+ — .+", subject
         )
     ):
         _reject()
@@ -204,10 +251,13 @@ def send_fleet_health_email(
     _validate_html(html)
     files = _attachments(attachments)
     with private_delivery():
+        recipients = _fleet_health_recipients()
+        if not recipients:
+            _reject("No enabled Fleet Health recipients configured.")
         account = EmailAccount.find_default_outgoing()
         if (
             not account
-            or account.email_id != RECIPIENT
+            or not account.email_id
             or not account.enable_outgoing
             or not account.default_outgoing
             or account.auth_method != "OAuth"
@@ -220,12 +270,12 @@ def send_fleet_health_email(
             or frappe.are_emails_muted()
             or frappe.get_hooks("override_email_send")
         ):
-            _reject("Approved LAB default outgoing Microsoft OAuth account required.")
+            _reject("Approved default outgoing Microsoft OAuth account required.")
         queue = None
         delivery_started = False
         try:
             queue = frappe.sendmail(
-                recipients=[RECIPIENT],
+                recipients=recipients,
                 subject=subject,
                 message=html,
                 attachments=files,
@@ -238,8 +288,8 @@ def send_fleet_health_email(
             if (
                 not queue
                 or queue.email_account != account.name
-                or parseaddr(queue.sender)[1] != RECIPIENT
-                or [row.recipient for row in queue.recipients] != [RECIPIENT]
+                or parseaddr(queue.sender)[1].lower() != account.email_id.lower()
+                or [row.recipient for row in queue.recipients] != recipients
             ):
                 _reject()
             delivery_started = True

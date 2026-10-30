@@ -27,6 +27,23 @@ class TestFleetHealthEmail(unittest.TestCase):
             ValidationError=ValueError, throw=lambda message, exc=ValueError: self.fail_with(message, exc),
             sendmail=Mock(return_value=self.queue), are_emails_muted=lambda: False,
             get_hooks=Mock(return_value=[]))
+        self.users = {
+            "erp.intelligence@isambane.co.za": {"enabled": 1, "email": "erp.intelligence@isambane.co.za"},
+            "juan@isambane.co.za": {"enabled": 1, "email": "juan@isambane.co.za"},
+        }
+        self.recipient_rows = [
+            SimpleNamespace(user="juan@isambane.co.za", location="")
+        ]
+        self.frappe.db = SimpleNamespace(
+            get_value=self.user_value
+        )
+        self.frappe.get_meta = lambda doctype: SimpleNamespace(
+            has_field=lambda field: field == "fleet_health_recipients"
+        )
+        self.frappe.get_single = lambda doctype: {
+            "fleet_health_recipients": self.recipient_rows
+        }
+        self.frappe.has_role = lambda role: role == "System Manager"
         self.fp = patch.object(self.controller, "frappe", self.frappe)
         self.api_fp = patch.object(self.api, "frappe", self.frappe)
         self.ap = patch.object(self.controller.EmailAccount, "find_default_outgoing", return_value=self.account)
@@ -37,6 +54,15 @@ class TestFleetHealthEmail(unittest.TestCase):
             "text": "24 machines checked", "html": "<h2>Daily Fleet Health — Koppie</h2>", "attachments": [
                 self.attachment("daily-fleet-health-koppie-2026-07-01.pdf", "application/pdf", b"%PDF-1.7\nfixture\n%%EOF\n"),
                 self.attachment("daily-fleet-health-koppie-2026-07-01.html", "text/html", b"<!doctype html><html><head><title>Daily Fleet Health</title></head><body>Report</body></html>")]}
+
+    def user_value(self, doctype, name, fields, as_dict=False):
+        assert doctype == "User"
+        record = self.users.get(name)
+        if not record:
+            return None
+        if isinstance(fields, list):
+            return SimpleNamespace(**record) if as_dict else record
+        return record.get(fields)
 
     @staticmethod
     def fail_with(message, exc):
@@ -66,17 +92,54 @@ class TestFleetHealthEmail(unittest.TestCase):
         self.assertEqual(len(kwargs["attachments"]), 2)
         self.assertTrue(kwargs["attachments"][0]["fcontent"].startswith(b"%PDF-"))
 
-    def test_rejects_every_other_site_even_for_administrator(self):
-        self.frappe.local.site = "production.invalid"
-        self.frappe.session.user = "Administrator"
-        self.rejected()
-
-    def test_only_service_user_and_administrator_allowed(self):
-        for user in ["Guest", "juan@isambane.co.za", "other@example.test", "", None]:
-            self.frappe.session.user = user
-            self.rejected()
+    def test_site_is_not_hardcoded(self):
+        self.frappe.local.site = "another-site.test"
         self.frappe.session.user = "Administrator"
         self.assertEqual(self.send()["status"], "sent")
+
+    def test_only_authorized_enabled_callers(self):
+        for user in ["Guest", "other@example.test", "", None]:
+            self.frappe.session.user = user
+            self.rejected()
+
+        self.frappe.session.user = "erp.intelligence@isambane.co.za"
+        self.assertEqual(self.send()["status"], "sent")
+        self.frappe.sendmail.reset_mock()
+
+        self.users["erp.intelligence@isambane.co.za"]["enabled"] = 0
+        self.rejected()
+
+    def test_disabled_recipients_are_excluded(self):
+        self.users["juan@isambane.co.za"]["enabled"] = 0
+        self.rejected()
+
+    def test_no_configured_recipients_means_no_delivery(self):
+        self.recipient_rows.clear()
+        self.rejected()
+
+    def test_other_location_cannot_receive_koppie_report(self):
+        self.recipient_rows[:] = [
+            SimpleNamespace(user="juan@isambane.co.za", location="Gwab")
+        ]
+        self.rejected()
+
+    def test_company_wide_recipient_is_allowed(self):
+        self.recipient_rows[0].location = ""
+        self.assertEqual(self.send()["status"], "sent")
+
+    def test_invalid_recipient_email_is_rejected(self):
+        self.users["juan@isambane.co.za"]["email"] = "invalid-email"
+        self.rejected()
+
+    def test_recipient_deduplication(self):
+        self.recipient_rows.append(
+            SimpleNamespace(user="juan@isambane.co.za", location="")
+        )
+        self.assertEqual(self.send()["status"], "sent")
+        self.assertEqual(
+            self.frappe.sendmail.call_args.kwargs["recipients"],
+            ["juan@isambane.co.za"],
+        )
 
     def test_post_only(self):
         self.frappe.request.method = "GET"
@@ -134,7 +197,7 @@ class TestFleetHealthEmail(unittest.TestCase):
             self.rejected(); self.payload[key] = old
 
     def test_requires_approved_default_microsoft_oauth_without_bcc(self):
-        for key, value in [("email_id", "other@example.test"), ("auth_method", "Basic"), ("smtp_server", "smtp.example.test"), ("always_bcc", "juan@isambane.co.za"), ("enable_outgoing", 0), ("default_outgoing", 0), ("connected_app", "")]:
+        for key, value in [("auth_method", "Basic"), ("smtp_server", "smtp.example.test"), ("always_bcc", "juan@isambane.co.za"), ("enable_outgoing", 0), ("default_outgoing", 0), ("connected_app", "")]:
             old = getattr(self.account, key); setattr(self.account, key, value)
             self.rejected(); setattr(self.account, key, old)
 
