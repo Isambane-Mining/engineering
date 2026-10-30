@@ -22,9 +22,8 @@ from engineering.engineering.page.daily_availability_and_utilization_dashboard.s
     fetch_short_haul_hours,
     short_haul_percentage,
 )
-from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import (
-    fetch_tyre_damage_records, damage_counts, au_kpi_row,
-)
+from engineering.controllers.tyre_damage import fetch_tyre_damage_records, damage_counts
+from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import au_kpi_row
 
 
 _ = frappe._
@@ -6861,3 +6860,132 @@ def get_daily_dashboard_pdf_override_css():
     /* END PDF_COMPACT_LABEL_ROW_V15 */
 
 """
+
+
+@frappe.whitelist()
+def get_tyre_breakdown_details(
+    category=None,
+    location=None,
+    start_date=None,
+    end_date=None,
+    machine_scope=None,
+    asset_ownership=None,
+    au_target_filter=None,
+    hours_asset=None,
+):
+    """Drill down into exactly the records counted by the dashboard KPI."""
+    from frappe.utils import get_datetime, getdate
+
+    from engineering.controllers.tyre_damage import (
+        CATEGORIES,
+        fetch_tyre_damage_records,
+    )
+
+    if category not in CATEGORIES:
+        frappe.throw("Invalid machine category.")
+
+    if not location or not start_date or not end_date:
+        frappe.throw("Site and date range are required.")
+
+    if getdate(start_date) > getdate(end_date):
+        frappe.throw("Start Date must not be after End Date.")
+
+    if not frappe.has_permission("Plant Breakdown or Maintenance", "read"):
+        frappe.throw(
+            "You do not have permission to view breakdown records.",
+            frappe.PermissionError,
+        )
+
+    source_rows = fetch_grouped_data(
+        location,
+        start_date,
+        end_date,
+        machine_scope or "Production + Swing/Spare Machines",
+        au_target_filter or "85% A & U",
+        asset_ownership or "Isambane & Excavo Assets",
+    )
+
+    matching = fetch_tyre_damage_records(
+        source_rows,
+        location,
+        start_date,
+        end_date,
+        hours_asset or None,
+    )
+
+    if matching is None:
+        frappe.throw("Breakdown read permission is required.")
+
+    # The KPI counts distinct names; use the same set.
+    selected = {
+        row["name"]: row
+        for row in matching
+        if row.get("category") == category
+    }
+
+    if not selected:
+        return {
+            "rows": [],
+            "total_records": 0,
+            "total_standing_hours": 0,
+            "average_standing_hours": None,
+            "duration_record_count": 0,
+        }
+
+    details = frappe.get_list(
+        "Plant Breakdown or Maintenance",
+        filters={"name": ["in", sorted(selected)]},
+        fields=[
+            "name",
+            "asset_name",
+            "breakdown_reason",
+            "breakdown_start_datetime",
+            "resolved_datetime",
+        ],
+        limit_page_length=len(selected),
+    )
+
+    rows = []
+    total_hours = 0.0
+    valid_durations = 0
+
+    for record in details:
+        start = record.breakdown_start_datetime
+        resolved = record.resolved_datetime
+        duration = None
+
+        if start and resolved:
+            hours = (
+                get_datetime(resolved) - get_datetime(start)
+            ).total_seconds() / 3600.0
+
+            if hours >= 0:
+                duration = round(hours, 4)
+                total_hours += hours
+                valid_durations += 1
+
+        rows.append({
+            "name": record.name,
+            "fleet": selected[record.name]["machine"],
+            "reason": record.breakdown_reason or "",
+            "start": str(start) if start else None,
+            "resolved": str(resolved) if resolved else None,
+            "standing_hours": duration,
+            "status": "Closed" if resolved else "Open",
+        })
+
+    rows.sort(
+        key=lambda row: (row["start"] or "", row["name"]),
+        reverse=True,
+    )
+
+    return {
+        "rows": rows,
+        "total_records": len(rows),
+        "total_standing_hours": round(total_hours, 4),
+        "average_standing_hours": (
+            round(total_hours / valid_durations, 4)
+            if valid_durations else None
+        ),
+        "duration_record_count": valid_durations,
+    }

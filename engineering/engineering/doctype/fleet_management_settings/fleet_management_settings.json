@@ -28,7 +28,9 @@
   "terminated_driver_alert_recipients_section",
   "terminated_driver_alert_recipients",
   "temporary_loan_digest_recipients_section",
-  "temporary_loan_digest_recipients"
+  "temporary_loan_digest_recipients",
+  "fleet_health_recipients_section",
+  "fleet_health_recipients"
  ],
  "fields": [
   {
@@ -37,7 +39,7 @@
    "label": "Public Road Asset Categories"
   },
   {
-   "description": "Assets whose Asset Category is listed here are treated as \"drives on public roads\" \u2014 they are the ones offered for selection on Vehicle Allocation, and the ones the Fleet Compliance Overview report enumerates.",
+   "description": "Assets whose Asset Category is listed here are treated as \"drives on public roads\" — they are the ones offered for selection on Vehicle Allocation, and the ones the Fleet Compliance Overview report enumerates.",
    "fieldname": "public_road_asset_categories",
    "fieldtype": "Table",
    "label": "Public Road Asset Categories",
@@ -176,6 +178,18 @@
    "fieldtype": "Table",
    "label": "Temporary Loan Digest Recipients",
    "options": "Fleet Notification Recipient"
+  },
+  {
+   "fieldname": "fleet_health_recipients_section",
+   "fieldtype": "Section Break",
+   "label": "Fleet Health Recipients"
+  },
+  {
+   "fieldname": "fleet_health_recipients",
+   "fieldtype": "Table",
+   "label": "Fleet Health Recipients",
+   "options": "Fleet Notification Recipient",
+   "description": "Only enabled ERP Users receive Fleet Health emails."
   }
  ],
  "grid_page_length": 50,
