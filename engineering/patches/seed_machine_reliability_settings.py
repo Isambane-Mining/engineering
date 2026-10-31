@@ -5,6 +5,7 @@ from engineering.engineering.doctype.machine_reliability_settings.machine_reliab
 def execute():
     settings = frappe.get_doc('Machine Reliability Settings')
     if not settings.categories:
+        _seed_missing_engineering_legals_sections()
         for category, keywords, test_sections in DEFAULT_CATEGORIES:
             settings.append('categories', dict(category=category, keywords=keywords, test_sections=test_sections))
         settings.save(ignore_permissions=True)
@@ -12,6 +13,29 @@ def execute():
     # Bound historical-source queries efficiently without altering ERP records.
     frappe.db.add_index('Plant Breakdown or Maintenance', ['breakdown_start_datetime', 'location'], 'machine_reliability_date_site')
     frappe.db.add_index('Engineering Legals', ['start_date', 'site'], 'machine_reliability_date_site')
+
+
+def _seed_missing_engineering_legals_sections():
+    """Ensure every Engineering Legals Sections name DEFAULT_CATEGORIES's
+    test_sections depend on actually exists, creating only the ones missing.
+
+    MachineReliabilitySettings.validate() rejects any test_sections entry
+    that isn't an existing Engineering Legals Sections record. On a site
+    with no prior Engineering Legals history (no earlier Desk entry or
+    import ever created these names), this patch's own settings.save()
+    below would otherwise fail validation before it even runs once.
+    """
+    required_sections = {
+        section.strip()
+        for _category, _keywords, test_sections in DEFAULT_CATEGORIES
+        for section in (test_sections or '').splitlines()
+        if section.strip()
+    }
+    for section in sorted(required_sections):
+        if not frappe.db.exists('Engineering Legals Sections', section):
+            frappe.get_doc({'doctype': 'Engineering Legals Sections', 'section': section}).insert(
+                ignore_permissions=True
+            )
 
 
 def ensure_navigation():
