@@ -17,7 +17,7 @@ describe('Machine Reliability on LAB', () => {
         cy.viewport(1440, 1000);
         cy.visit('/app/reliability-engineering');
         cy.get('.mr-cards .mr-card').should('have.length', 6);
-        filters({from_date: '2026-07-01', to_date: '2026-08-31', category: 'Brakes'});
+        filters({from_date: '2026-07-01', to_date: '2026-08-31', category: 'Braking System'});
         cy.get('.mr-marker.failure').should('have.length.greaterThan', 0);
     });
 
@@ -84,7 +84,7 @@ describe('Machine Reliability on LAB', () => {
     });
     it('keeps IS545 calculations, reading checks and shared filter results unchanged', () => {
         cy.get('.mr-page [role="tablist"],.mr-page [role="tab"],.mr-tabs,#mr-details,#mr-frequency').should('not.exist');
-        filters({from_date: '2025-10-01', to_date: '2026-08-31', fleet: 'IS545', category: 'Brakes'});
+        filters({from_date: '2025-10-01', to_date: '2026-08-31', fleet: 'IS545', category: 'Braking System'});
         page(instance => {
             expect(instance.data.summary.direct_failures).eq(7);
             expect(instance.data.summary.average_failure_gap).eq(32.25);
@@ -106,7 +106,7 @@ describe('Machine Reliability on LAB', () => {
         }));
         cy.get('#re-combined-machine-tab').should('have.attr', 'aria-selected', 'true');
         cy.get('.re-combined-tabs [role="tab"]').then(tabs => expect([...tabs].map(x => x.textContent)).deep.eq(['Machine Reliability', 'Breakdown Analysis', 'Problem Machines']));
-        filters({from_date: '2026-05-30', to_date: '2026-09-12', fleet: 'IS545', category: 'Brakes', additional_keywords: 'retarder'});
+        filters({from_date: '2026-05-30', to_date: '2026-09-12', fleet: 'IS545', category: 'Braking System', additional_keywords: 'retarder'});
         cy.get('[data-mode="hours"]').click();
         cy.get('#re-combined-analysis-tab').click();
         cy.get('.re-analysis-tab').should('be.visible');

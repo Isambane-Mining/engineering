@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import frappe
 from frappe.utils import cint, getdate, nowdate
+from engineering.controllers.failure_classification import terms, MASTER_DOCTYPE
 from engineering.engineering.page.downtime_correction_dashboard.downtime_correction_dashboard import get_allowed_sites
 
 
@@ -35,15 +36,24 @@ def date_range(from_date=None, to_date=None):
 
 
 def categories():
-    return [dict(category=x.category, keywords=terms(x.keywords),
-                 test_sections=[s.strip() for s in (x.test_sections or '').splitlines() if s.strip()])
-            for x in frappe.get_cached_doc('Machine Reliability Settings').categories]
+    settings = frappe.get_cached_doc('Machine Reliability Settings')
+    configured = {x.category: x for x in settings.categories if x.category}
+    # The master, not a hardcoded category list, defines the available filters.
+    names = frappe.get_all(MASTER_DOCTYPE, pluck='name', order_by='name', limit_page_length=0)
+    return [dict(category=name, keywords=terms(configured[name].keywords) if name in configured else [],
+                 test_sections=[s.strip() for s in (configured[name].test_sections or '').splitlines() if s.strip()] if name in configured else [])
+            for name in names]
+
+
+def configuration_warnings():
+    return [f"Review legacy classification settings: {x.legacy_category or 'Unmapped row'}."
+            for x in frappe.get_cached_doc('Machine Reliability Settings').categories if not x.category]
 
 
 @frappe.whitelist()
 def get_options():
     check_access()
-    return dict(categories=categories(), chart_limit=CHART_LIMIT)
+    return dict(categories=categories(), chart_limit=CHART_LIMIT, warnings=configuration_warnings())
 
 
 def source_filters(start, end, site, allowed_sites, legal=False):
@@ -74,7 +84,7 @@ def load_sources(start, end, site, asset_category, fleet, allowed_sites, lookup=
         legal_filters.append(['fleet_number', '=', fleet])
     breakdowns = limited_list(PBM, breakdown_filters, ['name', 'asset_name'] if lookup else [
         'name', 'asset_name', 'location', 'downtime_type', 'breakdown_start_datetime',
-        'resolved_datetime', 'hours_breakdown_starts', 'breakdown_reason', 'problem_category', 'resolution_summary', 'exclude_from_au'],
+        'resolved_datetime', 'hours_breakdown_starts', 'breakdown_reason', 'failure_classification', 'resolution_summary', 'exclude_from_au'],
         order_by='breakdown_start_datetime asc, name asc')
     legals = limited_list(LEGALS, legal_filters, ['name', 'fleet_number'] if lookup else [
         'name', 'fleet_number', 'site', 'sections', 'start_date'], order_by='start_date asc, name asc')
@@ -125,7 +135,7 @@ def get_dashboard(from_date=None, to_date=None, site=None, asset_category=None, 
     configured = categories()
     chosen = next((x for x in configured if x['category'] == category), None)
     if category and not chosen:
-        frappe.throw('Choose a configured Problem Category.')
+        frappe.throw('Choose a configured Failure Classification.')
     extra = additional_keywords or ''
     if len(extra) > 1000:
         frappe.throw('Additional Keywords must be 1,000 characters or fewer.')
@@ -159,6 +169,7 @@ def get_dashboard(from_date=None, to_date=None, site=None, asset_category=None, 
         report['limits'][key] = dict(total=len(rows), shown=min(CHART_LIMIT, len(rows)))
         report[key] = rows[:CHART_LIMIT]
     report['keywords'] = keywords
+    report['configuration_warnings'] = configuration_warnings()
     report['scope'] = dict(from_date=str(start), to_date=str(end), category=category or 'All Problems', site=site,
                            asset_category=asset_category, fleet=fleet)
     return report
@@ -184,10 +195,6 @@ from datetime import datetime, timedelta
 from math import isfinite
 
 
-def terms(value):
-    return list(dict.fromkeys(x.strip().casefold() for x in re.split(r'[,\n]+', value or '') if x.strip()))
-
-
 def classify(reason, resolution, keywords):
     def matches(text):
         text = str(text or '').casefold()
@@ -201,21 +208,21 @@ def classify(reason, resolution, keywords):
 
 
 def classify_record(record, keywords, category=None, additional_keywords=None):
-    """Manual complaint categories take precedence; extra terms extend the search.
+    """Explicit failure classifications take precedence over complaint keywords.
 
-    A different manual category suppresses category-keyword complaints, but not
-    repair work in the resolution. Blank categories retain historical matching.
+    A different explicit classification suppresses complaint keywords, but not
+    repair work in the resolution. Blank classifications retain historical matching.
     """
     reason, resolution = record.get('breakdown_reason'), record.get('resolution_summary')
-    manual = (record.get('problem_category') or '').strip()
+    manual = (record.get('failure_classification') or '').strip()
     if category and manual:
         if manual == category:
-            return 'direct', [], 'Manual category'
-        if additional_keywords:
-            match, matched = classify(reason, '', additional_keywords)
-            if match == 'direct':
-                return match, matched, 'Additional keywords in reason'
-        match, matched = classify('', resolution, keywords)
+            return 'direct', [], 'Failure classification'
+        # A classified complaint cannot be reassigned by free-text keywords.
+        # Resolution-only matches remain additional repair work.
+        match, matched = classify('', resolution, keywords) if keywords else (None, [])
+    elif category and not keywords:
+        return None, [], None
     else:
         match, matched = classify(reason, resolution, keywords)
     source = 'Resolution keywords' if match == 'additional' else 'Reason keywords' if keywords else 'All records'
@@ -264,7 +271,7 @@ def build_report(records, legals, keywords, from_date, to_date, category=None, a
                     resolution=source.get('resolution_summary') or '', machine_hours=meter(source.get('hours_breakdown_starts')),
                     standing_hours=round(duration, 2) if duration is not None else None,
                     downtime_type=source.get('downtime_type'), match=match, matched_terms=matched,
-                    problem_category=source.get('problem_category') or '', match_source=match_source,
+                    failure_classification=source.get('failure_classification') or '', match_source=match_source,
                     flags=flags, exclude_from_au=bool(source.get('exclude_from_au')))
         item['is_failure'] = match == 'direct' and item['downtime_type'] == 'Breakdown'
         item['event_type'] = 'failure' if item['is_failure'] else 'additional'

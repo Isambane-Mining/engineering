@@ -1,22 +1,17 @@
-"""Read-only tyre damage occurrences, scoped by the dashboard's Engine roster."""
+"""Read-only classified tyre / wheel breakdowns, scoped by the dashboard's Engine roster."""
 
 from datetime import timedelta
 
-from engineering.engineering.doctype.machine_reliability_settings.machine_reliability_settings import (
-    TYRE_DAMAGE_SUBCATEGORY,
-    TYRES_WHEELS_CATEGORY,
-)
+from engineering.controllers.failure_classification import TYRES_WHEELS_CLASSIFICATION
 
 CATEGORIES = ("ADT", "Dozer")
+TYRE_CARD_CATEGORIES = ("ADT",)
 MAX_RECORDS = 20000
 
 
 def is_classified_tyre_damage(record):
     """An explicit classification; complaint and resolution text are not estimates."""
-    return (
-        record.get("problem_category") == TYRES_WHEELS_CATEGORY
-        and record.get("problem_subcategory") == TYRE_DAMAGE_SUBCATEGORY
-    )
+    return record.get("failure_classification") == TYRES_WHEELS_CLASSIFICATION
 
 
 def damage_counts(records, machine=None):
@@ -70,8 +65,7 @@ def fetch_tyre_damage_records(
     rows = frappe.get_list(
         "Plant Breakdown or Maintenance",
         filters=[
-            ["problem_category", "=", TYRES_WHEELS_CATEGORY],
-            ["problem_subcategory", "=", TYRE_DAMAGE_SUBCATEGORY],
+            ["failure_classification", "=", TYRES_WHEELS_CLASSIFICATION],
             ["docstatus", "<", 2],
             ["downtime_type", "=", "Breakdown"],
             ["location", "=", location],
@@ -86,14 +80,14 @@ def fetch_tyre_damage_records(
             "location",
             "downtime_type",
             "breakdown_start_datetime",
-            "problem_category",
-            "problem_subcategory",
+            "failure_classification",
+            "docstatus",
         ],
         limit_page_length=MAX_RECORDS + 1,
     )
     if len(rows) > MAX_RECORDS:
         frappe.throw(
-            "Too many breakdown records to count tyre damage. Narrow the dates or select an asset."
+            "Too many tyre / wheel breakdown records. Narrow the dates or select an asset."
         )
     result = []
     for row in rows:
@@ -103,6 +97,7 @@ def fetch_tyre_damage_records(
             (machine, day) not in scope
             or row.location != location
             or row.downtime_type != "Breakdown"
+            or row.get("docstatus", 0) == 2
         ):
             continue
         category = row.asset_category or scope[(machine, day)]

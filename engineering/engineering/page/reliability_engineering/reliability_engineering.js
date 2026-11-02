@@ -27,7 +27,7 @@ engineering.MachineReliabilityDashboard = class MachineReliabilityDashboard {
             const today = frappe.datetime.get_today();
             await this.fields.from_date.set_value(frappe.datetime.add_days(today, -30));
             await this.fields.to_date.set_value(today);
-            await this.fields.category.set_value(options.categories.some(x => x.category === 'Brakes') ? 'Brakes' : 'All Problems');
+            await this.fields.category.set_value(options.categories.some(x => x.category === 'Braking System') ? 'Braking System' : 'All Problems');
             this.initializing = false;
             await this.load();
         } catch (error) {
@@ -48,13 +48,13 @@ engineering.MachineReliabilityDashboard = class MachineReliabilityDashboard {
                 <div class="mr-legend"><span class="failure">${__('Direct failure')}</span><span class="additional">${__('Additional / planned work')}</span><span class="test">${__('Inspection / test')}</span><span class="service">${__('Service')}</span></div>
                 <div class="mr-timeline-note"></div><div class="mr-timeline"></div><div class="mr-unpositioned"></div></div>
                 <div class="mr-quality mr-panel"></div></section>
-            <footer class="mr-footnote">${__('Selected categories identify reported complaints. Blank categories use keyword matches. Resolution-only matches show additional repair work. They do not confirm a diagnosis or accident root cause. Dates use the historical record site; asset categories use the current Asset master. Records without a date cannot appear in this dated report.')}</footer>
+            <footer class="mr-footnote">${__('Explicit failure classifications identify reported complaints. Blank classifications use keyword matches. Resolution-only matches show additional repair work. They do not confirm a diagnosis or accident root cause. Dates use the historical record site; asset categories use the current Asset master. Records without a date cannot appear in this dated report.')}</footer>
             </div>`);
         this.fields = {};
         const definitions = [
             ['from_date', 'From Date', 'Date'], ['to_date', 'To Date', 'Date'], ['site', 'Site', 'Link', 'Location'],
             ['asset_category', 'Asset Category', 'Link', 'Asset Category'], ['fleet', 'Fleet Number', 'Link', 'Asset'],
-            ['category', 'Problem Category', 'Select', ['All Problems']], ['additional_keywords', 'Additional Keywords', 'Data']
+            ['category', 'Failure Classification', 'Select', ['All Problems']], ['additional_keywords', 'Additional Keywords', 'Data']
         ];
         definitions.forEach(([name, label, type, options]) => {
             const parent = $('<div>').appendTo(this.root.find('.mr-filters'));
@@ -144,8 +144,9 @@ engineering.MachineReliabilityDashboard = class MachineReliabilityDashboard {
         ];
         this.root.find('.mr-cards').html(cards.map(([label, value, unit, help]) => `<div class="mr-card"><span>${__(label)}</span><strong>${value == null ? '—' : this.n(value, unit)}</strong><small>${this.e(__(help))}</small></div>`).join(''));
         const q = d.quality;
-        this.root.find('.mr-quality').html(`<h2>${__('Data checks')}</h2><div class="mr-checks"><span>${this.n(q.overlapping_records)} ${__('overlapping records')}</span><span>${this.n(q.reversed_intervals)} ${__('reversed intervals')}</span><span>${this.n(q.incomplete_intervals)} ${__('incomplete intervals')}</span><span>${this.n(q.missing_readings)} ${__('direct failures without valid readings')}</span><span>${this.n(q.invalid_gaps)} ${__('excluded hour gaps')}</span></div>
-            <details class="mr-calculation-help"><summary>${__('How the figures are calculated')}</summary><p>${__('Data checks cover all faults in the selected scope. Average standing time uses completed breakdown durations, including overlaps. Reversed and incomplete durations are excluded. Standing time without overlaps counts each completed period once per machine, within these dates. Averages show — when no eligible records exist.')}</p><p>${__('Active search terms:')} ${this.e(d.keywords.join(', ') || __('All problems'))}</p></details>`);
+        const warnings = (d.configuration_warnings || []).map(x => `<p class="text-warning">${this.e(x)}</p>`).join('');
+        this.root.find('.mr-quality').html(`${warnings}<h2>${__('Data checks')}</h2><div class="mr-checks"><span>${this.n(q.overlapping_records)} ${__('overlapping records')}</span><span>${this.n(q.reversed_intervals)} ${__('reversed intervals')}</span><span>${this.n(q.incomplete_intervals)} ${__('incomplete intervals')}</span><span>${this.n(q.missing_readings)} ${__('direct failures without valid readings')}</span><span>${this.n(q.invalid_gaps)} ${__('excluded hour gaps')}</span></div>
+            <details class="mr-calculation-help"><summary>${__('How the figures are calculated')}</summary><p>${__('Data checks cover all faults in the selected scope. Average standing time uses completed breakdown durations, including overlaps. Reversed and incomplete durations are excluded. Standing time without overlaps counts each completed period once per machine, within these dates. Averages show — when no eligible records exist.')}</p><p>${__('Active search terms:')} ${this.e(d.keywords.join(', ') || __(d.scope.category === 'All Problems' ? 'All problems' : 'No keyword terms; explicit classification only'))}</p></details>`);
         this.renderTimeline();
     }
 
@@ -192,7 +193,7 @@ engineering.MachineReliabilityDashboard = class MachineReliabilityDashboard {
 
     showRecord(row) {
         const dialog = new frappe.ui.Dialog({title: row.event_type === 'failure' ? __('Direct failure') : row.downtime_type === 'Planned Maintenance' ? __('Planned work') : row.event_type === 'additional' ? __('Additional repair work') : __(row.sections || 'Record'), size: 'large'});
-        const fields = [['Date', row.date], ['Fleet Number', row.fleet], ['Site', row.site], ['Problem Category', row.problem_category || __('Not selected')], ['Matched by', row.match_source || '—'], ['Breakdown reason / record', row.reason], ['Repair description', row.resolution || __('Not recorded')], ['Machine hours', this.n(row.machine_hours)], ['Standing hours', this.n(row.standing_hours)], ['Matched terms', (row.matched_terms || []).join(', ') || '—'], ['Interval checks', (row.flags || []).join('; ') || '—']];
+        const fields = [['Date', row.date], ['Fleet Number', row.fleet], ['Site', row.site], ['Failure Classification', row.failure_classification || __('Not selected')], ['Matched by', row.match_source || '—'], ['Breakdown reason / record', row.reason], ['Repair description', row.resolution || __('Not recorded')], ['Machine hours', this.n(row.machine_hours)], ['Standing hours', this.n(row.standing_hours)], ['Matched terms', (row.matched_terms || []).join(', ') || '—'], ['Interval checks', (row.flags || []).join('; ') || '—']];
         if (row.gap_status) fields.push(['Hour-gap check', row.gap_status]);
         if (row.exclude_from_au) fields.push(['A&U', __('Source record is excluded from A&U downtime')]);
         dialog.$body.html(`<dl class="mr-record-detail">${fields.map(([label, value]) => `<dt>${__(label)}</dt><dd>${this.e(value)}</dd>`).join('')}</dl><a class="btn btn-primary btn-sm" href="${frappe.utils.get_form_link(row.doctype, row.name)}">${__('Open source record')}</a>`);
@@ -458,6 +459,9 @@ class ReliabilityEngineeringPage {
     }
 
     renderTrend(key) {
+        // Release the old chart's resize listeners before replacing its SVG.
+        if (this.trendChart) this.trendChart.destroy();
+        this.trendChart = null;
         const rows = this.data.trend;
         const target = this.page.main.find(".re-chart").empty();
         this.page.main.find(".re-trend-label").text(this.metricLabel(key));
@@ -485,7 +489,7 @@ class ReliabilityEngineeringPage {
             target.html(`<div class="re-empty">${__("No trend data for this measurement and period.")}</div>`);
             return;
         }
-        new frappe.Chart(target[0], {type: "line", height: 260,
+        this.trendChart = new frappe.Chart(target[0], {type: "line", height: 260,
             data: {labels: series.map(point => point.label), datasets: [{name: this.metricLabel(key), values: series.map(point => Number(point.value.toFixed(2)))}]},
             colors: ["#087f83"], lineOptions: {regionFill: 1, hideDots: series.length > 45},
             tooltipOptions: {formatTooltipY: value => this.number(value, key === "repeat_rate" ? "%" : key === "bdfr" ? " / 1,000 h" : " h")}});

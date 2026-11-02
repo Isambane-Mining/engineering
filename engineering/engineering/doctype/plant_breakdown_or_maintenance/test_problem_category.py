@@ -1,109 +1,94 @@
-"""Real document saves, isolated by transaction savepoints on LAB."""
+"""Transaction-only saves after the failure-classification migration is activated."""
 import unittest
 import frappe
-from engineering.engineering.doctype.machine_reliability_settings.machine_reliability_settings import PROBLEM_CATEGORIES
+from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS, MASTER_DOCTYPE
 from engineering.engineering.page.machine_reliability.machine_reliability import get_dashboard
 
 PBM = 'Plant Breakdown or Maintenance'
 
 
-class TestOptionalProblemCategory(unittest.TestCase):
+class TestFailureClassificationSave(unittest.TestCase):
     def setUp(self):
-        frappe.db.savepoint('optional_problem_category')
-        self.original_user = frappe.session.user
+        # Live activation can intentionally be deferred while worktree changes are reviewed.
+        from pathlib import Path
+        import json
+        schema=json.loads(Path(__file__).with_name('plant_breakdown_or_maintenance.json').read_text())
+        expected={f['fieldname'] for f in schema['fields']}
+        actual={f.fieldname for f in frappe.get_meta(PBM).fields}
+        if not expected.issubset(actual) or actual.intersection({'problem_category', 'problem_subcategory'}):
+            self.skipTest('LAB schema has not activated this worktree; do not migrate a different running checkout.')
+        frappe.db.savepoint('failure_classification_saves')
+        self.original_user=frappe.session.user
         frappe.set_user('Administrator')
-        self.old_flags = {key: frappe.flags.get(key) for key in ('in_test', 'in_import', 'mute_emails')}
-        frappe.flags.update(in_test=True, in_import=True, mute_emails=True)
-        self.asset = frappe.db.sql('''select a.name, a.location from `tabAsset` a
-            where a.docstatus = 1 and a.asset_category = 'ADT' and ifnull(a.location, '') != '' and not exists
-            (select 1 from `tabPlant Breakdown or Maintenance` b
-             where b.asset_name = a.name and b.open_closed = 'Open')
-            order by a.name limit 1''', as_dict=True)[0]
+        self.old_flags={key:frappe.flags.get(key) for key in ('in_test','in_import','mute_emails')}
+        frappe.flags.update(in_test=True,in_import=True,mute_emails=True)
+        for label in INITIAL_CLASSIFICATIONS:
+            if not frappe.db.exists(MASTER_DOCTYPE,label):
+                frappe.get_doc(dict(doctype=MASTER_DOCTYPE,classification_name=label)).insert(ignore_permissions=True)
+        self.asset=frappe.db.sql('''select a.name,a.location from `tabAsset` a
+            where a.docstatus=1 and a.asset_category='ADT' and ifnull(a.location,'')!=''
+            and not exists (select 1 from `tabPlant Breakdown or Maintenance` b
+              where b.asset_name=a.name and b.open_closed='Open') order by a.name limit 1''',as_dict=True)[0]
 
     def tearDown(self):
-        frappe.db.rollback(save_point='optional_problem_category')
+        frappe.db.rollback(save_point='failure_classification_saves')
         frappe.flags.update(self.old_flags)
         frappe.set_user(self.original_user)
 
-    def make_breakdown(self, **values):
-        return frappe.get_doc(dict(doctype=PBM, asset_name=self.asset.name, location=self.asset.location,
-            shift='Day Shift', downtime_type='Breakdown', hours_breakdown_starts=100,
-            breakdown_start_datetime='2020-01-02 08:00:00', resolved_datetime='2020-01-02 09:00:00',
-            breakdown_reason='Operator reported an unspecified fault', **values))
+    def make_breakdown(self,**values):
+        return frappe.get_doc(dict(doctype=PBM,asset_name=self.asset.name,location=self.asset.location,
+            shift='Day Shift',downtime_type='Breakdown',hours_breakdown_starts=100,
+            breakdown_start_datetime='2020-01-02 08:00:00',resolved_datetime='2020-01-02 09:00:00',
+            breakdown_reason='Operator reported a fault',**values))
 
-    def test_field_is_optional_blank_and_beside_reason(self):
-        meta = frappe.get_meta(PBM)
-        field = meta.get_field('problem_category')
-        self.assertIsNotNone(field)
-        self.assertEqual(field.fieldtype, 'Select')
-        self.assertFalse(field.reqd)
-        self.assertFalse(field.mandatory_depends_on)
-        self.assertFalse(field.default)
-        self.assertEqual(field.options.splitlines()[1:], list(PROBLEM_CATEGORIES))
-        order = [x.fieldname for x in meta.fields]
-        self.assertEqual(order.index('problem_category'), order.index('breakdown_reason') + 1)
+    def test_blank_classification_saves_and_can_be_cleared(self):
+        doc=self.make_breakdown().insert(ignore_permissions=True)
+        self.assertFalse(doc.reload().failure_classification)
+        doc.failure_classification='Steering System'
+        doc.save(ignore_permissions=True)
+        doc.failure_classification=''
+        doc.save(ignore_permissions=True)
+        self.assertFalse(doc.reload().failure_classification)
 
-    def test_new_breakdown_saves_when_category_is_omitted_and_cleared(self):
-        doc = self.make_breakdown().insert(ignore_permissions=True)
-        doc.reload()
-        self.assertFalse(doc.problem_category)
-        doc.problem_category = 'Steering'
-        doc.save(ignore_permissions=True)
-        doc.problem_category = ''
-        doc.save(ignore_permissions=True)
-        doc.reload()
-        self.assertFalse(doc.problem_category)
+    def test_all_twenty_classifications_save_and_filter_without_keywords(self):
+        for label in INITIAL_CLASSIFICATIONS:
+            with self.subTest(classification=label):
+                doc=self.make_breakdown(failure_classification=label).insert(ignore_permissions=True)
+                self.assertEqual(doc.reload().failure_classification,label)
+                report=get_dashboard('2020-01-01','2020-01-31',fleet=self.asset.name,category=label)
+                self.assertEqual(report['summary']['direct_failures'],1)
+                self.assertEqual(report['timeline'][0]['name'],doc.name)
+                self.assertEqual(report['timeline'][0]['match_source'],'Failure classification')
 
-    def test_saves_every_category_and_reads_it_in_live_report(self):
-        for category in PROBLEM_CATEGORIES:
-            with self.subTest(category=category):
-                doc = self.make_breakdown(problem_category=category).insert(ignore_permissions=True)
-                doc.reload()
-                self.assertEqual(doc.problem_category, category)
-                report = get_dashboard('2020-01-01', '2020-01-31', fleet=self.asset.name, category=category)
-                self.assertEqual(report['summary']['direct_failures'], 1)
-                self.assertEqual(report['timeline'][0]['name'], doc.name)
-                self.assertEqual(report['timeline'][0]['match_source'], 'Manual category')
+    def test_existing_record_still_opens_and_saves(self):
+        name=frappe.db.get_value(PBM,{'docstatus':0,'open_closed':'Closed'},'name')
+        doc=frappe.get_doc(PBM,name)
+        before=(doc.breakdown_reason,doc.failure_classification)
+        doc.save(ignore_permissions=True)
+        self.assertEqual((doc.reload().breakdown_reason,doc.failure_classification),before)
 
-    def test_existing_historical_record_opens_and_saves_blank(self):
-        name = frappe.db.get_value(PBM, {'docstatus': 0, 'open_closed': 'Closed'}, 'name')
-        doc = frappe.get_doc(PBM, name)
-        self.assertFalse(doc.problem_category)
-        original_reason = doc.breakdown_reason
-        doc.save(ignore_permissions=True)
-        doc.reload()
-        self.assertFalse(doc.problem_category)
-        self.assertEqual(doc.breakdown_reason, original_reason)
-
-    def test_optional_subcategory_saves_and_classified_query_ignores_text(self):
-        from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import fetch_tyre_damage_records, damage_counts
-        field = frappe.get_meta(PBM).get_field('problem_subcategory')
-        self.assertIsNotNone(field)
-        self.assertFalse(field.reqd)
-        self.assertFalse(field.mandatory_depends_on)
-        self.assertFalse(field.default)
-        self.assertEqual(field.options, '\nTyre Damage')
-        doc = self.make_breakdown().insert(ignore_permissions=True)
-        self.assertFalse(doc.reload().problem_subcategory)
-        doc.problem_category = 'Tyres / Wheels'
-        doc.problem_subcategory = 'Tyre Damage'
-        doc.save(ignore_permissions=True)
-        self.assertEqual(doc.reload().problem_subcategory, 'Tyre Damage')
-        fleet = frappe.db.get_value('Asset', self.asset.name, 'asset_name')
-        source = [dict(indent=3, asset_name=fleet or self.asset.name, shift_date='2020-01-02', asset_category='ADT')]
-        def records():
-            return fetch_tyre_damage_records(source, self.asset.location, '2020-01-01', '2020-01-31', self.asset.name)
-        self.assertEqual(damage_counts(records()), {'ADT': 1, 'Dozer': 0})
-        doc.downtime_type = 'Planned Maintenance'
-        doc.save(ignore_permissions=True)
-        self.assertEqual(records(), [])
-        doc.downtime_type = 'Breakdown'
-        doc.problem_category = 'Other'
-        doc.save(ignore_permissions=True)
-        self.assertEqual(records(), [])
-        doc.problem_category = ''
-        doc.problem_subcategory = ''
-        doc.breakdown_reason = 'Flat tyre, tyre burst and sidewall damage'
-        doc.save(ignore_permissions=True)
-        self.assertFalse(doc.reload().problem_subcategory)
-        self.assertEqual(records(), [])
+    def test_whatsapp_optional_capture_and_positive_tyre_drilldown_use_real_records(self):
+        from unittest.mock import MagicMock, patch
+        from engineering.engineering.doctype.whatsapp_breakdown_message_log import whatsapp_breakdown_message_log as capture
+        from engineering.controllers.tyre_damage import fetch_tyre_damage_records, damage_counts
+        from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as daily
+        log=frappe._dict(target_site=self.asset.location,target_shift='Day Shift',detected_plant_no=self.asset.name,
+            detected_reason='Wheel studs and rim damaged',raw_message='',detected_hours=100,
+            message_datetime='2020-01-02 08:00:00',detected_start_time='08:00:00')
+        log.save=MagicMock()
+        with patch.object(frappe.db,'commit'):
+            for classification in (None,'Tyres / Wheels'):
+                created=capture.create_breakdown_from_log(log,failure_classification=classification)
+                doc=frappe.get_doc(PBM,created['breakdown'])
+                self.assertEqual(doc.failure_classification or '',classification or '')
+                doc.resolved_datetime='2020-01-02 10:00:00'
+                doc.open_closed='Closed'
+                doc.save(ignore_permissions=True)
+        fleet=frappe.db.get_value('Asset',self.asset.name,'asset_name') or self.asset.name
+        source=[dict(indent=3,asset_name=fleet,shift_date='2020-01-02',asset_category='ADT')]
+        counted=damage_counts(fetch_tyre_damage_records(source,self.asset.location,'2020-01-01','2020-01-31'))
+        self.assertEqual(counted['ADT'],1)
+        with patch.object(daily,'fetch_grouped_data',return_value=source):
+            details=daily.get_tyre_breakdown_details(category='ADT',location=self.asset.location,start_date='2020-01-01',end_date='2020-01-31')
+        self.assertEqual(details['total_records'],1)
+        self.assertEqual(details['rows'][0]['name'],doc.name)

@@ -1717,7 +1717,7 @@ def build_hours_based_performance_html(
 
         from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import tyre_damage_card
         tyre_card = tyre_damage_card(category, tyre_damage_counts.get(category)) if tyre_damage_counts is not None else ''
-        kpi_class = 'daily-damage-kpi-row' if tyre_card else ''
+        kpi_class = 'daily-damage-kpi-row' if tyre_card else ('daily-damage-kpi-row daily-average-only-row' if tyre_damage_counts is not None else '')
         kpi_html = f'''
     <div class="{kpi_class}" style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
         <div class="frappe-card" style="padding:14px;border-left:5px solid #2563eb;">

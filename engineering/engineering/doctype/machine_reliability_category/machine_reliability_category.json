@@ -6,22 +6,24 @@
  "field_order": [
   "category",
   "keywords",
-  "test_sections"
+  "test_sections",
+  "legacy_category",
+  "mapping_warning"
  ],
  "fields": [
   {
    "fieldname": "category",
-   "label": "Problem Category",
-   "fieldtype": "Data",
-   "reqd": 1,
+   "label": "Failure Classification",
+   "fieldtype": "Link",
+   "reqd": 0,
    "in_list_view": 1,
-   "read_only": 1
+   "options": "Breakdown Failure Classification"
   },
   {
    "fieldname": "keywords",
    "label": "Keywords",
    "fieldtype": "Small Text",
-   "reqd": 1,
+   "reqd": 0,
    "in_list_view": 1,
    "description": "Comma-separated words or phrases. Whole words; case-insensitive."
   },
@@ -30,6 +32,18 @@
    "label": "Relevant Test / Inspection Sections",
    "fieldtype": "Small Text",
    "description": "Exact Engineering Legals section names, one per line. Do not include services, schedules or staff authorisations."
+  },
+  {
+   "fieldname": "legacy_category",
+   "label": "Legacy settings label",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mapping_warning",
+   "label": "Mapping review needed",
+   "fieldtype": "Small Text",
+   "read_only": 1
   }
  ],
  "permissions": [],

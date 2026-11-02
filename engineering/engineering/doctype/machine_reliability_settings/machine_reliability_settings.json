@@ -12,11 +12,11 @@
    "fieldname": "help",
    "label": "About this report",
    "fieldtype": "HTML",
-   "options": "<p>Use the ten standard categories. Edit their keywords and test sections here. The report uses a selected category first and searches keywords for records with a blank category. Extra keywords extend the search. Keywords do not confirm a diagnosis or accident cause. Services come from Machine Service Records.</p>"
+   "options": "<p>Configure Breakdown Failure Classification master records, keywords and inspection sections. Explicit classification takes precedence; unclassified history uses keywords. Resolution-only matches are additional repair work. New classifications may have blank keywords. Unmapped legacy settings are retained below for review and excluded from matching. No classification PDF was supplied for keyword seeding. Keywords do not confirm a diagnosis or accident cause.</p>"
   },
   {
    "fieldname": "categories",
-   "label": "Problem Categories",
+   "label": "Failure Classifications",
    "fieldtype": "Table",
    "options": "Machine Reliability Category"
   }

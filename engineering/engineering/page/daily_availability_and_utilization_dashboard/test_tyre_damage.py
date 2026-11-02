@@ -7,11 +7,9 @@ from engineering.engineering.page.daily_availability_and_utilization_dashboard i
 
 
 class TestTyreDamageMatching(unittest.TestCase):
-    def test_only_explicit_category_and_subcategory_count(self):
-        self.assertTrue(tyre.is_classified_tyre_damage(dict(problem_category='Tyres / Wheels', problem_subcategory='Tyre Damage')))
-        for values in [{}, {'problem_category': 'Tyres / Wheels'},
-                       {'problem_subcategory': 'Tyre Damage'},
-                       {'problem_category': 'Other', 'problem_subcategory': 'Tyre Damage'},
+    def test_only_explicit_classification_counts(self):
+        self.assertTrue(tyre.is_classified_tyre_damage(dict(failure_classification='Tyres / Wheels')))
+        for values in [{}, {'failure_classification': 'Mechanical'},
                        {'breakdown_reason': 'flat tyre', 'resolution_summary': 'tyre burst repaired'}]:
             with self.subTest(values=values):
                 self.assertFalse(tyre.is_classified_tyre_damage(values))
@@ -35,8 +33,7 @@ class TestTyreDamageSources(unittest.TestCase):
                 frappe._dict(name='out',asset_name='ASSET1',location='Old Site',asset_category='ADT',downtime_type='Breakdown',breakdown_start_datetime='2026-07-03 12:00:00',breakdown_reason='flat tyre'),
                 frappe._dict(name='dozer',asset_name='DOZER1',location='Old Site',asset_category='Dozer',downtime_type='Breakdown',breakdown_start_datetime='2026-07-01 12:00:00',breakdown_reason='tire burst')]
         for row in rows:
-            row.problem_category = 'Tyres / Wheels'
-            row.problem_subcategory = 'Tyre Damage' if row.name in ('yes', 'out', 'dozer') else ''
+            row.failure_classification = 'Tyres / Wheels' if row.name in ('yes', 'out', 'dozer') else ''
         identities=[frappe._dict(name='ASSET1',asset_name='IS1'),frappe._dict(name='DOZER1',asset_name='DZ1')]
         with patch.object(frappe,'has_permission',return_value=True),patch.object(frappe,'get_all',return_value=identities),patch.object(frappe,'get_list',return_value=rows) as read:
             result=tyre.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-02')
@@ -50,8 +47,8 @@ class TestTyreDamageSources(unittest.TestCase):
         self.assertIn(['downtime_type','=','Breakdown'],args['filters'])
         self.assertNotIn('resolution_summary',args['fields'])
         self.assertNotIn('breakdown_reason',args['fields'])
-        self.assertIn(['problem_category', '=', 'Tyres / Wheels'], args['filters'])
-        self.assertIn(['problem_subcategory', '=', 'Tyre Damage'], args['filters'])
+        self.assertIn(['failure_classification', '=', 'Tyres / Wheels'], args['filters'])
+        self.assertIn(['docstatus', '<', 2], args['filters'])
         self.assertLessEqual(args['limit_page_length'],20001)
 
     def test_empty_roster_and_missing_permission_do_not_query_records(self):
@@ -76,7 +73,7 @@ class DashboardFixtures(unittest.TestCase):
             return [frappe._dict(name=name, asset_name=asset, asset_category=category,
                                  breakdown_start_datetime='2026-07-01 12:00:00',
                                  location=location, downtime_type='Breakdown',
-                                 problem_category='Tyres / Wheels', problem_subcategory='Tyre Damage')
+                                 failure_classification='Tyres / Wheels')
                     for name, asset, category in [('damage-1', 'A1', 'ADT'), ('damage-2', 'A2', 'Dozer')]]
         patches = [
             patch.object(dashboard.au_engine, 'get_data', side_effect=lambda filters: deepcopy(self.source)),
@@ -117,8 +114,8 @@ class TestTyreDamageLiveDashboard(DashboardFixtures):
         soup=BeautifulSoup(html,'html.parser')
         for panel in soup.select('.daily-dashboard-tab-panel'):
             cards=panel.select('.daily-tyre-kpi')
-            self.assertEqual(len(cards),2)
-            self.assertEqual({c['data-category']:c['data-count'] for c in cards},{'ADT':'1','Dozer':'1'})
+            self.assertEqual(len(cards),1)
+            self.assertEqual({c['data-category']:c['data-count'] for c in cards},{'ADT':'1'})
 
     def test_live_counts_match_both_tabs(self):
         from bs4 import BeautifulSoup
@@ -127,7 +124,7 @@ class TestTyreDamageLiveDashboard(DashboardFixtures):
         after=dashboard.execute(filters)[2]
         after_soup=BeautifulSoup(after,'html.parser')
         counts={panel['data-panel']:{x['data-category']:x['data-count'] for x in panel.select('.daily-tyre-kpi')} for panel in after_soup.select('.daily-dashboard-tab-panel')}
-        self.assertEqual(counts,{'hours':{'ADT':'1','Dozer':'1'},'au':{'ADT':'1','Dozer':'1'}})
+        self.assertEqual(counts,{'hours':{'ADT':'1'},'au':{'ADT':'1'}})
         for panel in after_soup.select('.daily-dashboard-tab-panel'):
             for card in panel.select('.daily-tyre-kpi'):
                 self.assertEqual(len(card.parent.select(':scope > .frappe-card')),3)
@@ -160,4 +157,63 @@ class TestTyreDamageRendering(DashboardFixtures):
         panels=BeautifulSoup(html,'html.parser').select('.daily-dashboard-tab-panel')
         self.assertEqual(len(panels), 2)
         for panel in panels:
-            self.assertEqual({c['data-category']:c['data-count'] for c in panel.select('.daily-tyre-kpi')}, {'ADT':'1', 'Dozer':'1'})
+            self.assertEqual({c['data-category']:c['data-count'] for c in panel.select('.daily-tyre-kpi')}, {'ADT':'1'})
+
+
+class TestTyreDrilldown(DashboardFixtures):
+    def test_card_and_drilldown_use_the_same_unique_adt_records(self):
+        from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
+        from engineering.controllers import tyre_damage as controller
+        source=dashboard.fetch_grouped_data('Old Site','2026-07-01','2026-07-01')
+        counted=controller.damage_counts(controller.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-01'))
+        original_read=frappe.get_list
+        def read(doctype,**kwargs):
+            if isinstance(kwargs.get('filters'),dict):
+                return [frappe._dict(name='damage-1',asset_name='A1',breakdown_reason='wheel studs broken',
+                    breakdown_start_datetime='2026-07-01 12:00:00',resolved_datetime='2026-07-01 14:00:00')]
+            rows=original_read(doctype,**kwargs)
+            return rows+rows  # Both KPI and drill-down must deduplicate identities.
+        with patch.object(frappe,'get_list',side_effect=read):
+            details=dashboard.get_tyre_breakdown_details(category='ADT',location='Old Site',start_date='2026-07-01',end_date='2026-07-01')
+        self.assertEqual(details['total_records'],counted['ADT'])
+        self.assertEqual([x['name'] for x in details['rows']],['damage-1'])
+        self.assertEqual(details['total_standing_hours'],2)
+
+    def test_planned_cancelled_wrong_class_and_wrong_roster_are_excluded(self):
+        from engineering.controllers import tyre_damage as controller
+        source=self.source
+        common=dict(asset_name='A1',asset_category='ADT',location='Old Site',downtime_type='Breakdown',
+                    breakdown_start_datetime='2026-07-01 12:00:00',failure_classification='Tyres / Wheels')
+        rows=[frappe._dict(common,name='valid')]
+        for name,values in [('planned',dict(downtime_type='Planned Maintenance')),
+                            ('cancelled',dict(docstatus=2)),('wrong-class',dict(failure_classification='Engine')),
+                            ('wrong-site',dict(location='Other Site')),('wrong-machine',dict(asset_name='not-in-roster'))]:
+            rows.append(frappe._dict(dict(common,**values),name=name))
+        with patch.object(frappe,'get_list',return_value=rows):
+            result=controller.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-01')
+        self.assertEqual([x['name'] for x in result],['valid'])
+
+    def test_drilldown_permission_and_dozer_category_are_rejected(self):
+        from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
+        def throw(message,exc=frappe.ValidationError):raise exc(message)
+        with patch.object(frappe,'throw',side_effect=throw):
+            with self.assertRaises(frappe.ValidationError):
+                dashboard.get_tyre_breakdown_details(category='Dozer',location='Old Site',start_date='2026-07-01',end_date='2026-07-01')
+            with patch.object(frappe,'has_permission',return_value=False):
+                with self.assertRaises(frappe.PermissionError):
+                    dashboard.get_tyre_breakdown_details(category='ADT',location='Old Site',start_date='2026-07-01',end_date='2026-07-01')
+
+    def test_dozer_graphs_rows_and_two_average_cards_survive_in_all_display_modes(self):
+        from bs4 import BeautifulSoup
+        from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
+        for display in ['Hours Average per Category','Hours per Asset']:
+            html=dashboard.execute(frappe._dict(location='Koppie',start_date='2026-07-01',end_date='2026-07-01',hours_display=display))[2]
+            soup=BeautifulSoup(html,'html.parser')
+            self.assertFalse(soup.select('.daily-tyre-kpi[data-category="Dozer"]'))
+            self.assertIn('DOZER',html)
+            self.assertIn('Average Working Hours',html)
+            row=soup.select_one('[data-kpi-category="Dozer"]')
+            self.assertIsNotNone(row)
+            self.assertEqual(len(row.select('.frappe-card')),2)
+            self.assertIn('Dozer Average Availability',row.get_text())
+            self.assertIn('Dozer Average Utilisation',row.get_text())
