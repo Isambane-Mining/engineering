@@ -118,12 +118,13 @@ scheduler_events = {
         # to sync to SharePoint.
         "engineering.engineering.doctype.engineering_legals.engineering_legals.queue_unsynced_engineering_legals",
     ],
-    # Long queue (1500s timeout instead of 300s): the on-the-hour run that
-    # coincides with the 6-hourly bench backup was being killed at 300s.
-    "hourly_long": [
-        "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_all_hourly_downtime_summaries",
-    ],
     "cron": {
+        # Quarter past, so the last hour's breakdowns have time to be captured
+        # and the run doesn't start with the on-the-hour bench backups. Runs in
+        # a few seconds now that (site, report_date, hour_slot) is indexed.
+        "15 * * * *": [
+            "engineering.engineering.doctype.hourly_downtime_summary.hourly_downtime_summary.create_all_hourly_downtime_summaries",
+        ],
         "0 6 * * *": [
             "engineering.api.deviation_email.send_open_deviation_emails",
             "engineering.engineering.report.down_time.down_time.send_daily_downtime_night_shift",

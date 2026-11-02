@@ -83,55 +83,17 @@ def get_category_group(asset_category):
     return ""
 
 
-def get_data(filters):
-    site = filters.get("site")
+def get_data(filters, assets=None):
+    """`assets` may be passed in (from get_report_assets) so callers that
+    run many hours for the same site only query the fleet once."""
     hour_end = get_hour_end(filters)
     hour_start = hour_end - timedelta(hours=1)
 
-    conditions = [
-        "a.docstatus = 1",
-        "ifnull(a.location, '') != ''",
-    ]
-    values = {}
-
-    if site:
-        conditions.append("a.location = %(site)s")
-        values["site"] = site
-
-    assets = frappe.db.sql(
-        f"""
-        SELECT
-            a.name,
-            a.location,
-            a.asset_category,
-            a.item_name
-        FROM `tabAsset` a
-        WHERE {" AND ".join(conditions)}
-        ORDER BY a.location, a.asset_category, a.name
-        """,
-        values,
-        as_dict=True,
-    )
-
-    filtered_assets = []
-
-    for asset in assets:
-        category_group = get_category_group(
-            asset.asset_category
-        )
-
-        if not category_group:
-            continue
-
-        asset.category_group = category_group
-        asset.category_order = CATEGORY_ORDER.get(
-            category_group,
-            999,
-        )
-        filtered_assets.append(asset)
+    if assets is None:
+        assets = get_report_assets(filters.get("site"))
 
     asset_names = [
-        asset.name for asset in filtered_assets
+        asset.name for asset in assets
     ]
 
     event_map = get_breakdowns_for_hour(
@@ -142,7 +104,7 @@ def get_data(filters):
 
     data = []
 
-    for asset in filtered_assets:
+    for asset in assets:
         breakdown = event_map.get(asset.name)
 
         if breakdown:
@@ -225,6 +187,52 @@ def get_data(filters):
     ))
 
     return data
+
+
+def get_report_assets(site=None):
+    conditions = [
+        "a.docstatus = 1",
+        "ifnull(a.location, '') != ''",
+    ]
+    values = {}
+
+    if site:
+        conditions.append("a.location = %(site)s")
+        values["site"] = site
+
+    assets = frappe.db.sql(
+        f"""
+        SELECT
+            a.name,
+            a.location,
+            a.asset_category,
+            a.item_name
+        FROM `tabAsset` a
+        WHERE {" AND ".join(conditions)}
+        ORDER BY a.location, a.asset_category, a.name
+        """,
+        values,
+        as_dict=True,
+    )
+
+    filtered_assets = []
+
+    for asset in assets:
+        category_group = get_category_group(
+            asset.asset_category
+        )
+
+        if not category_group:
+            continue
+
+        asset.category_group = category_group
+        asset.category_order = CATEGORY_ORDER.get(
+            category_group,
+            999,
+        )
+        filtered_assets.append(asset)
+
+    return filtered_assets
 
 
 def get_breakdowns_for_hour(

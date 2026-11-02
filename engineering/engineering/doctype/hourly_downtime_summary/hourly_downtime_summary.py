@@ -4,7 +4,7 @@
 import frappe
 import json
 from frappe.model.document import Document
-from frappe.utils import now_datetime
+from frappe.utils import getdate, now_datetime
 from datetime import timedelta
 
 
@@ -18,10 +18,24 @@ SITE_CHANNELS = {
 }
 
 
+UNIQUE_KEY_FIELDS = ["site", "report_date", "hour_slot"]
+UNIQUE_KEY_NAME = "unique_site_report_date_hour_slot"
+
+
 class HourlyDowntimeSummary(Document):
     def validate(self):
         if self.summary_message:
             self.summary_message = self.summary_message.strip()
+
+
+def on_doctype_update():
+    # One summary per site/shift date/hour. Also makes the scheduler's
+    # "already exists?" lookups an index hit instead of a full table scan.
+    frappe.db.add_unique(
+        "Hourly Downtime Summary",
+        UNIQUE_KEY_FIELDS,
+        constraint_name=UNIQUE_KEY_NAME,
+    )
 
 
 def get_completed_hour_slot(completed_hour_start=None):
@@ -57,20 +71,41 @@ def create_koppie_hourly_downtime_summary():
 
 
 def create_all_hourly_downtime_summaries(lookback_hours=24):
+    from engineering.engineering.report.hourly_downtime_report.hourly_downtime_report import get_report_assets
+
     created = []
     current_hour_start = now_datetime().replace(
         minute=0, second=0, microsecond=0
     )
+    oldest_report_date, _slot, _period = get_completed_hour_slot(
+        current_hour_start - timedelta(hours=lookback_hours)
+    )
+    existing_keys = get_existing_summary_keys(
+        oldest_report_date,
+        current_hour_start.date(),
+    )
+    # Loaded lazily, once per site, only if that site has a missing hour.
+    site_assets = {}
 
     # Oldest to newest so a scheduler outage is repaired chronologically.
     for hours_ago in range(lookback_hours, 0, -1):
         completed_hour_start = current_hour_start - timedelta(hours=hours_ago)
+        report_date, hour_slot, _period = get_completed_hour_slot(
+            completed_hour_start
+        )
 
         for site in SITE_CHANNELS:
+            if (site, report_date, hour_slot) in existing_keys:
+                continue
+
             try:
+                if site not in site_assets:
+                    site_assets[site] = get_report_assets(site)
+
                 result = create_hourly_downtime_summary(
                     site,
                     completed_hour_start=completed_hour_start,
+                    assets=site_assets[site],
                 )
                 if result:
                     created.append(result)
@@ -83,7 +118,26 @@ def create_all_hourly_downtime_summaries(lookback_hours=24):
     return created
 
 
-def create_hourly_downtime_summary(site, completed_hour_start=None):
+def get_existing_summary_keys(from_report_date, to_report_date):
+    rows = frappe.get_all(
+        "Hourly Downtime Summary",
+        # site first so this is a range scan on the unique key, not a
+        # full scan of the (large) table.
+        filters={
+            "site": ["in", list(SITE_CHANNELS)],
+            "report_date": ["between", [from_report_date, to_report_date]],
+        },
+        fields=["site", "report_date", "hour_slot"],
+        limit_page_length=0,
+    )
+
+    return {
+        (row.site, getdate(row.report_date), row.hour_slot)
+        for row in rows
+    }
+
+
+def create_hourly_downtime_summary(site, completed_hour_start=None, assets=None):
     report_date, hour_slot, period_date = get_completed_hour_slot(
         completed_hour_start
     )
@@ -109,9 +163,9 @@ def create_hourly_downtime_summary(site, completed_hour_start=None):
         "site": site,
     }
 
-    from engineering.engineering.report.hourly_downtime_report.hourly_downtime_report import execute
+    from engineering.engineering.report.hourly_downtime_report.hourly_downtime_report import get_data
 
-    columns, data = execute(filters)
+    data = get_data(filters, assets=assets)
 
     summary_message = build_summary_message(
         site=site,
@@ -131,7 +185,11 @@ def create_hourly_downtime_summary(site, completed_hour_start=None):
         "sent_to_raven": 0,
     })
 
-    doc.insert(ignore_permissions=True)
+    try:
+        doc.insert(ignore_permissions=True)
+    except frappe.UniqueValidationError:
+        # Another run created this hour between our check and insert.
+        return None
     frappe.db.commit()
 
     return doc.name
