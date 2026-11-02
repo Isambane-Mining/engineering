@@ -6877,11 +6877,11 @@ def get_tyre_breakdown_details(
     from frappe.utils import get_datetime, getdate
 
     from engineering.controllers.tyre_damage import (
-        CATEGORIES,
+        TYRE_CARD_CATEGORIES,
         fetch_tyre_damage_records,
     )
 
-    if category not in CATEGORIES:
+    if category not in TYRE_CARD_CATEGORIES:
         frappe.throw("Invalid machine category.")
 
     if not location or not start_date or not end_date:

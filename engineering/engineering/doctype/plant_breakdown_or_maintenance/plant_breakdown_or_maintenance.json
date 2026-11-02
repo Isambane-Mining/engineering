@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "format:{asset_name}-{breakdown_start_key}-.#####-{open_closed}",
- "creation": "2025-11-13 09:32:55.404198",
+ "creation": "2026-10-30 12:31:09.048696",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -21,8 +21,6 @@
   "hours_breakdown_starts",
   "breakdown_start_datetime",
   "breakdown_reason",
-  "problem_category",
-  "problem_subcategory",
   "failure_classification",
   "mechanic_breakdown_maintenance_start_time",
   "location1",
@@ -234,29 +232,12 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval:doc.downtime_type === 'Breakdown'",
-   "description": "Select the main problem reported. If unsure, ask the Plant Manager or Mechanic which category to select. Contact the BI Team if a new category needs to be added.",
-   "fieldname": "problem_category",
-   "fieldtype": "Select",
-   "label": "Problem Category",
-   "mandatory_depends_on": "eval:doc.downtime_type === 'Breakdown' && doc.__islocal",
-   "options": "\nBrakes\nSteering\nEngine / Starting\nHydraulics\nElectrical\nCooling\nTransmission / Drivetrain\nTyres / Wheels\nAir Conditioning\nOther"
-  },
-  {
-   "depends_on": "eval:doc.downtime_type === 'Breakdown' && doc.problem_category === 'Tyres / Wheels'",
-   "fieldname": "problem_subcategory",
-   "fieldtype": "Select",
-   "label": "Problem Subcategory",
-   "options": "\nTyre Damage"
-  },
-  {
    "depends_on": "eval:doc.downtime_type == 'Breakdown'",
    "fieldname": "failure_classification",
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Failure Classification",
-   "options": "Breakdown Failure Classification",
-   "mandatory_depends_on": "eval:doc.downtime_type == \"Breakdown\""
+   "options": "Breakdown Failure Classification"
   },
   {
    "fieldname": "column_break_zygn",
@@ -322,7 +303,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-28 08:45:57.634301",
+ "modified": "2026-11-02 13:21:58.972759",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",

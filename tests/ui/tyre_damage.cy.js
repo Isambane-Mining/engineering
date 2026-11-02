@@ -11,7 +11,7 @@ const setFilters = values => {
 const expectCounts = (adt, selectedAsset = false) => ['hours', 'au'].forEach(panel => {
     cy.get(`[data-panel="${panel}"] .daily-tyre-kpi[data-category="ADT"]`).should('have.attr', 'data-count', String(adt));
     if (selectedAsset && panel === 'hours') cy.get(`[data-panel="${panel}"] .daily-tyre-kpi[data-category="Dozer"]`).should('not.exist');
-    else cy.get(`[data-panel="${panel}"] .daily-tyre-kpi[data-category="Dozer"]`).should('have.attr', 'data-count', '0');
+    else cy.get(`[data-panel="${panel}"] .daily-tyre-kpi[data-category="Dozer"]`).should('not.exist');
 });
 
 describe('Daily Engine tyre damage KPI on LAB', () => {
@@ -28,8 +28,8 @@ describe('Daily Engine tyre damage KPI on LAB', () => {
         cy.viewport(1280, 950);
         ['hours', 'au'].forEach(tab => {
             cy.get(`.daily-dashboard-tab-button[data-tab="${tab}"]`).click();
-            cy.get(`[data-panel="${tab}"] .daily-tyre-kpi`).should('have.length', 2);
-            cy.get(`[data-panel="${tab}"] .daily-tyre-kpi[data-category="ADT"]`).should('be.visible').and('contain', 'Classified tyre damage breakdowns').and('contain', '0');
+            cy.get(`[data-panel="${tab}"] .daily-tyre-kpi`).should('have.length', 1);
+            cy.get(`[data-panel="${tab}"] .daily-tyre-kpi[data-category="ADT"]`).should('be.visible').and('contain', 'Classified tyre / wheel breakdowns').and('contain', '0');
             cy.get(`[data-panel="${tab}"] .daily-tyre-kpi`).first().parent().then(row => {
                 const cards = row.children('.frappe-card');
                 expect(cards.length).eq(3);

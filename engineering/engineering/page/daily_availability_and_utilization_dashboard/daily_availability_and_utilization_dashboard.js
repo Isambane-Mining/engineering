@@ -672,7 +672,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
 
 
     open_tyre_breakdown_popup(category, expected_count) {
-        if (!["ADT", "Dozer"].includes(category)) {
+        if (category !== "ADT") {
             return;
         }
 
@@ -717,7 +717,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
                 }
 
                 const dialog = new frappe.ui.Dialog({
-                    title: __(`${category} Tyre Related Breakdowns`),
+                    title: __(`${category} Tyre / Wheel Breakdowns`),
                     size: "extra-large"
                 });
 
@@ -783,7 +783,7 @@ class DailyAvailabilityAndUtilizationDashboardPage {
                             </table>
                         </div>
                         <p style="margin-top:12px;font-size:11px;color:#64748b;">
-                            Only breakdowns classified as Tyres / Wheels → Tyre Damage.
+                            Non-cancelled Breakdown records classified as Tyres / Wheels, including rims, studs and bearings.
                             Standing hours exclude records without a valid resolved duration.
                             Click a row to open its original breakdown.
                         </p>
