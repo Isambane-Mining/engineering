@@ -68,7 +68,7 @@ class TestHourlyDowntimeSummary(TestCase):
 
 	@patch(
 		"engineering.engineering.report.hourly_downtime_report."
-		"hourly_downtime_report.execute"
+		"hourly_downtime_report.get_data"
 	)
 	@patch.object(hourly_summary, "get_completed_hour_slot")
 	def test_saved_shift_date_does_not_change_actual_query_date(
@@ -81,7 +81,7 @@ class TestHourlyDowntimeSummary(TestCase):
 			"00:00-01:00",
 			date(2026, 9, 2),
 		)
-		mock_execute.return_value = ([], [])
+		mock_execute.return_value = []
 		inserted = _InsertedSummary()
 		captured_doc = {}
 
@@ -114,11 +114,17 @@ class TestHourlyDowntimeSummary(TestCase):
 
 
 class TestHourlyDowntimeRecovery(TestCase):
+        @patch(
+                "engineering.engineering.report.hourly_downtime_report."
+                "hourly_downtime_report.get_report_assets"
+        )
+        @patch.object(hourly_summary, "get_existing_summary_keys")
         @patch.object(hourly_summary, "now_datetime")
         @patch.object(hourly_summary, "create_hourly_downtime_summary")
         def test_scheduler_checks_missing_hours_oldest_to_newest(
-                self, mock_create, mock_now
+                self, mock_create, mock_now, mock_existing, mock_assets
         ):
+                mock_existing.return_value = set()
                 mock_now.return_value = datetime(2026, 10, 2, 11, 17)
                 mock_create.return_value = None
 
@@ -143,7 +149,7 @@ class TestHourlyDowntimeRecovery(TestCase):
 
         @patch(
                 "engineering.engineering.report.hourly_downtime_report."
-                "hourly_downtime_report.execute"
+                "hourly_downtime_report.get_data"
         )
         def test_existing_summary_is_skipped(self, mock_execute):
                 fake_frappe = SimpleNamespace(
@@ -165,10 +171,10 @@ class TestHourlyDowntimeRecovery(TestCase):
 
         @patch(
                 "engineering.engineering.report.hourly_downtime_report."
-                "hourly_downtime_report.execute"
+                "hourly_downtime_report.get_data"
         )
         def test_missing_historical_hour_is_created(self, mock_execute):
-                mock_execute.return_value = ([], [])
+                mock_execute.return_value = []
                 inserted = _InsertedSummary()
                 captured_doc = {}
 
@@ -215,14 +221,20 @@ class TestHourlyDowntimeRecovery(TestCase):
                 self.assertEqual(period_date, date(2026, 10, 2))
                 self.assertEqual(hour_slot, "02:00-03:00")
 
+        @patch(
+                "engineering.engineering.report.hourly_downtime_report."
+                "hourly_downtime_report.get_report_assets"
+        )
+        @patch.object(hourly_summary, "get_existing_summary_keys")
         @patch.object(hourly_summary, "now_datetime")
         @patch.object(hourly_summary, "create_hourly_downtime_summary")
         def test_one_site_failure_does_not_stop_recovery(
-                self, mock_create, mock_now
+                self, mock_create, mock_now, mock_existing, mock_assets
         ):
                 mock_now.return_value = datetime(2026, 10, 2, 11, 17)
+                mock_existing.return_value = set()
 
-                def create(site, completed_hour_start=None):
+                def create(site, completed_hour_start=None, assets=None):
                         if site == "Koppie":
                                 raise RuntimeError("test failure")
                         return f"HDS-{site}"
@@ -244,3 +256,69 @@ class TestHourlyDowntimeRecovery(TestCase):
                 self.assertEqual(len(mock_create.call_args_list), len(hourly_summary.SITE_CHANNELS))
                 self.assertEqual(len(created), len(hourly_summary.SITE_CHANNELS) - 1)
                 fake_frappe.log_error.assert_called_once()
+
+        @patch(
+                "engineering.engineering.report.hourly_downtime_report."
+                "hourly_downtime_report.get_report_assets"
+        )
+        @patch.object(hourly_summary, "get_existing_summary_keys")
+        @patch.object(hourly_summary, "now_datetime")
+        @patch.object(hourly_summary, "create_hourly_downtime_summary")
+        def test_existing_keys_skipped_and_assets_loaded_once_per_site(
+                self, mock_create, mock_now, mock_existing, mock_assets
+        ):
+                mock_now.return_value = datetime(2026, 10, 2, 11, 17)
+                # Every site already has 08:00-09:00; only Koppie has 09:00-10:00.
+                mock_existing.return_value = {
+                        (site, date(2026, 10, 2), "08:00-09:00")
+                        for site in hourly_summary.SITE_CHANNELS
+                } | {("Koppie", date(2026, 10, 2), "09:00-10:00")}
+                mock_assets.side_effect = lambda site: [f"assets-{site}"]
+                mock_create.return_value = None
+
+                hourly_summary.create_all_hourly_downtime_summaries(
+                        lookback_hours=3
+                )
+
+                sites = len(hourly_summary.SITE_CHANNELS)
+                # 08:00 skipped everywhere, 09:00 skipped for Koppie only.
+                self.assertEqual(mock_create.call_count, 2 * sites - 1)
+                self.assertEqual(mock_assets.call_count, sites)
+                for call in mock_create.call_args_list:
+                        self.assertEqual(
+                                call.kwargs["assets"], [f"assets-{call.args[0]}"]
+                        )
+
+        @patch(
+                "engineering.engineering.report.hourly_downtime_report."
+                "hourly_downtime_report.get_data"
+        )
+        def test_concurrent_duplicate_insert_returns_none(self, mock_execute):
+                mock_execute.return_value = []
+
+                class _DuplicateSummary:
+                        def insert(self, ignore_permissions=False):
+                                raise _UniqueError()
+
+                class _UniqueError(Exception):
+                        pass
+
+                fake_frappe = SimpleNamespace(
+                        get_doc=lambda values: _DuplicateSummary(),
+                        UniqueValidationError=_UniqueError,
+                        db=SimpleNamespace(
+                                exists=MagicMock(return_value=None),
+                                commit=MagicMock(),
+                        ),
+                )
+
+                with patch.object(hourly_summary, "frappe", fake_frappe):
+                        result = hourly_summary.create_hourly_downtime_summary(
+                                "Koppie",
+                                completed_hour_start=datetime(
+                                        2026, 10, 2, 9, 0
+                                ),
+                        )
+
+                self.assertIsNone(result)
+                fake_frappe.db.commit.assert_not_called()
