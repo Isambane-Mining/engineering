@@ -145,8 +145,8 @@ class MonthlyTMMAssurance {
 
     records_table(records, add_action=true) {
         if (!records.length) return '<p class="text-muted">No breakdown records in this selection.</p>';
-        return `<table class="tmm-breakdowns"><thead><tr><th>Category</th><th>Machine</th><th>Breakdown Reference</th><th>Reported Date</th><th>Description</th><th>Status (current)</th>${add_action ? '<th></th>' : ''}</tr></thead><tbody>${records.map(r => `<tr>
-            <td>${this.esc(r.problem_category || 'Missing category')}</td><td>${this.esc(r.asset_name)}</td>
+        return `<table class="tmm-breakdowns"><thead><tr><th>Failure Classification</th><th>Machine</th><th>Breakdown Reference</th><th>Reported Date</th><th>Description</th><th>Status (current)</th>${add_action ? '<th></th>' : ''}</tr></thead><tbody>${records.map(r => `<tr>
+            <td>${this.esc(r.failure_classification || 'Missing classification')}</td><td>${this.esc(r.asset_name)}</td>
             <td><a href="/app/plant-breakdown-or-maintenance/${encodeURIComponent(r.name)}" target="_blank" rel="noopener">${this.esc(r.name)}</a></td>
             <td>${this.esc(r.breakdown_start_datetime)}</td><td>${this.esc(r.breakdown_reason)}</td><td>${this.esc(r.status_label)}</td>
             ${add_action && this.group()?.can_write ? `<td><button class="btn btn-default btn-xs tmm-action-for-record" data-reference="${this.esc(r.name)}">Add action</button></td>` : ''}</tr>`).join('')}</tbody></table>`;
@@ -159,7 +159,7 @@ class MonthlyTMMAssurance {
             const records = [...g.counts.categories.flatMap(c => c.records), ...g.counts.unresolved_records];
             const record = records.find(r => r.name === event.currentTarget.dataset.reference);
             if (!record || !g.can_write) return;
-            g.actions.push({cause: this.data.problem_categories.includes(record.problem_category) ? record.problem_category : '',
+            g.actions.push({cause: this.data.failure_classifications.includes(record.failure_classification) ? record.failure_classification : '',
                 action: '', owner_name: '', due_date: '', status: 'Open', breakdown_reference: record.name});
             g.dirty = true; this.mark_dirty(); this.render_actions();
         });
@@ -179,11 +179,11 @@ class MonthlyTMMAssurance {
             <p class="text-muted">${c.categorised_count} categorised + ${c.unresolved_count} unresolved = ${c.total_count} records. Cumulative percentages exclude unresolved categorisation. Status below is current.</p>
             ${c.omitted_categories ? `<p class="text-muted">Top 10: ${c.omitted_categories} omitted categories contain ${c.omitted_count} records, included in the cumulative denominator. ${c.priority_category_count > 10 ? `${c.priority_category_count - 10} additional priority categories are beyond the top 10.` : ''} <button class="btn btn-default btn-xs tmm-toggle-categories">${this.show_all ? 'Show top 10' : 'Show all categories'}</button></p>` : ''}
             <details class="tmm-priority"><summary>Breakdowns contributing to the first 80% (${c.priority_records.length})</summary><div class="table-responsive">${this.records_table(c.priority_records)}</div></details>
-            <details class="tmm-all-categories"><summary>All categories — inspect individual category records</summary><table class="tmm-category-list"><thead><tr><th>Category</th><th>Records</th><th>80% priority</th></tr></thead><tbody>${c.all_categories.map(row => `<tr><td><button class="btn btn-link btn-xs tmm-inspect-category" data-category="${this.esc(row.category)}">${this.esc(row.category)}</button></td><td>${row.count}</td><td>${row.priority ? 'Priority' : ''}</td></tr>`).join('')}</tbody></table><div class="tmm-category-records"></div></details>
+            <details class="tmm-all-categories"><summary>All categories — inspect individual category records</summary><table class="tmm-category-list"><thead><tr><th>Failure Classification</th><th>Records</th><th>80% priority</th></tr></thead><tbody>${c.all_categories.map(row => `<tr><td><button class="btn btn-link btn-xs tmm-inspect-category" data-category="${this.esc(row.category)}">${this.esc(row.category)}</button></td><td>${row.count}</td><td>${row.priority ? 'Priority' : ''}</td></tr>`).join('')}</tbody></table><div class="tmm-category-records"></div></details>
             <details class="tmm-unresolved"><summary>${c.unresolved_count} unresolved categorisation · Review</summary><p class="text-muted">Blank and unsupported legacy categories require review. Open the original breakdown to correct it through the existing authorised workflow.</p><div class="table-responsive">${this.records_table(c.unresolved_records)}</div></details></section>
             <section class="tmm-section"><div class="tmm-actions-heading"><h3>Corrective actions · ${this.esc(g.group)}</h3>
             <button class="btn btn-primary btn-sm tmm-add" ${g.can_write ? '' : 'disabled'}>+ Add Action</button></div>
-            <div class="table-responsive"><table class="tmm-actions-table"><thead><tr><th>Category</th><th>Action</th><th>Owner</th><th>Due Date</th><th>Status</th><th>Breakdown Reference (optional)</th><th></th></tr></thead><tbody></tbody></table></div>
+            <div class="table-responsive"><table class="tmm-actions-table"><thead><tr><th>Failure Classification</th><th>Action</th><th>Owner</th><th>Due Date</th><th>Status</th><th>Breakdown Reference (optional)</th><th></th></tr></thead><tbody></tbody></table></div>
             <div class="tmm-state text-muted">${this.dirty ? 'Unsaved actions' : ''}</div></section>`);
         this.render_actions();
         this.bind_record_actions();
@@ -205,7 +205,7 @@ class MonthlyTMMAssurance {
         const g = this.group();
         const disabled = !g.can_write || this.busy ? 'disabled' : '';
         const input = (key, value, type='text') => `<input class="form-control input-sm" type="${type}" data-field="${key}" aria-label="${this.esc(key.replace('_', ' '))}" value="${this.esc(value)}" ${disabled}>`;
-        const category_select = a => `<select class="form-control input-sm" data-field="cause" aria-label="Category" ${disabled}><option value="">Select category…</option>${a.cause && !this.data.problem_categories.includes(a.cause) ? `<option value="${this.esc(a.cause)}" selected>${this.esc(a.cause)} (legacy — review)</option>` : ''}${this.data.problem_categories.map(c => `<option value="${this.esc(c)}" ${a.cause === c ? 'selected' : ''}>${this.esc(c)}</option>`).join('')}</select>`;
+        const category_select = a => `<select class="form-control input-sm" data-field="cause" aria-label="Category" ${disabled}><option value="">Select category…</option>${a.cause && !this.data.failure_classifications.includes(a.cause) ? `<option value="${this.esc(a.cause)}" selected>${this.esc(a.cause)} (legacy — review)</option>` : ''}${this.data.failure_classifications.map(c => `<option value="${this.esc(c)}" ${a.cause === c ? 'selected' : ''}>${this.esc(c)}</option>`).join('')}</select>`;
         const rows = g.actions.map((a, i) => `<tr data-index="${i}"><td>${category_select(a)}</td>
             <td><textarea class="form-control input-sm" data-field="action" aria-label="Action" ${disabled}>${this.esc(a.action)}</textarea></td>
             <td>${input('owner_name', a.owner_name)}</td><td>${input('due_date', a.due_date, 'date')}</td>
