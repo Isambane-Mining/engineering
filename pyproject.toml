@@ -8,6 +8,7 @@ requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
+    "python-pptx>=1.0,<2",  # Editable Monthly TMM presentation charts.
     # "frappe~=15.0.0" # Installed and managed by bench.
     "pymupdf>=1.24",       # PDF text-layer detection (text PDF vs scanned/image PDF) + page
                            # rasterization for OCR fallback, used by the Fleet Card Transaction

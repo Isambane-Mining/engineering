@@ -5,6 +5,8 @@ Source reports and the Daily A&U Engine Dashboard remain unchanged.
 import base64
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from io import BytesIO
 from html import escape
 import math
 import re
@@ -22,9 +24,7 @@ CATEGORY_GROUPS = {'ADT': 'ADTs', 'Excavator': 'Excavators', 'Drills': 'Drills',
                    'Grader': 'Graders', 'Loader': 'FELs', 'Dozer': 'Dozers',
                    'Service Truck': 'Ancillary', 'TLB': 'Ancillary',
                    'Water Bowser': 'Ancillary', 'Diesel Bowsers': 'Ancillary'}
-BASIS = '85% A & U'
-MACHINE_SCOPE = 'Production + Swing/Spare Machines'
-OWNERSHIP = 'Isambane & Excavo Assets'
+BASIS = '85 × SUM(stored available hours) / SUM(stored required hours)'
 ACTIONS = 'Monthly TMM Assurance Actions'
 PBM = 'Plant Breakdown or Maintenance'
 
@@ -36,6 +36,7 @@ def month_offset(value, offset):
 
 
 def reporting_period(value=None, today=None):
+    """Reporting labels/due date only; source boundaries must come from MPP."""
     today = today or date.today()
     if not value:
         month = month_offset(today, -1)
@@ -49,17 +50,15 @@ def reporting_period(value=None, today=None):
     months = []
     for offset in (-2, -1, 0):
         start = month_offset(month, offset)
-        months.append(dict(key=start.isoformat(), label=start.strftime('%b %Y'),
-                           end=(month_offset(start, 1)-timedelta(days=1)).isoformat()))
+        months.append(dict(key=start.isoformat(), label=start.strftime('%b %Y'), start=None, end=None))
     return dict(reporting_month=month.isoformat(), month_label=month.strftime('%B %Y'),
                 months=months, due_date=month_offset(month, 1).replace(day=3).isoformat(),
                 period_label=f"{months[0]['label']} – {months[-1]['label']}")
 
 
 def equipment_group(category):
-    # Import the dashboard's aliases rather than creating a competing alias list.
-    from engineering.engineering.page.daily_availability_and_utilization_dashboard.daily_availability_and_utilization_dashboard import CATEGORY_MAP
-    return CATEGORY_GROUPS.get(CATEGORY_MAP.get(category, category))
+    # Deliberately explicit: unsupported categories are reported, not inferred.
+    return CATEGORY_GROUPS.get(category)
 
 
 def operational_window(month):
@@ -151,14 +150,14 @@ def category_counts(records, classifications=None):
                 omitted_count=sum(row['count'] for row in categories[10:]))
 
 
-def monthly_population(records, month):
-    """One event per record whose recorded interval touches the calendar month.
+def monthly_population(records, month, period_end):
+    """One event per record whose recorded interval touches the inclusive MPP period.
 
-    Starts within the month count even for instantaneous events. Earlier events
-    require positive overlap (open or resolved strictly after month start).
+    Starts within the period count even for instantaneous events. Earlier events
+    require positive overlap (open or resolved strictly after period start).
     """
     start = datetime.combine(date.fromisoformat(month), time.min)
-    end = datetime.combine(month_offset(start.date(), 1), time.min)
+    end = datetime.combine(date.fromisoformat(str(period_end)) + timedelta(days=1), time.min)
     selected = {}
     for row in records:
         if row.get('docstatus') == 2 or str(row.get('downtime_type') or '').strip() not in ('', 'Breakdown'):
@@ -179,7 +178,7 @@ def monthly_population(records, month):
 
 
 def percent(value):
-    return 'N/A' if value is None else f'{value:.1f}%'
+    return 'N/A' if value is None else f'{value:.2f}%'
 
 
 def availability_svg(data):
@@ -337,7 +336,7 @@ def report_html(data):
     <p><b>Reporting month:</b> {esc(data['month_label'])} · <b>Period:</b> {esc(data['period_label'])} · <b>Submission due:</b> {esc(data['due_date'])}</p>
     <p>{esc(data['population'])}. Counting unit: {esc(data['counting_unit'])}. {esc(data['status_basis'])}.</p>
     <h2>Availability by equipment group</h2>{availability_image(data)}
-    <p class="text-muted">Daily A&amp;U Engine Dashboard basis: 85% A &amp; U; Production + Swing/Spare Machines; Isambane &amp; Excavo Assets. N/A means no valid required-hour data.</p>
+    <p class="text-muted">Stored A&amp;U hours: 85 × SUM(available hours) / SUM(required hours), once only. No dashboard fleet or ownership filters. N/A means no valid required-hour data.</p>
     {''.join(sections)}</body></html>'''
 
 
@@ -362,77 +361,112 @@ def _scope(site, month, group=GROUPS[0], permission='read'):
 
 def _authorize_sources(site, month):
     _scope(site, month)
-    for doctype in (PBM, 'Availability and Utilisation', 'Asset', 'Monthly Production Planning', 'Pre-Use Hours'):
+    for doctype in (PBM, 'Availability and Utilisation', 'Asset', 'Monthly Production Planning'):
         if not frappe.has_permission(doctype, 'read'):
             frappe.throw(f'No read access to {doctype}.', frappe.PermissionError)
 
 
-def _assert_complete_source_access(site, period):
-    """The Engine synthesizes rows from SQL, not permission-filtered documents.
-
-    Do not silently substitute partial source data for a site-wide measurement.
-    Comparing only identities reveals no denied data and preserves Engine maths
-    for users with access to the complete requested scope.
-    """
-    first, last = period['months'][0]['key'], period['months'][-1]['end']
-    start, _ = operational_window(first)
-    _, end = operational_window(period['reporting_month'])
-    sources = [
-        ('Availability and Utilisation', {'location': site, 'shift_date': ['between', [first, last]]}, None),
-        ('Pre-Use Hours', {'location': site, 'shift_date': ['between', [first, last]], 'docstatus': ['<', 2]}, None),
-        ('Monthly Production Planning', {'location': site, 'docstatus': ['<', 2], 'site_status': 'Producing',
-          'prod_month_start_date': ['<=', last], 'prod_month_end_date': ['>=', first]}, None),
-        (PBM, {'location': site, 'exclude_from_au': 0, 'breakdown_start_datetime': ['<', end]},
-         [['resolved_datetime', '>=', start], ['resolved_datetime', 'is', 'not set']]),
-    ]
-    for doctype, filters, or_filters in sources:
-        query = dict(filters=filters, or_filters=or_filters, pluck='name', limit=0)
-        visible = set(frappe.get_list(doctype, **query))
-        complete = set(frappe.get_all(doctype, **query))
-        if visible != complete:
-            frappe.throw(f'Your read access does not cover all {doctype} records needed for this site report.',
-                         frappe.PermissionError)
-
-
-    # Match the Engine's submitted, in-house, supported-category Asset scope.
-    # A permission-limited machine list must never become an unlabelled fleet KPI.
-    from engineering.engineering.report.availability_and_utilisation_engine import availability_and_utilisation_engine as engine
-    asset_filters = {'location': site, 'docstatus': 1, 'asset_category': ['in', list(engine.ALLOWED_ASSET_CATEGORIES)]}
-    complete_assets = frappe.get_all('Asset', filters=asset_filters,
-                                    fields=['name', 'asset_name', 'asset_owner'], limit=0)
-    participating = {a.name for a in complete_assets if a.asset_name and (a.asset_owner == 'Company' or not str(a.asset_owner or '').strip())}
-    visible_assets = set(frappe.get_list('Asset', filters=asset_filters, pluck='name', limit=0))
-    if not participating.issubset(visible_assets):
-        frappe.throw('Your Asset read access does not cover the complete participating fleet for this site report.',
+def _complete_records(doctype, **query):
+    """Permission-filtered rows; fail closed instead of showing partial totals."""
+    rows = frappe.get_list(doctype, **query, limit=0)
+    ids = set(frappe.get_all(doctype, filters=query.get('filters'),
+                            or_filters=query.get('or_filters'), pluck='name', limit=0))
+    if {r['name'] for r in rows} != ids:
+        frappe.throw(f'Your read access does not cover all {doctype} records needed for this site report.',
                      frappe.PermissionError)
+    return rows
+
+
+def resolve_mpp_periods(plans, months):
+    """End-date month labels; identical plans are flagged and never multiply rows.
+
+    Distinct intervals with the same label, inverted dates, and overlaps with any
+    another supplied interval for this site are conflicts. Missing plans stay missing.
+    """
+    buckets = defaultdict(list)
+    intervals = set()
+    for plan in plans:
+        if plan.get('docstatus') == 2:
+            continue
+        end = plan.get('prod_month_end_date')
+        if not end:
+            continue
+        end = getdate(end)
+        start = getdate(plan['prod_month_start_date']) if plan.get('prod_month_start_date') else None
+        buckets[end.strftime('%Y-%m')].append((start, end, plan.get('name')))
+        if start and start <= end:
+            intervals.add((start, end))
+    result = []
+    for month in months:
+        item = dict(month, start=None, end=None, status='missing', plan_names=[], warnings=[])
+        candidates = buckets[month['key'][:7]]
+        if candidates:
+            unique = {(a,b) for a,b,_ in candidates}
+            item['plan_names'] = sorted(str(n) for _,_,n in candidates)
+            if len(unique) != 1 or any(not a or a > b for a,b,_ in candidates):
+                item['status'] = 'conflict'
+            else:
+                start,end = next(iter(unique))
+                if any((a,b) != (start,end) and a <= end and b >= start for a,b in intervals):
+                    item['status'] = 'conflict'
+                else:
+                    item.update(start=start.isoformat(), end=end.isoformat(), status='ok')
+                    if len(candidates)>1:
+                        item['warnings'].append(f"{month['label']}: {len(candidates)} duplicate MPP plans share one period; shifts counted once.")
+        item['dates_label'] = (f"{getdate(item['start']).strftime('%d %b %Y')} – {getdate(item['end']).strftime('%d %b %Y')}"
+                               if item['status']=='ok' else f"MPP planning {item['status']}")
+        result.append(item)
+    return result
+
+
+def _mpp_periods(site, period):
+    plans = _complete_records('Monthly Production Planning',
+        filters={'location':site,'docstatus':['<',2]},
+        fields=['name','prod_month_start_date','prod_month_end_date','docstatus'])
+    return resolve_mpp_periods(plans, period['months'])
 
 
 def availability_by_group(rows):
-    from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
-    shifts = [r for r in rows if int(r.get('indent') or 0) == 3 and not r.get('is_formula_row')]
-    values = {}
-    for group in GROUPS:
-        selected = [r for r in shifts if equipment_group(r.get('asset_category')) == group]
-        summary = dashboard.au_engine.build_summary_row(selected, indent=0, asset_category=group)
-        dashboard.au_engine.apply_au_percentage_basis([summary], BASIS)
-        values[group] = summary.get('availability_percentage')
-    return values
+    """Approved stored-hour ratio, scaled exactly once; no fleet/ownership cap."""
+    totals = {g:[Decimal(0),Decimal(0),False] for g in GROUPS}
+    seen = set()
+    for row in rows:
+        if row.get('docstatus') == 2 or row.get('invalid_pre_use_hours') == 1:
+            continue
+        if row.get('name'):
+            if row['name'] in seen:
+                continue
+            seen.add(row['name'])
+        group = equipment_group(row.get('asset_category'))
+        if not group:
+            continue
+        required,available,present = totals[group]
+        required += Decimal(str(row.get('shift_required_hours') or 0))
+        if row.get('shift_available_hours') is not None:
+            available += Decimal(str(row['shift_available_hours']))
+            present = True
+        totals[group] = [required,available,present]
+    return {g:float(Decimal(85)*a/r) if r and present else None for g,(r,a,present) in totals.items()}
 
 
 def _shift_rows(site, month):
-    from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
-    return dashboard.fetch_grouped_data(site, month['key'], month['end'], MACHINE_SCOPE, BASIS, OWNERSHIP) or []
+    # One resolved date interval is equivalent to a site/date EXISTS join with
+    # MPP, avoiding duplicate shifts even when duplicate plans exist.
+    return _complete_records('Availability and Utilisation',
+        filters={'location':site,'shift_date':['between',[month['start'],month['end']]],'docstatus':['<',2]},
+        fields=['name','asset_category','shift_required_hours','shift_available_hours',
+                'invalid_pre_use_hours','docstatus'])
 
 
-def breakdown_counts_by_group(site, month):
-    """Confirmed population: distinct breakdown records overlapping the calendar month.
+def breakdown_counts_by_group(site, month, period_end):
+    """Confirmed population: distinct breakdown records overlapping the MPP period.
 
     Counts include closed/repaired and A&U-excluded records, including carry-ins.
     Planning, Pre-Use validity and measured downtime do not affect counts. Blank legacy types remain breakdowns.
     Group uses captured asset_category, with permission-filtered Asset fallback.
     """
     start = datetime.combine(getdate(month), time.min)
-    end = datetime.combine(month_offset(getdate(month), 1), time.min)
+    end = datetime.combine(getdate(period_end) + timedelta(days=1), time.min)
     rows = frappe.get_list(PBM, filters=[['location', '=', site], ['docstatus', '<', 2],
                                     ['breakdown_start_datetime', '<', end]],
                            or_filters=[['breakdown_start_datetime', '>=', start - timedelta(seconds=1)],
@@ -442,9 +476,9 @@ def breakdown_counts_by_group(site, month):
                                    'resolved_datetime', 'failure_classification', 'downtime_type',
                                    'breakdown_reason', 'docstatus'],
                            order_by='breakdown_start_datetime asc, name asc', limit=0)
-    # The exact half-open calendar window is enforced here too. A one-second
+    # The exact half-open MPP window is enforced here too. A one-second
     # query guard tolerates SQLite's legacy timestamp text lacking microseconds.
-    rows = monthly_population(rows, month)
+    rows = monthly_population(rows, month, period_end)
     # Asset fallback must not bypass Asset permissions. Do not require a machine
     # to remain at this site today to count its recorded breakdown at this site.
     identifiers = list({r.get('asset_name') for r in rows if r.get('asset_name')})
@@ -477,17 +511,29 @@ def _saved(scope):
 def get_report(site, reporting_month=None):
     period = _period(reporting_month)
     _authorize_sources(site, period['reporting_month'])
-    _assert_complete_source_access(site, period)
-    # Honor Asset record permissions even though the existing Engine queries SQL.
-    assets = frappe.get_list('Asset', filters={'location': site}, fields=['asset_name'], limit=0)
-    allowed_assets = {str(a.asset_name or '').strip() for a in assets}
+    period['months'] = _mpp_periods(site, period)
+    selected = period['months'][-1]
+    if selected['status'] != 'ok':
+        frappe.throw(f"{site}: {selected['label']} MPP planning is {selected['status']}. No calendar-period substitution is allowed.")
+    period['selected_period'] = selected
+    warnings = []
+    unsupported = []
     monthly = []
     for month in period['months']:
+        warnings.extend(month['warnings'])
+        if month['status'] != 'ok':
+            warnings.append(f"{month['label']}: MPP planning {month['status']}; availability is N/A.")
+            monthly.append({g:None for g in GROUPS})
+            continue
         rows = _shift_rows(site, month)
-        rows = [r for r in rows if int(r.get('indent') or 0) == 3
-                and str(r.get('asset_name') or '').strip() in allowed_assets]
         monthly.append(availability_by_group(rows))
-    counts, unassigned = breakdown_counts_by_group(site, period['reporting_month'])
+        unknown = sorted({str(r.get('asset_category') or '(blank)') for r in rows
+                          if r.get('docstatus')!=2 and r.get('invalid_pre_use_hours')!=1
+                          and not equipment_group(r.get('asset_category'))})
+        if unknown:
+            unsupported.append(dict(month=month['label'],categories=unknown))
+            warnings.append(f"{month['label']}: unsupported availability categories: {', '.join(unknown)}.")
+    counts, unassigned = breakdown_counts_by_group(site, selected['start'], selected['end'])
     groups = []
     for group in GROUPS:
         scope = _scope(site, period['reporting_month'], group)
@@ -498,11 +544,11 @@ def get_report(site, reporting_month=None):
                            summary=count_summary(counts[group]), **saved,
                            can_write=bool(scope.has_permission('write') and
                                           (frappe.db.exists(ACTIONS, scope.name) or scope.has_permission('create')))))
-    result = dict(site=site, **period, groups=groups, basis=BASIS, machine_scope=MACHINE_SCOPE, ownership=OWNERSHIP)
+    result = dict(site=site, **period, groups=groups, basis=BASIS, warnings=warnings, unsupported_categories=unsupported)
     result.update(availability_chart=availability_svg(result), failure_classifications=classification_names(),
-                  population='Distinct breakdown events overlapping the reporting calendar month, including carried-in and repaired/closed events',
+                  population='Distinct breakdown events overlapping the reporting MPP period, including carried-in and repaired/closed events',
                   counting_unit='One Plant Breakdown or Maintenance record',
-                  status_basis='Current status shown; open and repaired/closed events are included when their recorded interval overlaps the month',
+                  status_basis='Current status shown; open and repaired/closed events are included when their recorded interval overlaps the MPP period',
                   unassigned_records=unassigned, base_url=get_url())
     return result
 
@@ -553,3 +599,231 @@ def download_pdf(site, reporting_month):
     frappe.local.response.filecontent = get_pdf(report_html(data), {'page-size': 'A4', 'encoding': 'UTF-8',
                                                                  'margin-top': '12mm', 'margin-bottom': '12mm'})
     frappe.local.response.type = 'pdf'
+
+def presentation_bytes(data):
+    """Six-slide report; charts and their source workbooks remain editable.
+
+    Only aggregated authorised data is embedded, never individual records or
+    saved actions. No historical template figures enter this export.
+    """
+    from copy import deepcopy
+    from pptx import Presentation
+    from pptx.chart.data import CategoryChartData
+    from pptx.chart.datalabel import DataLabels
+    from pptx.dml.color import RGBColor
+    from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION
+    from pptx.oxml.xmlchemy import OxmlElement
+    from pptx.util import Inches, Pt
+
+    from pathlib import Path
+    prs = Presentation(Path(__file__).with_name('monthly_tmm_template.pptx'))
+    navy, blue, orange = '19324F', '3293FF', 'ED8B00'
+    palette = ('234F87','3293FF','9AD0FF')
+
+    def text(slide, value, x, y, w, h, size=16, color=navy, bold=False):
+        shape=slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+        frame=shape.text_frame
+        frame.word_wrap=True
+        for i,line in enumerate(str(value).split('\n')):
+            p=frame.paragraphs[0] if not i else frame.add_paragraph()
+            p.text=line
+            p.font.name='Arial';p.font.size=Pt(size)
+            p.font.bold=bold;p.font.color.rgb=RGBColor.from_string(color)
+        return shape
+
+    selected=data['selected_period']
+    caption=f"{data['site']} · {data['month_label']} · {selected['dates_label']} · Due {data['due_date']}"
+    slide_index=0
+    def slide(title):
+        nonlocal slide_index
+        index=slide_index;slide_index+=1
+        result=prs.slides[index]
+        if index==1:
+            heading=text(result,title,1.44,.65,10.99,.55,28,'FFFFFF',True)
+            text(result,caption,1.44,1.27,10.99,.5,12,'FFFFFF')
+        elif index>=2:
+            heading=text(result,title,.61,.70,12.26,.81,32,'FFFFFF')
+            from pptx.enum.text import PP_ALIGN
+            heading.text_frame.paragraphs[0].alignment=PP_ALIGN.CENTER
+            text(result,caption,.61,1.57,12.26,.4,13)
+        else:
+            heading=text(result,title,.6,.25,12.0,.55,26,bold=True)
+            text(result,caption,.6,.88,12.0,.45,13)
+        heading.name='tmm-title'
+        return result
+
+    def style(chart):
+        chart.has_legend=True
+        chart.legend.position=XL_LEGEND_POSITION.BOTTOM
+        chart.legend.include_in_layout=False
+        chart.legend.font.size=Pt(11)
+        chart.category_axis.tick_labels.font.size=Pt(11)
+        chart.value_axis.tick_labels.font.size=Pt(11)
+        chart.value_axis.minimum_scale=0
+        chart.value_axis.has_title=True
+        chart.chart_style=10
+        chart.plots[0].gap_width=55
+
+    s=slide('Availability by equipment group')
+    cd=CategoryChartData();cd.categories=list(GROUPS)
+    for i,month in enumerate(data['months']):
+        cd.add_series(month['label'],[g['availability'][i] for g in data['groups']])
+    chart=s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,Inches(.45),Inches(1.48),Inches(12.4),Inches(3.25),cd).chart
+    style(chart)
+    chart.value_axis.axis_title.text_frame.text='Availability (%) — 85% basis'
+    maximum=max((v for g in data['groups'] for v in g['availability'] if v is not None),default=100)
+    chart.value_axis.maximum_scale=max(100,math.ceil(maximum/20)*20)
+    chart.value_axis.major_unit=chart.value_axis.maximum_scale/5
+    chart.plots[0].has_data_labels=True
+    chart.plots[0].data_labels.number_format='0.00"%"'
+    chart.plots[0].data_labels.font.size=Pt(9)
+    chart.plots[0].data_labels.position=XL_LABEL_POSITION.OUTSIDE_END
+    for i,series in enumerate(chart.series):
+        series.format.fill.solid();series.format.fill.fore_color.rgb=RGBColor.from_string(palette[i])
+        series.format.line.fill.background()
+    text(s,'\n'.join(f"{m['label']}: {m['dates_label']}" for m in data['months']),.55,4.9,8.7,.65,11)
+    missing=[f"{m['label']}: "+', '.join(g['group'] for g in data['groups'] if g['availability'][i] is None)
+             for i,m in enumerate(data['months']) if any(g['availability'][i] is None for g in data['groups'])]
+    text(s,'85 × Σ stored available hours / Σ stored required hours. Scaling applied once; no 85% cap.',.55,5.55,12.2,.3,10)
+    if missing:
+        text(s,'N/A (not zero):\n'+'\n'.join(missing),9.2,4.9,3.7,.65,9)
+
+    # Rebuild the first slide's flattened footer as editable native elements.
+    from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
+    banner=s.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,0,Inches(5.95),prs.slide_width,Inches(1.55))
+    banner.fill.solid();banner.fill.fore_color.rgb=RGBColor.from_string('0A3040')
+    banner.line.fill.background()
+    text(s,'Fleet Availability Past 3 Months',.8,6.1,8.0,1.2,30,'FFFFFF')
+    text(s,data['period_label'],9.0,6.4,4.0,.65,20,'FFFFFF')
+
+    s=slide('Categorisation completeness')
+    total=sum(g['counts']['total_count'] for g in data['groups'])+len(data.get('unassigned_records',[]))
+    known=sum(g['counts']['categorised_count'] for g in data['groups'])
+    unresolved=sum(g['counts']['unresolved_count'] for g in data['groups'])
+    other=len(data.get('unassigned_records',[]))
+    primary=(f"{total} distinct breakdown records overlap this MPP period.\n\n"
+             f"{known} have a recognised classification and equipment group.")
+    text(s,primary,1.44,1.95,10.99,2.35,30,'FFFFFF')
+    note=(f"{unresolved} grouped records require classification review; {other} require equipment-group review. "
+          'Pareto percentages use classified records in each group. Review details remain on the ERP page. '
+          'No historical classifications have been inferred or backfilled.')
+    text(s,note,1.48,5.1,10.94,1.25,18)
+    if data.get('warnings'):
+        text(s,'Planning/data notes: '+' '.join(data['warnings']),1.48,6.4,10.94,.65,10)
+
+    def element(tag, **attrs):
+        node=OxmlElement('c:'+tag)
+        for key,value in attrs.items():node.set(key,str(value))
+        return node
+
+    for group,title in [('ADTs','ADT Pareto'),('Excavators','Excavator Pareto'),
+                        ('Graders','Grader Pareto'),('Ancillary','Ancillary Pareto')]:
+        s=slide(title)
+        counts=next(g['counts'] for g in data['groups'] if g['group']==group)
+        rows=counts['categories']
+        if not rows:
+            text(s,'No classified breakdown records for this equipment group in the selected MPP period.',.8,2.5,11.7,1.4,25)
+            text(s,completeness(counts),.8,4.3,11.7,1.0,17)
+            continue
+        cd=CategoryChartData()
+        cd.categories=['\n'.join(textwrap.wrap(r['category'],width=22 if len(rows)>10 else 18,break_long_words=False)) for r in rows]
+        cd.add_series('Breakdown records',[r['count'] for r in rows])
+        cd.add_series('Cumulative percentage',[r['cumulative_percent'] for r in rows])
+        cd.add_series('80% reference',[80]*len(rows))
+        chart=s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,Inches(.45),Inches(2.1),Inches(12.4),Inches(4.1),cd).chart
+        style(chart)
+        chart.category_axis.tick_labels.font.size=Pt(8 if len(rows)>10 else 11)
+        # Explicit label spacing/rotation prevents dense categories disappearing.
+        axis=chart.category_axis._element
+        axis.get_or_add_txPr().bodyPr.set('rot','-2700000' if len(rows)>10 else '0')
+        auto=axis.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}auto')
+        if auto is not None:auto.set('val','0')
+        before=axis.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}noMultiLvlLbl')
+        offset=list(axis).index(before) if before is not None else len(axis)
+        axis.insert(offset,element('tickLblSkip',val=1))
+        axis.insert(offset+1,element('tickMarkSkip',val=1))
+        chart.value_axis.axis_title.text_frame.text='Number of breakdown records'
+        maximum=max(1,math.ceil(max(r['count'] for r in rows)*1.2))
+        chart.value_axis.maximum_scale=maximum
+        chart.value_axis.major_unit=max(1,math.ceil(maximum/5))
+        plot=chart.plots[0]
+        plot.has_data_labels=True
+        plot.data_labels.position=XL_LABEL_POSITION.OUTSIDE_END
+        plot.data_labels.font.size=Pt(12)
+        plot.data_labels.font.bold=True
+        labels=DataLabels(chart.series[0]._element.get_or_add_dLbls())
+        labels.show_value=True
+        labels.show_category_name=False;labels.show_series_name=False
+        labels.number_format='0'
+        for index,row in enumerate(rows):
+            label=chart.series[0].points[index].data_label
+            label.font.size=Pt(10 if len(rows)>10 else 12);label.font.bold=True
+            label.position=(XL_LABEL_POSITION.INSIDE_END if len(rows)>10 or
+                abs(row['count']/maximum-row['cumulative_percent']/100)<.10 else XL_LABEL_POSITION.OUTSIDE_END)
+        chart.series[0].format.fill.solid()
+        chart.series[0].format.fill.fore_color.rgb=RGBColor.from_string(blue)
+        chart.series[0].format.line.fill.background()
+        # Native combo chart with a separate 0–100 percentage axis. The complete
+        # editable source workbook contains counts, cumulative % and reference %.
+        space=chart._chartSpace
+        area=space.xpath('.//c:plotArea')[0]
+        bars=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}barChart')
+        lines=element('lineChart');lines.append(element('grouping',val='standard'))
+        series=list(bars.findall('{http://schemas.openxmlformats.org/drawingml/2006/chart}ser'))
+        for index,ser in enumerate(series[1:]):
+            bars.remove(ser);lines.append(ser)
+            # Native line styling; reference line remains dashed without labels.
+            sp=OxmlElement('c:spPr');ln=OxmlElement('a:ln');ln.set('w','25400')
+            fill=OxmlElement('a:solidFill');color=OxmlElement('a:srgbClr')
+            color.set('val',orange if index==0 else '9B8B70');fill.append(color);ln.append(fill)
+            if index==1:
+                dash=OxmlElement('a:prstDash');dash.set('val','dash');ln.append(dash)
+            sp.append(ln)
+            ser.insert(3,sp)
+            marker=element('marker');marker.append(element('symbol',val='circle' if index==0 else 'none'))
+            if index==0:marker.append(element('size',val=5))
+            # spPr/marker precede category/value references in CT_LineSer.
+            ser.insert(4,marker)
+            if index==0:
+                labels=element('dLbls');labels.append(element('numFmt',formatCode='0.0"%"',sourceLinked=0))
+                labels.append(element('dLblPos',val='t'))
+                for flag,value in [('showLegendKey',0),('showVal',1),('showCatName',0),('showSerName',0),('showPercent',0),('showBubbleSize',0)]:
+                    labels.append(element(flag,val=value))
+                DataLabels(labels).font.size=Pt(10 if len(rows)>10 else 12)
+                ser.insert(5,labels)
+        cat=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}catAx')
+        val=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}valAx')
+        cat_id=int(cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').get('val'))+10
+        val_id=int(val.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').get('val'))+10
+        lines.append(element('axId',val=cat_id));lines.append(element('axId',val=val_id))
+        # Chart-type nodes must precede axes in OOXML.
+        area.insert(list(area).index(cat),lines)
+        secondary_cat=deepcopy(cat)
+        secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').set('val',str(cat_id))
+        secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}crossAx').set('val',str(val_id))
+        deleted=secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}delete')
+        if deleted is None:secondary_cat.insert(2,element('delete',val=1))
+        else:deleted.set('val','1')
+        area.append(secondary_cat)
+        secondary_val=element('valAx');secondary_val.append(element('axId',val=val_id))
+        scaling=element('scaling');scaling.extend([element('orientation',val='minMax'),element('max',val=100),element('min',val=0)])
+        secondary_val.extend([scaling,element('delete',val=0),element('axPos',val='r'),
+            element('numFmt',formatCode='0"%"',sourceLinked=0),element('majorTickMark',val='none'),
+            element('minorTickMark',val='none'),element('tickLblPos',val='nextTo'),
+            element('crossAx',val=cat_id),element('crosses',val='max'),element('crossBetween',val='between'),element('majorUnit',val=20)])
+        area.append(secondary_val)
+        text(s,'Right axis: cumulative percentage (0–100%). Dashed line: 80% reference.',.65,6.4,12.0,.35,12)
+        text(s,count_summary(counts)+' '+completeness(counts),.65,6.87,12.0,.45,12)
+    output=BytesIO();prs.save(output)
+    return output.getvalue()
+
+
+@frappe.whitelist()
+def download_presentation(site, reporting_month):
+    data=get_report(site, reporting_month)
+    for group in data['groups']:
+        _scope(site,data['reporting_month'],group['group']).check_permission('print')
+    frappe.local.response.filename=f"Monthly TMM Assurance {site} {data['reporting_month'][:7]}.pptx"
+    frappe.local.response.filecontent=presentation_bytes(data)
+    frappe.local.response.type='download'
+    frappe.local.response.content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation'

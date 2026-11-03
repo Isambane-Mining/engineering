@@ -46,8 +46,8 @@ class TestTMMLabIntegration(unittest.TestCase):
         cls.schema('Location', [dict(fieldname='location_name',fieldtype='Data')])
         cls.schema('Asset', [dict(fieldname='asset_name',fieldtype='Data'),dict(fieldname='asset_owner',fieldtype='Data'),dict(fieldname='asset_category',fieldtype='Data'),dict(fieldname='location',fieldtype='Link',options='Location')])
         cls.schema('Availability and Utilisation', [dict(fieldname='location',fieldtype='Link',options='Location'),
-            dict(fieldname='asset_name',fieldtype='Data'),dict(fieldname='shift_date',fieldtype='Date'),
-            dict(fieldname='shift',fieldtype='Data'),dict(fieldname='shift_system',fieldtype='Data'),dict(fieldname='shift_required_hours',fieldtype='Float')])
+            dict(fieldname='asset_name',fieldtype='Data'),dict(fieldname='asset_category',fieldtype='Data'),dict(fieldname='shift_date',fieldtype='Date'),
+            dict(fieldname='shift',fieldtype='Data'),dict(fieldname='shift_system',fieldtype='Data'),dict(fieldname='shift_required_hours',fieldtype='Float'),dict(fieldname='shift_available_hours',fieldtype='Float'),dict(fieldname='invalid_pre_use_hours',fieldtype='Check')])
         cls.schema('Pre-Use Hours', [dict(fieldname='location',fieldtype='Link',options='Location'),dict(fieldname='shift_date',fieldtype='Date')])
         cls.schema('Monthly Production Planning', [dict(fieldname='location',fieldtype='Link',options='Location'),
             dict(fieldname='site_status',fieldtype='Data'),dict(fieldname='prod_month_start_date',fieldtype='Date'),dict(fieldname='prod_month_end_date',fieldtype='Date')])
@@ -120,6 +120,10 @@ class TestTMMLabIntegration(unittest.TestCase):
         frappe.db.delete(api.ACTIONS)
         frappe.db.delete(api.PBM)
         frappe.db.delete('Availability and Utilisation')
+        frappe.db.delete('Monthly Production Planning')
+        for month,end in [('2026-07','31'),('2026-08','31'),('2026-09','30')]:
+            self.fixture('Monthly Production Planning',month,location='Koppie',
+                prod_month_start_date=month+'-01',prod_month_end_date=month+'-'+end)
 
     def tearDown(self):
         frappe.set_user('Administrator')
@@ -147,7 +151,8 @@ class TestTMMLabIntegration(unittest.TestCase):
         frappe.set_user('tmm-engineer@example.invalid')
         for call in [lambda: api.get_report('Gwab','2026-09-01'),
                      lambda: api.save_actions('Gwab','2026-09-01','ADTs',[self.action()]),
-                     lambda: api.download_pdf('Gwab','2026-09-01')]:
+                     lambda: api.download_pdf('Gwab','2026-09-01'),
+                     lambda: api.download_presentation('Gwab','2026-09-01')]:
             with self.assertRaises(frappe.PermissionError): call()
         doc = frappe.get_doc(dict(doctype=api.ACTIONS,site='Gwab',reporting_month='2026-09-01',
                                   equipment_group='ADTs',actions=[self.action()]))
@@ -171,29 +176,30 @@ class TestTMMLabIntegration(unittest.TestCase):
         frappe.clear_cache(user=user)
         try:
             frappe.set_user(user)
-            with patch.object(api,'_shift_rows',side_effect=AssertionError('Engine must not read denied source data')):
-                with self.assertRaises(frappe.PermissionError):
-                    api.get_report('Koppie','2026-09-01')
+            with self.assertRaises(frappe.PermissionError):
+                api.get_report('Koppie','2026-09-01')
         finally:
             frappe.set_user('Administrator')
             frappe.delete_doc('User Permission',permission.name,ignore_permissions=True)
             frappe.clear_cache(user=user)
 
-    def test_asset_restriction_cannot_change_fleet_percentage(self):
-        self.fixture('Asset','visible-fleet-asset',asset_name='VISIBLE',asset_category='ADT',asset_owner='Company',location='Koppie',docstatus=1)
-        self.fixture('Asset','hidden-fleet-asset',asset_name='HIDDEN',asset_category='ADT',asset_owner='Company',location='Koppie',docstatus=1)
+    def test_stored_availability_does_not_apply_dashboard_asset_scope(self):
+        self.fixture('Availability and Utilisation','stored-no-fleet',location='Koppie',shift_date='2026-09-10',
+            asset_category='ADT',shift_required_hours=10,shift_available_hours=10)
         user='tmm-engineer@example.invalid'
+        self.fixture('Asset','visible-fleet-asset',asset_name='VISIBLE',asset_category='ADT',location='Koppie')
         permission=frappe.get_doc(dict(doctype='User Permission',user=user,allow='Asset',
             for_value='visible-fleet-asset',apply_to_all_doctypes=1)).insert(ignore_permissions=True)
         frappe.clear_cache(user=user)
         try:
             frappe.set_user(user)
-            with patch.object(api,'_shift_rows',side_effect=AssertionError('Cannot generate partial-fleet result')):
-                with self.assertRaises(frappe.PermissionError): api.get_report('Koppie','2026-09-01')
+            report=api.get_report('Koppie','2026-09-01')
+            self.assertEqual(report['groups'][0]['availability'],[None,None,85])
         finally:
             frappe.set_user('Administrator')
             frappe.delete_doc('User Permission',permission.name,ignore_permissions=True)
             frappe.clear_cache(user=user)
+
 
     def test_scope_is_immutable_and_invalid_actions_fail(self):
         saved=api.save_actions('Koppie','2026-09-01','ADTs',[self.action()])
@@ -222,7 +228,7 @@ class TestTMMLabIntegration(unittest.TestCase):
                 resolved_datetime=resolved,exclude_from_au=excluded)
         self.fixture(api.PBM,'cancelled',location='Koppie',asset_category='ADT',downtime_type='Breakdown',
             breakdown_start_datetime='2026-09-15 12:00:00',failure_classification='Braking System',docstatus=2)
-        result,unassigned=api.breakdown_counts_by_group('Koppie','2026-09-01')
+        result,unassigned=api.breakdown_counts_by_group('Koppie','2026-09-01','2026-09-30')
         c=result['ADTs']
         self.assertEqual((c['total_count'],c['categorised_count'],c['unresolved_count']),(6,4,2))
         self.assertEqual({r['category']:r['count'] for r in c['categories']},{'Hydraulic':3,'Safety Systems':1})
@@ -239,25 +245,20 @@ class TestTMMLabIntegration(unittest.TestCase):
         self.assertNotIn('ended-boundary',html)
         self.assertNotIn('ended-before',html)
 
-    def test_report_uses_dashboard_defaults_and_pdf_all_groups_saved_actions(self):
-        from .monthly_tmm_assurance import reporting_period
-        from datetime import date
+    def test_report_uses_stored_hours_and_pdf_all_groups_saved_actions(self):
         api.save_actions('Koppie','2026-09-01','Dozers',[self.action('Saved dozer action')])
         api.save_actions('Koppie','2026-09-01','FELs',[self.action('Saved loader action')])
-        from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
-        source=[dict(indent=3,asset_name='ADT-TEST',asset_category='ADT',required_hours=12,
-                     availability_available_hours=9,utilisation_available_hours=9)]
-        with patch.object(dashboard,'fetch_grouped_data',return_value=source) as fetch:
-            result=api.get_report('Koppie','2026-09-01')
-        self.assertEqual(fetch.call_count,3)
-        self.assertEqual(fetch.call_args.args,('Koppie','2026-09-01','2026-09-30',
-                         'Production + Swing/Spare Machines','85% A & U','Isambane & Excavo Assets'))
-        self.assertEqual(result['groups'][0]['availability'],[63.75]*3)
-        from .monthly_tmm_assurance import report_html
-        html=report_html(result)
-        self.assertIn('Saved dozer action',html)
-        self.assertIn('Saved loader action',html)
-        self.assertIn('Three-month availability by equipment group',html)
+        self.fixture('Availability and Utilisation','stored-measurement',location='Koppie',shift_date='2026-09-15',
+            asset_category='ADT',shift_required_hours=12,shift_available_hours=9)
+        result=api.get_report('Koppie','2026-09-01')
+        self.assertEqual(result['groups'][0]['availability'],[None,None,63.75])
+        self.assertEqual(result['selected_period']['start'],'2026-09-01')
+        self.assertNotIn('ownership',result)
+        self.assertNotIn('machine_scope',result)
+        html=api.report_html(result)
+        self.assertIn('Saved dozer action',html);self.assertIn('Saved loader action',html)
+        self.assertNotIn('Daily A&amp;U Engine Dashboard basis',html)
+
 
     def test_legacy_actions_preserved_and_new_categories_and_references_validated(self):
         saved=api.save_actions('Koppie','2026-09-01','ADTs',[self.action()])
@@ -324,7 +325,7 @@ class TestTMMLabIntegration(unittest.TestCase):
             result['groups'].append(dict(group=group,availability=[None,0,85],
                 counts=category_counts(monthly_population([dict(name=group+'-'+str(i),failure_classification='Hydraulic' if i<2 else 'Engine',
                     asset_name='TEST',breakdown_start_datetime='2026-08-15 12:00:00' if i==0 else '2026-09-15 12:00:00',
-                    resolved_datetime='2026-09-20 12:00:00') for i in range(3)],'2026-09-01')),actions=saved['actions']))
+                    resolved_datetime='2026-09-20 12:00:00') for i in range(3)],'2026-09-01','2026-09-30')),actions=saved['actions']))
         with patch.object(api,'get_report',return_value=result):
             api.download_pdf('Koppie','2026-09-01')
         pdf=frappe.local.response.filecontent
@@ -336,7 +337,7 @@ class TestTMMLabIntegration(unittest.TestCase):
         self.assertGreaterEqual(len(doc),8)
         for group in GROUPS:
             self.assertIn(f'{group} saved action',' '.join(text.split()))
-        for label in ['N/A','0.0%','85.0%','100.0%','Cumulative percentage','first 80%','66.7%']:
+        for label in ['N/A','0.00%','85.00%','100.0%','Cumulative percentage','first 80%','66.7%']:
             self.assertIn(label,text)
         self.assertIn('2026-08-15',text)  # Earlier-started, now-closed event is present in exported priority details.
         self.assertIn('including carried-in and repaired/closed events',' '.join(text.split()))
@@ -352,3 +353,45 @@ class TestTMMLabIntegration(unittest.TestCase):
             self.assertGreater(orange,20)
         doc[0].get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save(str(output/'pdf-availability.png'))
         doc[1].get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save(str(output/'pdf-pareto-actions.png'))
+
+
+    def test_mpp_stored_sql_totals_october_boundary_and_editable_export(self):
+        from io import BytesIO
+        from pptx import Presentation
+        frappe.db.delete('Monthly Production Planning')
+        for i,(start,end) in enumerate([('2026-07-20','2026-08-23'),('2026-08-24','2026-09-20'),('2026-09-21','2026-10-18')]):
+            self.fixture('Monthly Production Planning','mpp-'+str(i),location='Koppie',
+                prod_month_start_date=start,prod_month_end_date=end)
+        self.fixture('Monthly Production Planning','duplicate-mpp',location='Koppie',
+            prod_month_start_date='2026-09-21',prod_month_end_date='2026-10-18')
+        self.fixture('Availability and Utilisation','oct-valid',location='Koppie',shift_date='2026-10-18',
+            asset_category='ADT',shift_required_hours=18240,shift_available_hours=14766.5299999999)
+        for name,stamp,options in [('next-period','2026-10-19',{}),('before-period','2026-09-20',{}),
+                                     ('invalid','2026-10-01',{'invalid_pre_use_hours':1}),
+                                     ('cancelled','2026-10-01',{'docstatus':2})]:
+            self.fixture('Availability and Utilisation',name,location='Koppie',shift_date=stamp,
+                asset_category='ADT',shift_required_hours=100000,shift_available_hours=100000,**options)
+        self.fixture('Availability and Utilisation','unsupported',location='Koppie',shift_date='2026-10-01',
+            asset_category='LDV',shift_required_hours=1,shift_available_hours=1)
+        for name,stamp,resolved in [('carry-in','2026-08-01','2026-09-22'),('last-day','2026-10-18 23:59:59',None),('subsequent','2026-10-19',None)]:
+            self.fixture(api.PBM,name,location='Koppie',asset_category='ADT',failure_classification='Hydraulic',
+                downtime_type='Breakdown',breakdown_start_datetime=stamp,resolved_datetime=resolved)
+        result=api.get_report('Koppie','2026-10')
+        self.assertEqual(f"{result['groups'][0]['availability'][-1]:.2f}",'68.81')
+        self.assertEqual(result['groups'][0]['counts']['total_count'],2)
+        self.assertEqual(result['selected_period']['end'],'2026-10-18')
+        self.assertIn('LDV',result['unsupported_categories'][0]['categories'])
+        self.assertTrue(any('duplicate' in w for w in result['warnings']))
+        api.download_presentation('Koppie','2026-10')
+        payload=frappe.local.response.filecontent
+        self.assertEqual(len(Presentation(BytesIO(payload)).slides),6)
+        self.assertTrue(frappe.local.response.filename.endswith('.pptx'))
+        Path('/tmp/tmm-mpp-presentation/database-fixture.pptx').write_bytes(payload)
+
+    def test_missing_and_conflicting_mpp_cannot_export_calendar_fallback(self):
+        frappe.db.delete('Monthly Production Planning')
+        with self.assertRaises(frappe.ValidationError):api.download_presentation('Koppie','2026-10')
+        for i,start in enumerate(['2026-09-21','2026-09-22']):
+            self.fixture('Monthly Production Planning','conflict-'+str(i),location='Koppie',
+                prod_month_start_date=start,prod_month_end_date='2026-10-18')
+        with self.assertRaises(frappe.ValidationError):api.download_presentation('Koppie','2026-10')

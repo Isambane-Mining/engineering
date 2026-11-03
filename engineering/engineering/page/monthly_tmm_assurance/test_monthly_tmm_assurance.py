@@ -17,9 +17,9 @@ class TestCalculations(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 reporting_period(value, today=date(2027, 1, 15))
 
-    def test_group_mapping_uses_dashboard_aliases_and_known_ancillaries(self):
+    def test_group_mapping_is_explicit_with_known_ancillaries(self):
         from .monthly_tmm_assurance import equipment_group
-        for category, group in [("ADT's", 'ADTs'), ('Loader', 'FELs'), ('Drills', 'Drills'),
+        for category, group in [('ADT', 'ADTs'), ('Loader', 'FELs'), ('Drills', 'Drills'),
                                 ('TLB', 'Ancillary'), ('Diesel Bowsers', 'Ancillary')]:
             self.assertEqual(equipment_group(category), group)
         self.assertIsNone(equipment_group('Unknown'))
@@ -49,23 +49,18 @@ class TestCalculations(unittest.TestCase):
         self.assertEqual(pareto({}), [])
 
 class TestReportData(unittest.TestCase):
-    def test_group_totals_use_engine_hours_and_keep_missing_distinct_from_zero(self):
+    def test_group_totals_use_stored_hours_and_keep_missing_distinct_from_zero(self):
         from .monthly_tmm_assurance import availability_by_group
-        rows = [dict(indent=3, asset_category='TLB', required_hours=10,
-                     availability_available_hours=10, utilisation_available_hours=10),
-                dict(indent=3, asset_category='Water Bowser', required_hours=30,
-                     availability_available_hours=0, utilisation_available_hours=0),
-                dict(indent=3, asset_category='ADT', required_hours=12,
-                     availability_available_hours=0, utilisation_available_hours=0),
-                dict(indent=3, asset_category='Loader', required_hours=20,
-                     availability_available_hours=20, invalid_pre_use=1),
-                dict(indent=0, asset_category='TLB', required_hours=999,
-                     availability_available_hours=999)]
-        values = availability_by_group(rows)
-        self.assertEqual(values['Ancillary'], 21.25)
-        self.assertEqual(values['ADTs'], 0)
-        self.assertIsNone(values['FELs'])
-        self.assertIsNone(values['Drills'])
+        rows = [dict(asset_category='TLB', shift_required_hours=10,shift_available_hours=10),
+                dict(asset_category='Water Bowser',shift_required_hours=30,shift_available_hours=0),
+                dict(asset_category='ADT',shift_required_hours=12,shift_available_hours=0),
+                dict(asset_category='Loader',shift_required_hours=20,shift_available_hours=20,invalid_pre_use_hours=1),
+                dict(asset_category='TLB',shift_required_hours=999,shift_available_hours=999,docstatus=2)]
+        values=availability_by_group(rows)
+        self.assertEqual(values['Ancillary'],21.25)
+        self.assertEqual(values['ADTs'],0)
+        self.assertIsNone(values['FELs']);self.assertIsNone(values['Drills'])
+
 
     def test_count_chart_and_complete_pdf_content(self):
         from .monthly_tmm_assurance import count_chart_image, report_html

@@ -20,7 +20,7 @@ class MonthlyTMMAssurance {
         this.month.$input.attr('max', previous);
         this.body = $('<div class="monthly-tmm-assurance"></div>').appendTo(page.main);
         this.add_styles();
-        page.set_primary_action(__('Download PDF'), () => this.download_pdf(), 'download');
+        page.set_primary_action(__('Download Presentation'), () => this.download_presentation(), 'download');
         page.set_secondary_action(__('Save Actions'), () => this.save(), 'save');
         this.before_unload = event => {
             if (this.dirty) { event.preventDefault(); event.returnValue = ''; }
@@ -66,7 +66,7 @@ class MonthlyTMMAssurance {
 
     values() { return {site: this.site.get_value(), reporting_month: this.month.get_value()}; }
     esc(value) { return frappe.utils.escape_html(String(value ?? '')); }
-    percent(value) { return value === null || value === undefined ? 'N/A' : `${Number(value).toFixed(1)}%`; }
+    percent(value) { return value === null || value === undefined ? 'N/A' : `${Number(value).toFixed(2)}%`; }
     group() { return this.data?.groups.find(g => g.group === this.selected); }
     mark_dirty() {
         this.dirty = true;
@@ -127,6 +127,9 @@ class MonthlyTMMAssurance {
         const d = this.data;
         this.body.html(`<div class="text-muted tmm-subtitle">Monthly equipment availability and downtime review</div>
             <div class="text-muted">${this.esc(d.period_label)} · Due ${this.esc(frappe.datetime.str_to_user(d.due_date))}</div>
+            <div class="text-muted tmm-periods">${d.months.map(m => `${this.esc(m.label)}: ${this.esc(m.dates_label || '')}`).join(' · ')}</div>
+            <div class="text-muted">${this.esc(d.basis || '')}</div>
+            ${(d.warnings || []).map(w => `<p class="text-warning">${this.esc(w)}</p>`).join('')}
             <section class="tmm-section"><h3>1. Availability by equipment group</h3>
             <div class="tmm-chart tmm-availability">${d.availability_chart}</div>
             <div class="text-muted">Select a group to view its breakdowns and actions. N/A means no valid data.</div></section>
@@ -249,10 +252,10 @@ class MonthlyTMMAssurance {
         }
     }
 
-    async download_pdf() {
+    async download_presentation() {
         if (this.busy || !this.data) return;
         if (this.dirty && !(await this.save())) return;
-        const url = '/api/method/' + this.method + 'download_pdf?' + $.param(this.context);
+        const url = '/api/method/' + this.method + 'download_presentation?' + $.param(this.context);
         window.open(url, '_blank', 'noopener');
     }
 }
