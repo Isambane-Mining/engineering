@@ -2,6 +2,7 @@ import json
 import frappe
 from frappe import _
 from erpnext.controllers.website_list_for_contact import get_customers_suppliers
+from engineering.controllers.engineering_legals_rules import authorize_capture
 
 
 def get_context(context):
@@ -95,7 +96,7 @@ def send_engineering_legals():
         if draft.sent_to_erp:
             continue
 
-        _validate_supplier_asset_access(draft.fleet_number)
+        authorize_capture(draft)
 
         erp_doc = frappe.get_doc({
             "doctype": "Engineering Legals",
@@ -104,6 +105,7 @@ def send_engineering_legals():
             "fleet_number": draft.fleet_number,
             "vehicle_type": draft.vehicle_type,
             "lifting_type": draft.lifting_type,
+            "brake_wear_type": getattr(draft, "brake_wear_type", None),
             "attach_paper": draft.attach_paper,
             "start_date": draft.start_date,
         })

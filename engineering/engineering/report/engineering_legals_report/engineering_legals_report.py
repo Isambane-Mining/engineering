@@ -1,3 +1,4 @@
+from engineering.controllers.engineering_legals_rules import apply_no_expiry_overrides, filter_expiry_range, optional_snapshot_fields, skip_no_expiry_section
 # Copyright (c) 2026, BuFf0k and contributors
 # For license information, please see license.txt
 
@@ -131,11 +132,6 @@ def _summary_view(as_at, site, section, asset, from_expiry_date=None, to_expiry_
     if asset:
         filters.append(["fleet_number", "=", asset])
 
-    if from_expiry_date:
-        filters.append(["expiry_date", ">=", from_expiry_date])
-
-    if to_expiry_date:
-        filters.append(["expiry_date", "<=", to_expiry_date])
 
     docs = frappe.get_all(
         "Engineering Legals",
@@ -146,10 +142,11 @@ def _summary_view(as_at, site, section, asset, from_expiry_date=None, to_expiry_
             "sections",
             "fleet_number",
             "start_date",
+            "creation",
             "expiry_date",
             "modified",
             "attach_paper",
-        ],
+        ] + optional_snapshot_fields(),
         order_by="sections asc, fleet_number asc, start_date desc, expiry_date desc, modified desc",
         limit_page_length=0,
     )
@@ -157,11 +154,11 @@ def _summary_view(as_at, site, section, asset, from_expiry_date=None, to_expiry_
     asset_site_map = _get_asset_site_map([d.get("fleet_number") for d in docs])
 
     grouped = {}
-    for d in docs:
+    for d in filter_expiry_range(apply_no_expiry_overrides(docs), from_expiry_date, to_expiry_date):
         sec = (d.get("sections") or "").strip()
         fleet = (d.get("fleet_number") or "").strip()
 
-        if sec in NO_EXPIRY_SECTIONS:
+        if skip_no_expiry_section(d, NO_EXPIRY_SECTIONS):
             continue
         if not fleet:
             continue
@@ -239,11 +236,6 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
     if asset:
         filters.append(["fleet_number", "=", asset])
 
-    if from_expiry_date:
-        filters.append(["expiry_date", ">=", from_expiry_date])
-
-    if to_expiry_date:
-        filters.append(["expiry_date", "<=", to_expiry_date])
 
 
 
@@ -256,10 +248,11 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
             "sections",
             "fleet_number",
             "start_date",
+            "creation",
             "expiry_date",
             "modified",
             "attach_paper",
-        ],
+        ] + optional_snapshot_fields(),
         order_by="site asc, sections asc, fleet_number asc, start_date desc, expiry_date desc, modified desc",
         limit_page_length=0,
     )
@@ -328,11 +321,11 @@ def _assets_view(as_at, site, section, asset, bucket, from_expiry_date=None, to_
     asset_site_map = _get_asset_site_map([d.get("fleet_number") for d in docs])
 
     grouped = defaultdict(list)
-    for d in docs:
+    for d in filter_expiry_range(apply_no_expiry_overrides(docs), from_expiry_date, to_expiry_date):
         sec = (d.get("sections") or "").strip()
         fleet = (d.get("fleet_number") or "").strip()
 
-        if sec in NO_EXPIRY_SECTIONS:
+        if skip_no_expiry_section(d, NO_EXPIRY_SECTIONS):
             continue
         if not fleet:
             continue

@@ -1,3 +1,4 @@
+from engineering.controllers.engineering_legals_rules import apply_no_expiry_overrides, filter_expiry_range, optional_snapshot_fields, skip_no_expiry_section
 from collections import defaultdict
 
 import frappe
@@ -208,10 +209,11 @@ def _get_legal_docs(asset_names, filters):
             "sections",
             "fleet_number",
             "start_date",
+            "creation",
             "expiry_date",
             "attach_paper",
             "modified",
-        ],
+        ] + optional_snapshot_fields(),
         order_by="sections asc, fleet_number asc, start_date desc, expiry_date desc, modified desc",
         limit_page_length=0,
     )
@@ -223,14 +225,15 @@ def _get_legal_docs(asset_names, filters):
 
 
 def _get_latest_docs(asset_names, filters):
-    docs = _get_legal_docs(asset_names, filters)
+    status_filters = {key: value for key, value in filters.items() if key not in {"from_expiry_date", "to_expiry_date"}}
+    docs = _get_legal_docs(asset_names, status_filters)
     grouped = {}
 
-    for d in docs:
+    for d in filter_expiry_range(apply_no_expiry_overrides(docs), filters.get("from_expiry_date"), filters.get("to_expiry_date")):
         sec = (d.get("sections") or "").strip()
         fleet = (d.get("fleet_number") or "").strip()
 
-        if not fleet or sec in NO_EXPIRY_SECTIONS:
+        if not fleet or skip_no_expiry_section(d, NO_EXPIRY_SECTIONS):
             continue
 
         key = (sec, fleet)
@@ -336,6 +339,7 @@ def _get_draft_rows(asset_names, filters):
             "sections",
             "fleet_number",
             "start_date",
+            "creation",
             "expiry_date",
             "attach_paper",
             "sent_to_erp",

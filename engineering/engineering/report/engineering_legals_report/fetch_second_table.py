@@ -1,3 +1,4 @@
+from engineering.controllers.engineering_legals_rules import apply_no_expiry_overrides, filter_expiry_range, optional_snapshot_fields
 import csv
 import io
 import os
@@ -291,18 +292,17 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
     out = []
     as_at = getdate(today())
 
-    if fleet_numbers and section != "Machine Service Records":
+    snapshot_fields = optional_snapshot_fields()
+    if fleet_numbers and (section != "Machine Service Records" or snapshot_fields):
         legal_filters = [
             ["docstatus", "<", 2],
             ["fleet_number", "in", fleet_numbers],
         ]
         if section:
             legal_filters.append(["sections", "=", section])
+        if section == "Machine Service Records":
+            legal_filters.append(["expiry_rule_source", "=", "Site Configuration"])
 
-        if from_expiry_date:
-            legal_filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
-        if to_expiry_date:
-            legal_filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
 
         docs = frappe.get_all(
             "Engineering Legals",
@@ -313,10 +313,11 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
                 "sections",
                 "fleet_number",
                 "start_date",
+                "creation",
                 "expiry_date",
                 "modified",
                 "attach_paper",
-            ],
+            ] + snapshot_fields,
             order_by="fleet_number asc, sections asc, start_date desc, expiry_date desc, modified desc",
             limit_page_length=0,
         )
@@ -324,7 +325,7 @@ def get_category_summary(site=None, asset_category=None, section=None, from_expi
         asset_site_map = _get_asset_site_map(fleet_numbers)
 
         grouped = defaultdict(list)
-        for d in docs:
+        for d in filter_expiry_range(apply_no_expiry_overrides(docs), from_expiry_date, to_expiry_date):
             fleet = (d.get("fleet_number") or "").strip()
             sec = (d.get("sections") or "").strip()
             current_site = (asset_site_map.get(fleet) or "").strip()
@@ -471,7 +472,7 @@ def get_doc_history_tree_meta(site=None, section=None, asset=None, from_expiry_d
     counts = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
     legal_filters = [["docstatus", "<", 2]]
-    if section and section != "Machine Service Records":
+    if section:
         legal_filters.append(["sections", "=", section])
     if asset:
         legal_filters.append(["fleet_number", "=", asset])
@@ -584,6 +585,8 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None,
         return {"rows": [], "limit": int(limit or 50), "offset": int(offset or 0)}
 
     if section == "Machine Service Records":
+        include_configured = bool(optional_snapshot_fields())
+        page_offset, page_limit = int(offset or 0), int(limit or 50)
         filters = [
             ["docstatus", "<", 2],
             ["service_breakdown", "=", "Service"],
@@ -600,8 +603,8 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None,
             filters=filters,
             fields=["name", "service_date", "modified", "attach"],
             order_by="service_date desc, modified desc",
-            limit_start=int(offset or 0),
-            limit_page_length=int(limit or 50),
+            limit_start=0 if include_configured else page_offset,
+            limit_page_length=page_offset + page_limit if include_configured else page_limit,
         )
 
         out = []
@@ -616,7 +619,31 @@ def get_doc_history_docs(site=None, section=None, fleet_number=None, asset=None,
                 "record_url": f"/app/mechanical-service-report/{quote(r.get('name') or '')}",
             })
 
-        return {"rows": out, "limit": int(limit or 50), "offset": int(offset or 0)}
+        if include_configured:
+            current_site = (_get_asset_site_map([fleet_number]).get(fleet_number) or "").strip()
+            if current_site and current_site not in EXCLUDED_SITES and (not site or current_site == site):
+                legal_filters = [
+                    ["docstatus", "<", 2],
+                    ["fleet_number", "=", fleet_number],
+                    ["sections", "=", "Machine Service Records"],
+                    ["expiry_rule_source", "=", "Site Configuration"],
+                ]
+                if asset:
+                    legal_filters.append(["fleet_number", "=", asset])
+                if from_expiry_date:
+                    legal_filters.append(["expiry_date", ">=", getdate(from_expiry_date)])
+                if to_expiry_date:
+                    legal_filters.append(["expiry_date", "<=", getdate(to_expiry_date)])
+                legal_rows = frappe.get_all(
+                    "Engineering Legals", filters=legal_filters,
+                    fields=["name", "fleet_number", "start_date", "expiry_date", "modified", "attach_paper"],
+                    order_by="start_date desc, modified desc", limit_start=0,
+                    limit_page_length=page_offset + page_limit,
+                )
+                out.extend(dict(r, site=current_site, record_url=f"/app/engineering-legals/{quote(r.get('name') or '')}") for r in legal_rows)
+            out.sort(key=lambda r: (str(r.get("start_date") or ""), str(r.get("modified") or "")), reverse=True)
+            out = out[page_offset:page_offset + page_limit]
+        return {"rows": out, "limit": page_limit, "offset": page_offset}
 
     asset_site_map = _get_asset_site_map([fleet_number])
     current_site = (asset_site_map.get(fleet_number) or "").strip()
@@ -850,13 +877,15 @@ def _add_file_to_zip(zip_file, row, manifest_rows, used_paths):
 def export_filtered_documents(site=None, section=None, asset=None, from_expiry_date=None, to_expiry_date=None):
     legal_rows = []
 
-    if section != "Machine Service Records":
+    if section != "Machine Service Records" or optional_snapshot_fields():
         legal_filters = [["docstatus", "<", 2], ["site", "not in", EXCLUDED_SITES]]
 
         if site:
             legal_filters.append(["site", "=", site])
         if section:
             legal_filters.append(["sections", "=", section])
+        if section == "Machine Service Records":
+            legal_filters.append(["expiry_rule_source", "=", "Site Configuration"])
         if asset:
             legal_filters.append(["fleet_number", "=", asset])
         if from_expiry_date:
@@ -959,4 +988,4 @@ def export_filtered_documents(site=None, section=None, asset=None, from_expiry_d
     timestamp = now_datetime().strftime("%Y%m%d_%H%M%S")
     frappe.local.response.filename = f"Engineering_Legals_Export_{timestamp}.zip"
     frappe.local.response.filecontent = zip_buffer.getvalue()
-    frappe.local.response.type = "download"    
+    frappe.local.response.type = "download"

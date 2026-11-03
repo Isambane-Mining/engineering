@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import patch
+import frappe
 
 from engineering.engineering.doctype.engineering_legals.engineering_legals import (
     EngineeringLegals,
@@ -8,6 +9,11 @@ from engineering.engineering.doctype.engineering_legals.engineering_legals impor
 
 
 class TestEngineeringLegals(TestCase):
+    def setUp(self):
+        loader = patch("engineering.controllers.engineering_legals_rules.load_configuration", return_value=None)
+        loader.start()
+        self.addCleanup(loader.stop)
+
     def _doc(self, section):
         return SimpleNamespace(
             sections=section,
@@ -40,9 +46,5 @@ class TestEngineeringLegals(TestCase):
     def test_unknown_section_still_rejected(self):
         doc = self._doc("Definitely Unknown Section")
 
-        with patch(
-            "engineering.engineering.doctype.engineering_legals.engineering_legals.frappe.throw",
-            side_effect=ValueError,
-        ):
-            with self.assertRaises(ValueError):
-                EngineeringLegals.validate(doc)
+        with self.assertRaises(frappe.ValidationError):
+            EngineeringLegals.validate(doc)

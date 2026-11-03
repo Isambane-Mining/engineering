@@ -1,10 +1,10 @@
 """Grant feedback: presentation and canonical categorisation regression tests."""
 import base64
-from datetime import date
+from datetime import date, timedelta
 import unittest
 import xml.etree.ElementTree as ET
 
-from .monthly_tmm_assurance import GROUPS, reporting_period
+from .monthly_tmm_assurance import GROUPS, reporting_period, month_offset
 
 
 class TestAvailabilityGraph(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestAvailabilityGraph(unittest.TestCase):
         self.assertEqual(len(root.findall('.//s:g[@data-group]',ns)),7)
         self.assertEqual(len(root.findall('.//s:rect[@data-month]',ns)),21)
         self.assertEqual([g['availability'] for g in data['groups']],before)
-        for label in ['N/A','0.0%','105.0%','Jul 2026','Aug 2026','Sep 2026','Availability (%)']:
+        for label in ['N/A','0.00%','105.00%','Jul 2026','Aug 2026','Sep 2026','Availability (%)']:
             self.assertIn(label,svg)
         self.assertIn('aria-label="ADTs',svg)
 
@@ -95,7 +95,7 @@ class TestMonthlyPopulation(unittest.TestCase):
               dict(name='next',breakdown_start_datetime='2026-10-01 00:00:00'),
               dict(name='cancelled',breakdown_start_datetime='2026-09-10 00:00:00',docstatus=2),
               dict(name='maintenance',breakdown_start_datetime='2026-09-10 00:00:00',downtime_type='Planned Maintenance')]
-        result=monthly_population(rows+[rows[1]],'2026-09-01')
+        result=monthly_population(rows+[rows[1]],'2026-09-01','2026-09-30')
         self.assertEqual([r['name'] for r in result],['prior','carried-closed','instant','first','long','last'])
         self.assertTrue(all('status_label' in r for r in result))
 
@@ -103,8 +103,8 @@ class TestMonthlyPopulation(unittest.TestCase):
         from .monthly_tmm_assurance import monthly_population
         row=dict(name='same-record',breakdown_start_datetime='2026-11-28 12:00:00',resolved_datetime='2027-02-01 00:00:00')
         for month in ['2026-11-01','2026-12-01','2027-01-01']:
-            self.assertEqual([r['name'] for r in monthly_population([row,row],month)],['same-record'])
-        self.assertEqual(monthly_population([row],'2027-02-01'),[])
+            self.assertEqual([r['name'] for r in monthly_population([row,row],month,(month_offset(date.fromisoformat(month),1)-timedelta(days=1)).isoformat())],['same-record'])
+        self.assertEqual(monthly_population([row],'2027-02-01','2027-02-28'),[])
 
 
 

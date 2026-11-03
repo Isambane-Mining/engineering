@@ -3,6 +3,7 @@
 No runtime/demo data is installed. Run using bench Python from the app root.
 """
 from datetime import date
+import calendar
 import json
 from pathlib import Path
 import unittest
@@ -20,6 +21,10 @@ ARTIFACTS = Path('/tmp/monthly-tmm-assurance-validation')
 
 def fixture():
     data = dict(site='Koppie',**reporting_period('2026-09',today=date(2026,10,30)),groups=[])
+    for month in data['months']:
+        last=calendar.monthrange(int(month['key'][:4]),int(month['key'][5:7]))[1]
+        month.update(start=month['key'],end=month['key'][:8]+str(last),status='ok')
+        month['dates_label']=month['start']+' – '+month['end']
     for index, group in enumerate(GROUPS):
         records=[dict(name=f'{group}-{i}',failure_classification=c,asset_name='TEST-MACHINE',
                       breakdown_start_datetime='2026-09-15 08:00:00',breakdown_reason='Test-only recorded description',status_label='Open (current)')
@@ -85,6 +90,8 @@ class TestBrowser(unittest.TestCase):
 
     def test_layout_selection_draft_retention_and_filter_cancel(self):
         self.assertEqual(self.page.locator('[data-filter]').count(),2)
+        self.assertEqual(self.page.get_by_role('button',name='Download Presentation').count(),1)
+        self.assertIn('2026-09-30',self.page.locator('.tmm-periods').inner_text())
         self.assertEqual(self.page.locator('[data-group]').count(),7)
         self.add()
         self.page.locator('[data-group="Excavators"]').click()
@@ -114,10 +121,10 @@ class TestBrowser(unittest.TestCase):
         self.page.locator('[data-group="Dozers"]').click()
         self.add()
         self.page.evaluate('window.open=(url)=>window.exportURL=url')
-        self.page.evaluate('view.download_pdf()')
+        self.page.evaluate('view.download_presentation()')
         calls=self.page.evaluate("calls.filter(c=>c.method.endsWith('save_actions')).map(c=>c.args.equipment_group)")
         self.assertEqual(calls,['ADTs','Dozers'])
-        self.assertIn('download_pdf?site=Koppie',self.page.evaluate('window.exportURL'))
+        self.assertIn('download_presentation?site=Koppie',self.page.evaluate('window.exportURL'))
 
     def test_stale_responses_do_not_replace_latest_filters(self):
         self.page.evaluate('''() => {window.pending=[];frappe.call=req=>new Promise(resolve=>pending.push({resolve,req}));view.site.set_value('Gwab');}''')
