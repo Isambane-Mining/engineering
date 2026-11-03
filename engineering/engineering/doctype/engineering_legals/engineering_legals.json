@@ -28,7 +28,10 @@
   "sharepoint_sync_column",
   "sharepoint_synced",
   "sharepoint_synced_at",
-  "sharepoint_sync_error"
+  "sharepoint_sync_error",
+  "site_configuration",
+  "expiry_rule_source",
+  "expiry_rule_snapshot"
  ],
  "fields": [
   {
@@ -67,7 +70,7 @@
    "fieldname": "start_date",
    "fieldtype": "Date",
    "label": "Document Start Date",
-   "reqd": 1
+   "reqd": 0
   },
   {
    "fieldname": "expiry_date",
@@ -183,6 +186,33 @@
   {
    "fieldname": "column_break_yuig",
    "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "site_configuration",
+   "label": "Site Configuration",
+   "fieldtype": "Link",
+   "options": "Engineering Legals Site Configuration",
+   "read_only": 1,
+   "no_copy": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "expiry_rule_source",
+   "label": "Expiry Rule Source",
+   "fieldtype": "Select",
+   "options": "\nHistorical\nLegacy\nSite Configuration",
+   "read_only": 1,
+   "no_copy": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "expiry_rule_snapshot",
+   "label": "Expiry Rule Snapshot",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "read_only": 1,
+   "no_copy": 1,
    "hidden": 1
   }
  ],
