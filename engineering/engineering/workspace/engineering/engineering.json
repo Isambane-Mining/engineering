@@ -466,7 +466,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Machine Information Report",
-   "link_count": 7,
+   "link_count": 8,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -541,6 +541,16 @@
    "link_type": "Page",
    "link_to": "reliability-engineering",
    "onboard": 0
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Monthly TMM Assurance",
+   "link_count": 0,
+   "link_to": "monthly-tmm-assurance",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
   },
   {
    "description": "This is where you can change emails and system related settings. Note that your actions is recorded.(Do not take yourself of any email)",

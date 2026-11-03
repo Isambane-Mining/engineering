@@ -1,0 +1,41 @@
+{
+ "doctype": "Page",
+ "name": "monthly-tmm-assurance",
+ "page_name": "monthly-tmm-assurance",
+ "title": "Monthly TMM Assurance",
+ "module": "Engineering",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Engineering Manager"
+  },
+  {
+   "role": "Engineering User"
+  },
+  {
+   "role": "Engineering Foreman"
+  },
+  {
+   "role": "Engineering Area Manager"
+  },
+  {
+   "role": "Engineering Supervisor"
+  },
+  {
+   "role": "Production Manager"
+  },
+  {
+   "role": "Production User"
+  },
+  {
+   "role": "Production Foreman"
+  },
+  {
+   "role": "Production Supervisor"
+  }
+ ]
+}
