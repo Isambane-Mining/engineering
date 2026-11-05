@@ -2090,6 +2090,99 @@ def _get_submitted_assets(
     return rows or []
 
 
+
+# MONTH_END_MPP_EXCLUSION_V1
+def _month_end_mpp_excluded_asset_keys(location, from_date, to_date):
+    """Resolve exclusions only for a complete matching planning period."""
+    from frappe.utils import getdate
+
+    if not location or not from_date or not to_date:
+        return set()
+
+    start = getdate(from_date)
+    end = getdate(to_date)
+
+    plans = frappe.get_all(
+        "Monthly Production Planning",
+        filters={
+            "location": location,
+            "prod_month_start_date": ["<=", end],
+            "prod_month_end_date": [">=", start],
+            "docstatus": ["<", 2],
+        },
+        fields=[
+            "name",
+            "prod_month_start_date",
+            "prod_month_end_date",
+            "modified",
+        ],
+        order_by="modified desc",
+        limit_page_length=0,
+    )
+
+    selected_exclusions = set()
+
+    for plan in plans:
+        excluded_rows = frappe.get_all(
+            "Excluded Production Machine",
+            filters={
+                "parent": plan.name,
+                "parenttype": "Monthly Production Planning",
+                "parentfield": "excluded_production_machines",
+            },
+            fields=["asset"],
+            limit_page_length=0,
+        )
+
+        asset_ids = {
+            str(row.asset or "").strip()
+            for row in excluded_rows
+            if row.asset
+        }
+
+        if not asset_ids:
+            continue
+
+        covers_report = (
+            getdate(plan.prod_month_start_date) <= start
+            and getdate(plan.prod_month_end_date) >= end
+        )
+
+        if not covers_report:
+            frappe.throw(
+                "The selected A&U period overlaps Monthly Production "
+                "Planning exclusions without covering a single complete "
+                "exclusion period. Run the report within one planning "
+                "period until date-level exclusions are supported."
+            )
+
+        selected_exclusions.update(asset_ids)
+
+    if not selected_exclusions:
+        return set()
+
+    keys = {
+        value.casefold()
+        for value in selected_exclusions
+    }
+
+    asset_rows = frappe.get_all(
+        "Asset",
+        filters={
+            "name": ["in", sorted(selected_exclusions)],
+        },
+        fields=["name", "asset_name"],
+        limit_page_length=0,
+    )
+
+    for asset in asset_rows:
+        for value in (asset.name, asset.asset_name):
+            if value:
+                keys.add(str(value).strip().casefold())
+
+    return keys
+
+
 def _month_end_direct_rows(filters):
     filters = frappe._dict(filters or {})
 
@@ -2161,6 +2254,12 @@ def _month_end_direct_rows(filters):
 
     spare_swing_asset_map = get_spare_swing_asset_map(
         filters
+    )
+
+    mpp_excluded_keys = _month_end_mpp_excluded_asset_keys(
+        location,
+        from_date,
+        to_date,
     )
 
     categories = [selected_category] if selected_category else list(MONTH_END_CATEGORIES)
@@ -2546,6 +2645,11 @@ def _month_end_direct_rows(filters):
                 location,
                 asset_name,
             ):
+                continue
+
+            # Exclude machines removed in Monthly Production Planning.
+            # The remaining machine rows form all scope totals.
+            if str(asset_name or "").strip().casefold() in mpp_excluded_keys:
                 continue
 
             is_spare = is_spare_swing_asset(asset_name, spare_swing_asset_map)
