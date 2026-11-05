@@ -356,3 +356,153 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
     });
 })();
 // --- PBOM SIGNATURE ROLE PERMISSION END ---
+
+// --- PBOM AUTO FAILURE CLASSIFICATION START ---
+(function () {
+    const METHOD =
+        "engineering.engineering.doctype." +
+        "plant_breakdown_or_maintenance." +
+        "auto_failure_classification.classify_breakdown";
+
+    function cancel_pending(frm) {
+        frm._pbom_ai_request = (frm._pbom_ai_request || 0) + 1;
+        clearTimeout(frm._pbom_ai_timer);
+    }
+
+    async function clear_previous_suggestion(frm) {
+        const previous = frm._pbom_ai_auto_value;
+
+        if (!previous) return;
+        frm._pbom_ai_auto_value = null;
+
+        if (frm.doc.failure_classification !== previous) return;
+
+        frm._pbom_ai_writing = true;
+        try {
+            await frm.set_value("failure_classification", "");
+        } finally {
+            frm._pbom_ai_writing = false;
+        }
+    }
+
+    function reason_changed(frm) {
+        cancel_pending(frm);
+
+        // Never overwrite an existing manual selection.
+        if (frm._pbom_ai_manual) return;
+
+        const previous = frm._pbom_ai_auto_value;
+
+        if (previous &&
+            frm.doc.failure_classification === previous) {
+            clear_previous_suggestion(frm);
+        }
+
+        if (frm.doc.failure_classification &&
+            frm.doc.failure_classification !== previous) {
+            return;
+        }
+
+        frm._pbom_ai_timer = setTimeout(function () {
+            suggest_classification(frm);
+        }, 700);
+    }
+
+    async function suggest_classification(frm) {
+        if (frm.doc.downtime_type !== "Breakdown") return;
+        if (frm._pbom_ai_manual || frm._pbom_ai_writing) return;
+        if (frm.doc.failure_classification) return;
+
+        const reason = (frm.doc.breakdown_reason || "").trim();
+        if (!reason || reason.length > 1000) return;
+
+        const request_id = ++frm._pbom_ai_request;
+        const document_name = frm.doc.name;
+
+        try {
+            const response = await frappe.call({
+                method: METHOD,
+                args: { reason },
+                freeze: false
+            });
+
+            if (request_id !== frm._pbom_ai_request) return;
+            if (frm.doc.name !== document_name) return;
+            if (frm._pbom_ai_manual || frm._pbom_ai_writing) return;
+            if (frm.doc.downtime_type !== "Breakdown") return;
+            if (frm.doc.failure_classification) return;
+
+            if ((frm.doc.breakdown_reason || "").trim() !== reason) {
+                return;
+            }
+
+            const classification =
+                (response.message || {}).classification;
+
+            if (!classification) return;
+
+            frm._pbom_ai_auto_value = classification;
+            frm._pbom_ai_writing = true;
+
+            try {
+                await frm.set_value(
+                    "failure_classification",
+                    classification
+                );
+            } finally {
+                frm._pbom_ai_writing = false;
+            }
+
+        } catch (error) {
+            console.warn(
+                "AI classification unavailable:",
+                error
+            );
+        }
+    }
+
+    function attach_reason_listener(frm) {
+        const field = frm.fields_dict.breakdown_reason;
+        if (!field || !field.$input) return;
+
+        field.$input.off("input.pbom_ai");
+
+        field.$input.on("input.pbom_ai", function () {
+            reason_changed(frm);
+        });
+    }
+
+    frappe.ui.form.on("Plant Breakdown or Maintenance", {
+        onload(frm) {
+            frm._pbom_ai_request = 0;
+            frm._pbom_ai_manual = false;
+            frm._pbom_ai_auto_value = null;
+            frm._pbom_ai_writing = false;
+        },
+
+        refresh(frm) {
+            attach_reason_listener(frm);
+        },
+
+        breakdown_reason(frm) {
+            reason_changed(frm);
+        },
+
+        failure_classification(frm) {
+            if (frm._pbom_ai_writing) return;
+
+            frm._pbom_ai_manual = true;
+            frm._pbom_ai_auto_value = null;
+            cancel_pending(frm);
+        },
+
+        downtime_type(frm) {
+            cancel_pending(frm);
+
+            if (frm.doc.downtime_type === "Breakdown") {
+                reason_changed(frm);
+            }
+        }
+    });
+})();
+// --- PBOM AUTO FAILURE CLASSIFICATION END ---
