@@ -1,0 +1,335 @@
+/* Source tab styles, isolated from other Desk pages. */
+.machines-available-page .hpa-shell{--date-width:94px;--day-width:42px;--month-width:100px;max-width:100%;padding:12px 0;color:var(--text-color,#243447)}
+    .machines-available-page .hpa-filters{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:12px;align-items:end;margin-bottom:12px}
+    .machines-available-page .hpa-filters .form-group{margin-bottom:0}.machines-available-page .hpa-filters button{margin-bottom:4px}.machines-available-page .hpa-note{font-size:12px;line-height:1.5;margin:10px 0;color:var(--text-muted,#667582)}
+    .machines-available-page .hpa-warning{font-size:12px;background:#fff2cf;color:#714900;padding:8px 10px;border-radius:6px;margin:6px 0}
+    .machines-available-page .hpa-scroll{overflow:auto;max-height:65vh;border:1px solid #b7c2cc;border-radius:6px;position:relative}
+    .machines-available-page .hpa-table{border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:1772px;width:100%;font-size:11px;text-align:center}
+    .machines-available-page .hpa-table caption{caption-side:top;text-align:left;padding:8px;color:inherit;font-weight:600}
+    .machines-available-page .hpa-table th,.machines-available-page .hpa-table td{box-sizing:border-box;height:29px;padding:4px;border-right:1px solid #a9b7c3;border-bottom:1px solid #a9b7c3;white-space:nowrap}
+    .machines-available-page .hpa-table thead th{position:sticky;top:0;background:#e7edf3;z-index:5;height:30px;color:#263b4d}
+    .machines-available-page .hpa-table thead .hpa-hour{top:30px;font-size:10px;width:64px}.machines-available-page .hpa-table .hpa-shift-day{background:#d8ead2}.machines-available-page .hpa-table .hpa-shift-night{background:#d5e2f3}
+    .machines-available-page .hpa-sticky-date,.machines-available-page .hpa-sticky-day,.machines-available-page .hpa-sticky-month{position:sticky;z-index:3;background:var(--card-bg,#fff);color:var(--text-color,#243447);font-weight:500}
+    .machines-available-page .hpa-sticky-date{left:0;width:var(--date-width);min-width:var(--date-width);max-width:var(--date-width)}
+    .machines-available-page .hpa-sticky-day{left:var(--date-width);width:var(--day-width);min-width:var(--day-width);max-width:var(--day-width)}
+    .machines-available-page .hpa-sticky-month{left:calc(var(--date-width) + var(--day-width));width:var(--month-width);min-width:var(--month-width);max-width:var(--month-width)}
+    .machines-available-page .hpa-table thead .hpa-sticky-date,.machines-available-page .hpa-table thead .hpa-sticky-day,.machines-available-page .hpa-table thead .hpa-sticky-month{z-index:8}
+    .machines-available-page .hpa-cell{font-weight:600;width:64px;min-width:64px;color:#172a1a}.machines-available-page .hpa-cell sup{font-size:9px;margin-left:2px}
+    .machines-available-page .hpa-table .hpa-night-start{border-left:3px solid #354f75}.machines-available-page .hpa-green{background:#00b050}.machines-available-page .hpa-amber{background:#ff9f1c}
+    .machines-available-page .hpa-red{background:#ffe066}.machines-available-page .hpa-bright_red{background:#d63c4b;color:#fff}.machines-available-page .hpa-partial{color:#172a1a}.machines-available-page .hpa-grey{background:#f5f5f5;color:#333}
+    .machines-available-page .hpa-mixed-text,.machines-available-page .hpa-mobile-mixed .hpa-mobile-text{display:inline-block;background:#fff;color:#172a1a;padding:2px 4px;border-radius:3px}
+    .machines-available-page .hpa-month-divider th{text-align:left;background:#d9e5ef;color:#203f58;height:27px}.machines-available-page .hpa-month-divider span{position:sticky;left:8px}
+    .machines-available-page .hpa-chart{display:flex;align-items:center;gap:24px;margin-top:16px;padding:12px;border:1px solid var(--border-color,#e1e6eb);border-radius:8px}
+    .machines-available-page .hpa-pie{width:150px;height:150px;border-radius:50%;flex-shrink:0}.machines-available-page .hpa-legend{font-size:12px;display:grid;gap:8px}
+    .machines-available-page .hpa-legend>div{display:grid;grid-template-columns:12px minmax(0,1fr) auto auto;gap:8px;align-items:center}.machines-available-page .hpa-legend i{width:10px;height:10px;border:1px solid #71808c}
+    .machines-available-page .hpa-cell[tabindex]{cursor:pointer}.machines-available-page .hpa-cell:focus-visible{outline:3px solid var(--primary,#2490ef);outline-offset:-3px}
+    .machines-available-page .hpa-hour-card{position:fixed;z-index:1060;width:340px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);
+      box-sizing:border-box;overflow:auto;padding:16px;border:1px solid var(--border-color,#d1d8dd);border-radius:8px;
+      background:var(--popover-bg,var(--card-bg,#fff));color:var(--text-color,#243447);box-shadow:0 6px 24px #0003;font-size:13px;line-height:1.5}
+    .machines-available-page .hpa-hour-card[hidden]{display:none}.machines-available-page .hpa-hour-card h3{font-size:14px;font-weight:600;margin:0 24px 12px 0}
+    .machines-available-page .hpa-hour-card h4{font-size:12px;font-weight:600;margin:12px 0 6px}.machines-available-page .hpa-hour-card dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;margin:0}
+    .machines-available-page .hpa-hour-card dt{font-weight:400;color:var(--text-muted,#667582)}.machines-available-page .hpa-hour-card dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+    .machines-available-page .hpa-card-close{position:absolute;right:5px;top:5px;width:32px;height:32px;border:0;border-radius:4px;background:transparent;color:inherit;font-size:20px;cursor:pointer}
+    .machines-available-page .hpa-load-times{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 0;border-top:1px solid var(--border-color,#e1e6eb)}
+    .machines-available-page .hpa-load-times strong{width:100%;overflow-wrap:anywhere}.machines-available-page .hpa-load-times b{margin-left:4px;font-weight:500}
+    .machines-available-page .hpa-message{padding:20px;font-size:14px}.machines-available-page .hpa-shell[aria-busy=true]{opacity:.7}
+    .machines-available-page .hpa-mobile{display:none}
+    @media(max-width:600px){.machines-available-page .hpa-shell{--date-width:82px;--day-width:38px;--month-width:90px}.machines-available-page .hpa-filters{grid-template-columns:1fr 1fr;gap:8px}
+      .machines-available-page .hpa-shift-day span,.machines-available-page .hpa-shift-night span{position:sticky;left:calc(var(--date-width) + var(--day-width) + var(--month-width) + 8px);display:block;width:max-content;text-align:left}
+      .machines-available-page .hpa-filters>div:first-child,.machines-available-page .hpa-filters button{grid-column:1/-1}.machines-available-page .hpa-chart{gap:12px;flex-wrap:wrap}.machines-available-page .hpa-pie{width:110px;height:110px}
+      .machines-available-page .hpa-legend{font-size:11px;width:100%}.machines-available-page .hpa-table{min-width:1746px;font-size:10px}.machines-available-page .hpa-table th,.machines-available-page .hpa-table td{padding:3px}
+      .machines-available-page .hpa-filters :is(input,select,button){font-size:16px;min-height:44px}
+      .machines-available-page .hpa-content{display:flex;flex-direction:column}.machines-available-page .hpa-scroll{display:none}.machines-available-page .hpa-mobile{display:block}
+      .machines-available-page .hpa-chart{order:-1;margin:0 0 14px;flex-wrap:nowrap;padding:12px;gap:12px}.machines-available-page .hpa-pie{width:80px;height:80px}
+      .machines-available-page .hpa-legend{width:auto;min-width:0;font-size:13px}.machines-available-page .hpa-legend>div{display:none}
+      .machines-available-page .hpa-mobile-key{display:flex;flex-wrap:wrap;gap:7px 12px;margin-bottom:16px;font-size:11px}
+      .machines-available-page .hpa-key-item{display:inline-flex;align-items:center;gap:5px}.machines-available-page .hpa-key-item i{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+      .machines-available-page .hpa-mobile-date-label{display:block;font-size:13px}.machines-available-page .hpa-mobile-date{display:block;width:100%;min-height:48px;font:inherit;font-size:16px;margin-top:6px;padding:10px;border:1px solid var(--border-color,#d1d8dd);border-radius:8px;background:var(--card-bg,#fff);color:var(--text-color,#243447)}
+      .machines-available-page .hpa-mobile h3{font-size:16px;margin:18px 0 10px}.machines-available-page .hpa-mobile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+      .machines-available-page .hpa-mobile-cell{box-sizing:border-box;min-width:0;min-height:60px;border:0;border-radius:8px;padding:7px 3px;font:inherit;color:#172a1a;cursor:pointer;font-variant-numeric:tabular-nums}
+      .machines-available-page .hpa-mobile-cell.hpa-bright_red{color:#fff}.machines-available-page .hpa-mobile-cell.hpa-grey{color:#333}
+      .machines-available-page .hpa-mobile-cell[aria-pressed=true]{outline:3px solid var(--text-color,#243447);outline-offset:2px}
+      .machines-available-page .hpa-mobile-cell small{display:block;font-size:11px}.machines-available-page .hpa-mobile-cell strong{display:block;font-size:18px;font-weight:600;overflow-wrap:anywhere}.machines-available-page .hpa-mobile-cell sup{font-size:10px}
+      .machines-available-page .hpa-mobile-note{font-size:11px;margin:12px 0}.machines-available-page .hpa-mobile-detail{padding:14px;border:1px solid var(--border-color,#d1d8dd);border-radius:10px;margin:14px 0;background:var(--card-bg,#fff)}
+      .machines-available-page .hpa-mobile-detail h3{font-size:14px;margin:0 0 12px}.machines-available-page .hpa-mobile-detail h4{font-size:13px;margin:14px 0 8px}
+      .machines-available-page .hpa-mobile-detail dl{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:13px;margin:0}.machines-available-page .hpa-mobile-detail dt{font-weight:400}.machines-available-page .hpa-mobile-detail dd{margin:0;font-weight:600;overflow-wrap:anywhere}}
+    @media(max-width:350px){.machines-available-page .hpa-mobile-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.machines-available-page .hpt-tabs{display:flex;gap:24px;border-bottom:1px solid var(--border-color,#dce4e9);margin-bottom:12px}
+      .machines-available-page .hpt-tabs button{font:inherit;font-size:14px;font-weight:600;min-height:48px;padding:14px 2px;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--text-muted,#667582)}
+      .machines-available-page .hpt-tabs button[aria-selected=true]{color:var(--text-color,#243447);border-bottom-color:currentColor}
+      .machines-available-page .hpt-shell>[hidden]{display:none!important}.machines-available-page .hpt-message{padding:20px;font-size:14px}
+      @media(max-width:600px){.machines-available-page .hpt-tabs{gap:8px}.machines-available-page .hpt-tabs button{flex:1;min-width:0;font-size:0;line-height:1.4;padding:12px 2px;border-radius:8px}.machines-available-page .hpt-tabs button::after{content:attr(data-mobile-label);font-size:14px}.machines-available-page .hpt-tabs button[aria-selected=true]{background:var(--control-bg,#f3f6f8)}}
+
+
+.machines-available-page .hm-filters{
+  grid-template-columns:2fr 1fr 1fr auto auto;
+  align-items:end;
+}
+.machines-available-page .hm-scope-control{
+  min-width:170px;
+  margin-bottom:4px;
+}
+.machines-available-page .hm-scope-control label{
+  display:block;
+  font-size:12px;
+  font-weight:600;
+  margin-bottom:6px;
+}
+.machines-available-page .hm-scope-control select{
+  height:34px;
+}
+.machines-available-page .hm-status:not(:empty){
+  padding:12px 0;
+  font-size:13px;
+}
+.machines-available-page .hm-matrix .hm-cell{
+  background:var(--card-bg,#fff);
+  color:var(--text-color,#243447);
+}
+.machines-available-page .hm-avail{
+  color:#2563EB;
+  font-weight:700;
+}
+.machines-available-page .hm-used{
+  color:#9333EA;
+  font-weight:700;
+}
+.machines-available-page .hm-legend{
+  display:grid;
+  gap:10px;
+  font-size:12px;
+  width:100%;
+}
+.machines-available-page .hm-legend>div{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.machines-available-page .hm-legend i{
+  width:12px;
+  height:12px;
+  border:1px solid #94a3b8;
+  flex-shrink:0;
+}
+.machines-available-page .hm-available-key{background:#2563EB}
+.machines-available-page .hm-utilised-key{background:#9333EA}
+.machines-available-page .hm-unknown-key{background:#fff}
+.machines-available-page .hm-legend b{margin-left:auto}
+.machines-available-page .hm-chart{min-height:110px}
+@media(max-width:600px){
+  .machines-available-page .hm-filters{
+    grid-template-columns:1fr 1fr;
+  }
+  .machines-available-page .hm-scope-control{
+    grid-column:1/-1;
+  }
+  .machines-available-page .hm-shell .hpa-scroll{
+    display:block;
+    max-height:65vh;
+  }
+}
+
+
+/* Machine utilisation backgrounds */
+.machines-available-page .hm-matrix td.hm-green   {background:#B9EDC5}
+.machines-available-page .hm-matrix td.hm-yellow  {background:#FFF09A}
+.machines-available-page .hm-matrix td.hm-orange  {background:#FFC18A}
+.machines-available-page .hm-matrix td.hm-red     {background:#F3A6AE}
+.machines-available-page .hm-matrix td.hm-neutral {background:var(--card-bg,#fff)}
+
+.machines-available-page .hm-green-key  {background:#B9EDC5}
+.machines-available-page .hm-yellow-key {background:#FFF09A}
+.machines-available-page .hm-orange-key {background:#FFC18A}
+.machines-available-page .hm-red-key    {background:#F3A6AE}
+
+
+/* Shared machine-scope controls */
+.machines-available-page .hpa-filters:has(.hpa-scope-control) {
+  grid-template-columns:2fr 1fr 1fr minmax(150px,auto) auto auto;
+}
+
+.machines-available-page .hpa-scope-control,
+.machines-available-page .hps-scope-control {
+  min-width:150px;
+  margin-bottom:4px;
+}
+
+.machines-available-page .hpa-scope-control label,
+.machines-available-page .hps-scope-control label {
+  display:block;
+  font-size:12px;
+  font-weight:600;
+  margin-bottom:6px;
+}
+
+.machines-available-page .hpa-scope-control select,
+.machines-available-page .hps-scope-control select {
+  height:34px;
+}
+
+@media(max-width:700px) {
+  .machines-available-page .hpa-filters:has(.hpa-scope-control) {
+    grid-template-columns:1fr 1fr;
+  }
+  .machines-available-page .hpa-scope-control {
+    grid-column:1/-1;
+  }
+}
+
+
+          .machines-available-page .hm-shell .hm-filters {
+            display:grid;
+            grid-template-columns:
+              minmax(220px,2fr)
+              minmax(145px,1fr)
+              minmax(145px,1fr)
+              minmax(150px,.7fr)
+              minmax(195px,.9fr);
+            gap:10px;
+            align-items:end;
+          }
+          .machines-available-page .hm-shell .hm-refresh,
+          .machines-available-page .hm-shell .hm-export {
+            width:auto;
+            min-width:110px;
+            max-width:160px;
+            padding:6px 14px;
+            justify-self:start;
+            margin:0 0 4px;
+          }
+          .machines-available-page .hm-shell .hm-refresh {grid-column:4;grid-row:2}
+          .machines-available-page .hm-shell .hm-export {grid-column:5;grid-row:2}
+          .machines-available-page .hm-shell .hm-legend {
+            display:flex !important;
+            flex-wrap:wrap;
+            align-items:center;
+            justify-content:flex-start;
+            gap:12px 22px;
+            width:100%;
+          }
+          .machines-available-page .hm-shell .hm-legend > div {
+            display:inline-flex !important;
+            flex:0 0 auto;
+            align-items:center;
+            gap:6px;
+          }
+          .machines-available-page .hm-shell .hm-legend b {margin-left:0}
+          .machines-available-page .hm-shell .hm-matrix .hm-cell.hm-unavailable-match {
+            box-shadow:inset 0 0 0 2px #dc2626 !important;
+          }
+          @media(max-width:1000px) {
+            .machines-available-page .hm-shell .hm-filters {
+              grid-template-columns:repeat(2,minmax(0,1fr));
+            }
+            .machines-available-page .hm-shell .hm-refresh,
+            .machines-available-page .hm-shell .hm-export {
+              grid-column:auto;
+              grid-row:auto;
+            }
+          }
+
+/* Hourly PBM drill-down: fixed to the viewport, independent of table overflow. */
+.machines-available-page .hm-cell[tabindex] {cursor:pointer}
+.machines-available-page .hm-cell[aria-expanded=true] {outline:2px solid var(--primary,#2490ef);outline-offset:-4px}
+.machines-available-page .hm-breakdown-popup {
+  position:fixed;z-index:1060;width:420px;max-width:calc(100vw - 24px);
+  max-height:calc(100dvh - 24px);overflow:auto;box-sizing:border-box;
+  padding:16px;background:var(--popover-bg,var(--card-bg,#fff));color:var(--text-color,#243447);
+  border:1px solid var(--border-color,#d1d8dd);border-radius:8px;box-shadow:0 6px 24px #0003;
+  font-size:13px;line-height:1.5;overflow-wrap:anywhere;overscroll-behavior:contain;
+}
+.machines-available-page .hm-breakdown-popup[hidden] {display:none}
+.machines-available-page .hm-breakdown-popup h3 {font-size:14px;font-weight:600;margin:0 30px 10px 0}
+.machines-available-page .hm-breakdown-popup h4 {font-size:14px;font-weight:600;margin:0 0 6px}
+.machines-available-page .hm-breakdown-close {
+  position:absolute;right:5px;top:5px;width:32px;height:32px;border:0;border-radius:4px;
+  background:transparent;color:inherit;font-size:22px;cursor:pointer;
+}
+.machines-available-page .hm-breakdown-machine {border-top:1px solid var(--border-color,#d1d8dd);padding:12px 0 0;margin-top:12px}
+.machines-available-page .hm-breakdown-record + .hm-breakdown-record {border-top:1px dashed var(--border-color,#d1d8dd);padding-top:10px}
+.machines-available-page .hm-breakdown-popup dl {display:grid;grid-template-columns:115px minmax(0,1fr);gap:6px 12px;margin:0 0 12px}
+.machines-available-page .hm-breakdown-popup dt {font-weight:400;color:var(--text-muted,#667582)}
+.machines-available-page .hm-breakdown-popup dd {margin:0;white-space:pre-wrap}
+@media(max-width:600px) {
+  .machines-available-page .hm-breakdown-popup {max-height:60dvh}
+  .machines-available-page .hm-breakdown-close {width:40px;height:40px}
+}
+
+/* Month / Day / Heatmap follow machines_available_mobile_options.html. */
+.machines-available-page {--hm-navy:#1c334e;--hm-muted:#65758a;--hm-border:#e2e8f0;min-width:0}
+.machines-available-page .hm-shell {max-width:1160px;margin:auto}
+.machines-available-page .hm-view-controls[hidden] {display:none}
+.machines-available-page .hm-month-control {display:block;max-width:280px;font-size:11px;font-weight:800;color:var(--hm-muted)}
+.machines-available-page .hm-month-control select {margin-top:4px;border:1px solid var(--hm-border);background:var(--control-bg,#f8fafc);border-radius:10px;padding:8px;height:auto;font-size:13px}
+.machines-available-page .hm-mode-nav {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:3px;gap:3px;background:var(--control-bg,#e9eef5);border-radius:11px;margin:12px 0 17px}
+.machines-available-page .hm-mode-nav button {border:0;background:transparent;color:var(--hm-muted);font-size:12px;font-weight:750;padding:11px 5px;border-radius:8px;cursor:pointer}
+.machines-available-page .hm-mode-nav button[aria-selected=true] {background:var(--hm-navy);color:#fff;box-shadow:0 2px 7px #17304c24}
+.machines-available-page .hm-content {min-width:0}
+.machines-available-page .hm-section-heading {display:flex;justify-content:space-between;align-items:center;gap:8px;margin:17px 0 10px}
+.machines-available-page .hm-section-heading h2 {font-size:16px;letter-spacing:-.3px;margin:0}
+.machines-available-page .hm-section-heading>span {font-size:11px;color:var(--hm-muted)}
+.machines-available-page .hm-kpis {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.machines-available-page .hm-kpi {padding:14px 12px;border-radius:12px;min-height:91px}
+.machines-available-page .hm-kpi span {display:block;font-size:11px;font-weight:750;margin-bottom:6px}
+.machines-available-page .hm-kpi strong {font-size:24px;letter-spacing:-.7px}
+.machines-available-page .hm-kpi.blue {background:#e2efff;color:#214e9f}
+.machines-available-page .hm-kpi.purple {background:#f0e8ff;color:#7431aa}
+.machines-available-page .hm-kpi.red {background:#ffe5e6;color:#ad303b}
+.machines-available-page .hm-kpi.green {background:#dbf5e6;color:#27734a}
+.machines-available-page .hm-view-note {font-size:11px;color:var(--hm-muted);margin:10px 0;line-height:1.5}
+.machines-available-page .hm-cal-grid {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.machines-available-page .hm-weekday {text-align:center;font-size:10px;font-weight:800;padding:6px 0;color:var(--hm-muted)}
+.machines-available-page .hm-cal-day {min-height:48px;aspect-ratio:1.4;display:flex;align-items:center;justify-content:center;position:relative;border:2px solid transparent;border-radius:8px;color:var(--text-color,#334155);font-size:12px;font-weight:800;cursor:pointer}
+.machines-available-page .hm-cal-day:disabled {opacity:.55;cursor:default}
+.machines-available-page .hm-cal-day.selected {border-color:#2563eb}
+.machines-available-page .hm-cal-dot {position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:#af3038}
+.machines-available-page :is(.hm-cal-day,.hm-hour-row,.hm-heat,.hm-view-legend i).hm-green {background:#B9EDC5}
+.machines-available-page :is(.hm-cal-day,.hm-hour-row,.hm-heat,.hm-view-legend i).hm-yellow {background:#FFF09A}
+.machines-available-page :is(.hm-cal-day,.hm-hour-row,.hm-heat,.hm-view-legend i).hm-orange {background:#FFC18A}
+.machines-available-page :is(.hm-cal-day,.hm-hour-row,.hm-heat,.hm-view-legend i).hm-red {background:#F3A6AE}
+.machines-available-page :is(.hm-cal-day,.hm-hour-row,.hm-heat,.hm-view-legend i).hm-neutral {background:var(--control-bg,#f6f7f9)}
+.machines-available-page .hm-unavailable-match {box-shadow:inset 0 0 0 2px #dc2626!important}
+.machines-available-page .hm-view-legend {display:flex;gap:8px 13px;flex-wrap:wrap;margin-top:15px;font-size:10px;color:var(--hm-muted)}
+.machines-available-page .hm-view-legend>span {display:flex;align-items:center;gap:5px}
+.machines-available-page .hm-view-legend i {width:11px;height:11px;border-radius:3px;border:1px solid #94a3b8}
+.machines-available-page .hm-day-nav {display:flex;align-items:center;justify-content:space-between;margin:14px 0 10px}
+.machines-available-page .hm-day-nav strong {font-size:14px}
+.machines-available-page .hm-icon-button {background:var(--control-bg,#f2f6fa);color:inherit;border:1px solid var(--hm-border);border-radius:9px;padding:7px 12px;cursor:pointer;font-size:16px}
+.machines-available-page .hm-icon-button:disabled {opacity:.35;cursor:default}
+.machines-available-page .hm-day-summary {display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--control-bg,#f8fafc);padding:11px 12px;border-radius:10px;margin-bottom:12px;font-size:12px}
+.machines-available-page .hm-day-summary b {color:#2459bc}
+.machines-available-page .hm-day-summary .hm-down-count,.machines-available-page .hm-down-count {color:#b73a43;font-size:12px;font-weight:800;text-align:right}
+.machines-available-page .hm-shift-head {margin:15px 0 7px;color:var(--hm-muted);text-transform:uppercase;font-size:10px;font-weight:900;letter-spacing:.7px}
+.machines-available-page .hm-hour-row {display:grid;width:100%;grid-template-columns:1fr auto auto 18px;gap:10px;align-items:center;padding:11px 10px;border-radius:9px;margin-bottom:5px;cursor:pointer;border:2px solid transparent;color:var(--text-color,#334155);text-align:left}
+.machines-available-page .hm-hour-label {font-weight:800;font-size:12px}
+.machines-available-page .hm-hour-count {font-size:12px;font-weight:900}
+.machines-available-page .hm-cell:focus-visible,.machines-available-page .hm-cal-day:focus-visible {outline:2px solid #2563eb;outline-offset:1px}
+.machines-available-page .hm-heat-scroller {border:1px solid var(--hm-border);border-radius:10px;max-width:100%;max-height:65vh;overflow:auto;background:var(--card-bg,#fff)}
+.machines-available-page .hm-heat-table {border-collapse:separate;border-spacing:3px;width:max-content;min-width:100%;font-size:10px}
+.machines-available-page .hm-heat-table caption {caption-side:top;padding:8px;text-align:left;font-weight:600;color:inherit}
+.machines-available-page .hm-heat-table th {font-size:10px;color:var(--hm-muted);padding:6px 3px;background:var(--card-bg,#fff);position:sticky;top:0;height:30px;z-index:2}
+.machines-available-page .hm-heat-table .hm-hour-head {top:33px}
+.machines-available-page .hm-heat-table .hm-date-head {position:sticky;left:0;background:var(--card-bg,#fff);text-align:left;padding-left:8px;min-width:60px;z-index:1}
+.machines-available-page .hm-heat-table thead .hm-date-head {z-index:4}
+.machines-available-page .hm-heat {display:block;width:29px;height:29px;border:2px solid transparent;border-radius:4px;cursor:pointer;padding:0;color:var(--text-color,#334155)}
+.machines-available-page .hm-heat-value {position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.machines-available-page .hm-heat-empty {width:29px;height:29px;text-align:center;background:var(--control-bg,#f6f7f9);border-radius:4px;color:var(--hm-muted)}
+.machines-available-page .hm-heat-info {padding:11px 12px;border-radius:10px;background:var(--control-bg,#f8fafc);margin-top:12px;font-size:12px}
+.machines-available-page .hm-view-export {width:100%;border:0;border-radius:11px;padding:13px;background:#203954;color:#fff;font-weight:800;cursor:pointer;margin-top:18px}
+.machines-available-page .hm-breakdown-popup {border-radius:16px}
+@media(max-width:600px) {
+  .machines-available-page .hm-kpis {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .machines-available-page .hm-cal-day {aspect-ratio:1/.95;min-height:40px}
+  .machines-available-page .hm-month-control {max-width:none}
+  .machines-available-page .hm-shell .hm-filters {grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .machines-available-page .hm-scope-control {min-width:0;grid-column:auto}
+  .machines-available-page .hm-filters .form-control {border-radius:10px}
+  .machines-available-page .hm-shell .hm-refresh,.machines-available-page .hm-shell .hm-export {grid-column:auto;width:100%;max-width:none;min-width:0}
+}
+.machines-available-page .hm-heat-table tbody .hm-date-head {top:auto}
+.machines-available-page .hm-filters>div {min-width:0}
+.machines-available-page .hm-filters :is(input,select) {width:100%;box-sizing:border-box}
+@media(max-width:600px) {
+  .machines-available-page .hm-filters .hm-unavailable-control {grid-column:auto;min-width:0}
+}

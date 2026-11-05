@@ -1,7 +1,7 @@
 {
  "app": "engineering",
  "charts": [],
- "content": "[{\"id\": \"skzRE6WTC2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h1\\\">Engineering</span>\", \"col\": 12}}, {\"id\": \"sZDBbZCI3L\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h3\\\">Dashboards</span>\", \"col\": 12}}, {\"id\": \"engineeringProductionReports\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Engineering and Production Reports\", \"col\": 12}}, {\"id\": \"LtXdvfLbmE\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Weekly A & U Dashboard\", \"col\": 6}}, {\"id\": \"aCmzuqPZli\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Weekly Performance Tool\", \"col\": 6}}, {\"id\": \"lKxVpGPEZa\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Daily Availability & Utilisation Dashboard\", \"col\": 6}}, {\"id\": \"fleetMgmtSpacer1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ngshvtiyUP\", \"type\": \"card\", \"data\": {\"card_name\": \"Downtime Verification and Reports\", \"col\": 6}}, {\"id\": \"ff-YLzTyzs\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"MyMIER7PYD\", \"type\": \"card\", \"data\": {\"card_name\": \"Availability and Utilisation Reports\", \"col\": 6}}, {\"id\": \"OeS-8We268\", \"type\": \"card\", \"data\": {\"card_name\": \"Availability and Utilisation Capture\", \"col\": 6}}, {\"id\": \"l27-epjru2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"BJ1IGn-pXU\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Information Capturing\", \"col\": 6}}, {\"id\": \"3nTbUdn6sC\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Information Report\", \"col\": 6}}, {\"id\": \"U0E_aVRgp2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"Y_vUfdikNP\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Management\", \"col\": 6}}, {\"id\": \"n0zteetS9m\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Planning\", \"col\": 6}}, {\"id\": \"6lM7a_TdfA\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"Dq5KicizMW\", \"type\": \"card\", \"data\": {\"card_name\": \"Engineering Legals Reports\", \"col\": 6}}, {\"id\": \"wdVZshp1eP\", \"type\": \"card\", \"data\": {\"card_name\": \"Legals\", \"col\": 6}}, {\"id\": \"rZWIfUNJRQ\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"7fnJchMR8X\", \"type\": \"card\", \"data\": {\"card_name\": \"Diesel\", \"col\": 6}}, {\"id\": \"vsQTdHb-Bj\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 6}}]",
+ "content": "[{\"id\": \"skzRE6WTC2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h1\\\">Engineering</span>\", \"col\": 12}}, {\"id\": \"sZDBbZCI3L\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h3\\\">Dashboards</span>\", \"col\": 12}}, {\"id\": \"engineeringProductionReports\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Engineering and Production Reports\", \"col\": 12}}, {\"id\": \"LtXdvfLbmE\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Weekly A & U Dashboard\", \"col\": 6}}, {\"id\": \"machinesAvailableShortcut\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Machines Available\", \"col\": 6}}, {\"id\": \"aCmzuqPZli\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Weekly Performance Tool\", \"col\": 6}}, {\"id\": \"lKxVpGPEZa\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Daily Availability & Utilisation Dashboard\", \"col\": 6}}, {\"id\": \"fleetMgmtSpacer1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ngshvtiyUP\", \"type\": \"card\", \"data\": {\"card_name\": \"Downtime Verification and Reports\", \"col\": 6}}, {\"id\": \"ff-YLzTyzs\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"MyMIER7PYD\", \"type\": \"card\", \"data\": {\"card_name\": \"Availability and Utilisation Reports\", \"col\": 6}}, {\"id\": \"OeS-8We268\", \"type\": \"card\", \"data\": {\"card_name\": \"Availability and Utilisation Capture\", \"col\": 6}}, {\"id\": \"l27-epjru2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"BJ1IGn-pXU\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Information Capturing\", \"col\": 6}}, {\"id\": \"3nTbUdn6sC\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Information Report\", \"col\": 6}}, {\"id\": \"U0E_aVRgp2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"Y_vUfdikNP\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Management\", \"col\": 6}}, {\"id\": \"n0zteetS9m\", \"type\": \"card\", \"data\": {\"card_name\": \"Machine Planning\", \"col\": 6}}, {\"id\": \"6lM7a_TdfA\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"Dq5KicizMW\", \"type\": \"card\", \"data\": {\"card_name\": \"Engineering Legals Reports\", \"col\": 6}}, {\"id\": \"wdVZshp1eP\", \"type\": \"card\", \"data\": {\"card_name\": \"Legals\", \"col\": 6}}, {\"id\": \"rZWIfUNJRQ\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"7fnJchMR8X\", \"type\": \"card\", \"data\": {\"card_name\": \"Diesel\", \"col\": 6}}, {\"id\": \"vsQTdHb-Bj\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 6}}]",
  "creation": "2026-09-01 06:16:15.374789",
  "custom_blocks": [],
  "docstatus": 0,
@@ -427,7 +427,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Availability and Utilisation Reports",
-   "link_count": 3,
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -459,6 +459,16 @@
    "link_count": 0,
    "link_to": "Availability and utilization Asset timeline",
    "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Machines Available",
+   "link_count": 0,
+   "link_to": "machines-available",
+   "link_type": "Page",
    "onboard": 0,
    "type": "Link"
   },
@@ -719,6 +729,13 @@
    "doc_view": "List",
    "label": "Weekly A & U Dashboard",
    "link_to": "weekly-availability-",
+   "type": "Page"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Machines Available",
+   "link_to": "machines-available",
    "type": "Page"
   },
   {

@@ -1,0 +1,29 @@
+{
+ "doctype": "Page",
+ "module": "Engineering",
+ "name": "machines-available",
+ "page_name": "machines-available",
+ "title": "Machines Available",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Engineering Manager"
+  },
+  {
+   "role": "Engineering User"
+  },
+  {
+   "role": "Production Manager"
+  },
+  {
+   "role": "Production User"
+  }
+ ],
+ "content": null,
+ "script": null,
+ "style": null
+}
