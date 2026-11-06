@@ -1043,8 +1043,8 @@ function show_invalid_au_rows(report) {
                         color:#7f1d1d;
                         font-size:12px;
                     ">
-                        Invalid shifts are excluded from
-                        A&amp;U KPI totals.
+                        Recorded working hours remain in A&amp;U totals
+                        when the Pre-Use meter integrity rules pass.
                     </div>
                 </div>
 
@@ -1269,8 +1269,8 @@ function show_au_invalid_explanation() {
                 </strong>
 
                 <div style="margin-top:8px;">
-                    The individual shift contains a physically impossible
-                    or invalid combination of hours.
+                    The individual shift has hours that conflict with its
+                    production plan or recorded mechanical downtime and needs investigation.
                 </div>
             </div>
 
@@ -1345,7 +1345,11 @@ function show_au_invalid_explanation() {
                     Date, machine and category rows may naturally total
                     more than one shift.
 
-                    Invalid shift rows are excluded from A&amp;U totals.
+                    A&amp;U flags do not remove recorded working hours from totals.
+                    Only shifts failing the Pre-Use meter integrity rules are excluded.
+                    Those rules remain 12 hours per shift and 24 hours per day;
+                    Saturdays planned at 7 hours use 9 hours per shift and 18 per day,
+                    while Saturdays planned at 9 hours use 12 and 24.
                 </div>
             </div>
         </div>
@@ -1841,9 +1845,9 @@ function show_availability_available_hours_formula() {
                 <strong>Totals</strong>
 
                 <div style="margin-top:8px;">
-                    Each valid shift is calculated first.
-                    Invalid shifts are excluded from the machine,
-                    date and category totals.
+                    Each shift passing the Pre-Use meter integrity rules is included
+                    in machine, date and category totals. A&amp;U investigation
+                    flags remain visible without removing those hours.
                 </div>
             </div>
         </div>
