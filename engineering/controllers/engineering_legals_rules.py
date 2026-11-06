@@ -676,7 +676,9 @@ def authorize_capture(values, docname=None, draft_name=None):
         raise frappe.PermissionError("Please log in first.")
     if docname and draft_name:
         fail("Specify a legal document or supplier draft, not both.")
-    supplier = "Supplier" in frappe.get_roles(frappe.session.user)
+    roles = set(frappe.get_roles(frappe.session.user))
+    internal_roles = {"System Manager", "Engineering Manager"}
+    supplier = "Supplier" in roles and not bool(roles & internal_roles)
     existing = None
     if docname:
         existing = frappe.get_doc("Engineering Legals", docname)
