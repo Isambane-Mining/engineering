@@ -1,7 +1,8 @@
 {
+ "actions": [],
+ "autoname": "field:site",
+ "creation": "2026-11-02 14:48:18.567702",
  "doctype": "DocType",
- "name": "Engineering Legals Site Configuration",
- "module": "Engineering",
  "engine": "InnoDB",
  "field_order": [
   "site",
@@ -14,70 +15,96 @@
  "fields": [
   {
    "fieldname": "site",
-   "label": "Site",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site",
    "options": "Location",
    "reqd": 1,
-   "unique": 1,
-   "in_list_view": 1
+   "unique": 1
   },
   {
-   "fieldname": "enabled",
-   "label": "Enable Site Rules",
-   "fieldtype": "Check",
    "default": "0",
-   "in_list_view": 1
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enable Site Rules"
   },
   {
    "fieldname": "effective_from",
-   "label": "Effective From",
    "fieldtype": "Date",
+   "label": "Effective From",
    "mandatory_depends_on": "eval:doc.enabled"
   },
   {
    "fieldname": "section_rules",
-   "label": "Section Rules",
    "fieldtype": "Table",
+   "label": "Section Rules",
    "options": "Engineering Legals Site Section Rule"
   },
   {
+   "description": "Optional folder code. Existing gwab/klp routes remain the default.",
    "fieldname": "sharepoint_site_code",
-   "label": "SharePoint Site Code",
    "fieldtype": "Data",
-   "description": "Optional folder code. Existing gwab/klp routes remain the default."
+   "label": "SharePoint Site Code"
   },
   {
    "fieldname": "notes",
-   "label": "Notes",
-   "fieldtype": "Small Text"
+   "fieldtype": "Small Text",
+   "label": "Notes"
   }
  ],
- "actions": [],
  "links": [],
- "states": [],
- "sort_field": "modified",
- "sort_order": "DESC",
- "autoname": "field:site",
- "allow_rename": 0,
- "track_changes": 1,
+ "modified": "2026-11-05 12:09:40.402995",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "Engineering Legals Site Configuration",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
  "permissions": [
   {
-   "role": "System Manager",
-   "read": 1,
-   "write": 1,
    "create": 1,
-   "delete": 0,
+   "export": 1,
+   "read": 1,
    "report": 1,
-   "export": 1
+   "role": "System Manager",
+   "write": 1
   },
   {
-   "role": "Engineering Manager",
-   "read": 1,
-   "write": 1,
    "create": 1,
-   "delete": 0,
+   "export": 1,
+   "read": 1,
    "report": 1,
-   "export": 1
+   "role": "Engineering Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Engineering User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "share": 1,
+   "write": 1
   }
- ]
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
 }
