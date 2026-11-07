@@ -193,8 +193,8 @@ Loader`,
 			return "";
 		}
 
-		const is_na_utilisation = (
-			column.fieldname === "util_percent"
+		const is_na_percentage = (
+			["avail_percent", "util_percent"].includes(column.fieldname)
 			&& (
 				data[column.fieldname] === null
 				|| data[column.fieldname] === undefined
@@ -202,7 +202,7 @@ Loader`,
 			)
 		);
 
-		if (is_na_utilisation) {
+		if (is_na_percentage) {
 			value = `
 				<span style="
 					display:inline-block;
@@ -382,7 +382,7 @@ Loader`,
 		];
 
 		if (percent_fields.includes(column.fieldname)) {
-			if (is_na_utilisation) {
+			if (is_na_percentage) {
 				return value;
 			}
 
