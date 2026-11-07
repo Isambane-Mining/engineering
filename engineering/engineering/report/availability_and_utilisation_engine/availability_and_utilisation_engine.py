@@ -1697,7 +1697,7 @@ def calculate_availability_values(row):
             required_hours > 0
             and utilisation_available_hours > 0
         )
-        else 0.0
+        else None
     )
 
     row["utilisation_available_hours"] = (
@@ -1826,7 +1826,8 @@ def validate_au_row(row):
             "Invalid A&U: "
             + "; ".join(invalid_reasons)
         )
-        row["utilisation_percentage"] = None
+        # Keep the calculated percentage alongside the investigation flag.
+        # Meter integrity, rather than A&U reconciliation, controls totals.
     elif warning_reasons:
         row["invalid_au"] = 0
         row["au_validation_level"] = "warning"
@@ -1880,14 +1881,12 @@ def round_engine_row(row):
 
 
 def get_valid_rows(rows):
+    """Include integrity-valid meters even when A&U needs investigation."""
     return [
         row
         for row in rows
         if not row.get(
             "invalid_pre_use"
-        )
-        and not row.get(
-            "invalid_au"
         )
     ]
 
@@ -1902,15 +1901,10 @@ def build_summary_row(
         rows
     )
 
-    # PBM represents actual breakdown downtime and must not disappear
-    # merely because an A&U validation rule flags the shift.
-    # We still exclude invalid Pre-Use rows, but retain PBM from
-    # invalid_au rows so Mechanical Downtime matches breakdown detail.
-    pbm_rows = [
-        row
-        for row in rows
-        if not row.get("invalid_pre_use")
-    ]
+    # All hours use the same Pre-Use integrity boundary. An invalid_au
+    # flag remains visible but does not discard recorded work, planning
+    # or physical downtime merely because their reconciliation needs review.
+    pbm_rows = valid_rows
 
     problem_dates = {
         str(row.get("shift_date"))
@@ -1984,7 +1978,8 @@ def build_summary_row(
     )
 
 
-    # KPI fields continue to use fully valid A&U rows.
+    # Keep the numerator and denominators on the same integrity-valid shifts.
+    # In particular, Sunday work remains work even with zero required hours.
     for fieldname in (
         "planned_downtime",
         "required_hours",
