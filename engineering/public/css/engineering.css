@@ -2031,3 +2031,254 @@
 @media(max-width:600px) {
   .machines-available-page .hm-filters .hm-unavailable-control {grid-column:auto;min-width:0}
 }
+
+
+/* A&U Engine: report and investigation-dialog presentation. */
+/* ensure_engine_filter_dropdowns_in_front: report-scoped table/filter layout. */
+
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form {
+    position: relative !important;
+    z-index: 50 !important;
+    overflow: visible !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .form-group,
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .control-input-wrapper,
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .control-input,
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .awesomplete,
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .frappe-control {
+    overflow: visible !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .dropdown-menu,
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .awesomplete > ul,
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .multiselect-list,
+body[data-route="query-report/Availability and Utilisation Engine"] .page-form .multiselect-list .dropdown-menu {
+    z-index: 2000 !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .report-wrapper,
+body[data-route="query-report/Availability and Utilisation Engine"] .datatable {
+    position: relative;
+    z-index: 1;
+}
+
+/* apply_engine_styles: report-scoped table/filter layout. */
+
+body[data-route="query-report/Availability and Utilisation Engine"]
+.dt-row-filter {
+    min-height: 68px !important;
+    height: 68px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.dt-row-filter .dt-cell {
+    min-height: 68px !important;
+    height: 68px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.dt-row-filter .dt-cell__content {
+    height: 100% !important;
+    overflow: visible !important;
+    white-space: normal !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .availability-engine-header-formula {
+    margin-bottom: 5px;
+    padding: 4px 3px;
+    border: 1px solid #60a5fa;
+    border-radius: 4px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.dt-cell--header {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    font-weight: 800 !important;
+    border-bottom: 2px solid #16a34a !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-0,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-1,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-2,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-3,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-4,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-5,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-6,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-7 {
+    position: sticky !important;
+    background: #ffffff !important;
+    z-index: 30 !important;
+    box-shadow: 1px 0 0 #d1d8dd !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-header .dt-cell--col-0,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-header .dt-cell--col-1,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-header .dt-cell--col-2,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-header .dt-cell--col-3,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-header .dt-cell--col-4,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-header .dt-cell--col-5,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-header .dt-cell--col-6,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-header .dt-cell--col-7,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--header.dt-cell--col-0,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--header.dt-cell--col-1,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--header.dt-cell--col-2,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--header.dt-cell--col-3,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--header.dt-cell--col-4,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--header.dt-cell--col-5,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--header.dt-cell--col-6,
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--header.dt-cell--col-7 {
+    position: sticky !important;
+    background: #dcfce7 !important;
+    z-index: 60 !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-0 {
+    left: 0 !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-1 {
+    left: 38px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-2 {
+    left: 168px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-3 {
+    left: 268px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-4 {
+    left: 383px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-5 {
+    left: 468px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-6 {
+    left: 603px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"] .dt-cell--col-7 {
+    left: 723px !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.availability-engine-spare-cell {
+    display: block;
+    min-height: 100%;
+    margin: -8px -10px;
+    padding: 8px 10px;
+    background: #e6d6ff !important;
+    color: #4b0082 !important;
+    font-weight: 600 !important;
+    border-left: 3px solid #7b2cbf !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.dt-cell__tree-node,
+body[data-route="query-report/Availability and Utilisation Engine"]
+.dt-tree-node,
+body[data-route="query-report/Availability and Utilisation Engine"]
+.dt-cell__toggle {
+    position: relative !important;
+    z-index: 20 !important;
+    color: #111111 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.availability-engine-date-label {
+    font-weight: 600;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.availability-engine-row-expanded
+.dt-cell {
+    border-top: 2px solid #22c55e !important;
+    border-bottom: 2px solid #22c55e !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.availability-engine-row-expanded
+.dt-cell:first-child {
+    border-left: 3px solid #16a34a !important;
+}
+body[data-route="query-report/Availability and Utilisation Engine"]
+.availability-engine-row-expanded
+.dt-cell:last-child {
+    border-right: 2px solid #22c55e !important;
+}
+
+.au-engine-panel-1 { background:#000000; width:100%; min-width:10px; height:34px; margin:-7px -8px; padding:0; }
+.au-engine-badge-1 { display:inline-block; padding:3px 8px; border-radius:999px; background:#fee2e2; color:#991b1b; font-weight:700; }
+.au-engine-badge-2 { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; margin-left:6px; padding:0 5px; border-radius:9px; background:#f97316; color:#ffffff; font-size:10px; font-weight:700; line-height:18px; }
+.au-engine-panel-2 { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:6px 0 8px; font-size:11px; font-weight:600; }
+.au-engine-badge-3 { display:inline-flex; align-items:center; gap:5px; cursor:pointer; }
+.au-engine-badge-4 { width:12px; height:12px; border-radius:3px; background:#ffedd5; border-left:3px solid #f97316; }
+.au-engine-badge-5 { width:12px; height:12px; border-radius:3px; background:#fee2e2; border-left:3px solid #dc2626; }
+.au-engine-button-1 { border:1px solid #dc2626; color:#991b1b; background:#fff; font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px; }
+.au-engine-badge-6 { display:inline-flex; align-items:center; gap:5px; }
+.au-engine-badge-7 { width:12px; height:12px; border-radius:3px; background:#e6d6ff; border-left:3px solid #7b2cbf; }
+.au-engine-table-cell-1 { color:#991b1b; min-width:280px; }
+.au-engine-panel-3 { padding:4px 2px 12px; }
+.au-engine-panel-4 { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; padding:12px 14px; background:#fee2e2; border:1px solid #dc2626; border-radius:8px; }
+.au-engine-heading-1 { color:#991b1b; font-size:14px; }
+.au-engine-panel-5 { margin-top:3px; color:#7f1d1d; font-size:12px; }
+.au-engine-panel-6 { color:#7f1d1d; font-size:12px; }
+.au-engine-panel-7 { max-height:60vh; overflow:auto; border:1px solid #d1d8dd; border-radius:8px; }
+.au-engine-table-1 { margin:0; width:100%; font-size:12px; background:#fff; }
+.au-engine-table-row-1 { background:#f8fafc; }
+.au-engine-table-heading-1 { position:sticky; top:0; background:#f8fafc; z-index:1; }
+.au-engine-panel-8 { padding:6px 4px 12px; line-height:1.6; }
+.au-engine-panel-9 { background:#ffedd5; border:1px solid #f97316; border-radius:10px; padding:16px; margin-bottom:14px; }
+.au-engine-heading-2 { color:#9a3412; font-size:15px; }
+.au-engine-panel-10 { margin-top:8px; }
+.au-engine-panel-11 { background:#f8fafc; border:1px solid #d1d8dd; border-radius:10px; padding:16px; margin-bottom:12px; }
+.au-engine-list-1 { margin-top:8px; margin-bottom:0; padding-left:22px; }
+.au-engine-panel-12 { background:#f8fafc; border:1px solid #d1d8dd; border-radius:10px; padding:16px; }
+.au-engine-panel-13 { background:#fee2e2; border:1px solid #dc2626; border-radius:10px; padding:16px; margin-bottom:14px; }
+.au-engine-heading-3 { color:#991b1b; font-size:15px; }
+.au-engine-panel-14 { background:#eff6ff; border:1px solid #93c5fd; border-radius:10px; padding:16px; margin-bottom:14px; }
+.au-engine-panel-15 { margin-top:10px; font-size:16px; font-weight:700; }
+.au-engine-panel-16 { background:#ecfdf5; border:1px solid #86efac; border-radius:10px; padding:16px; margin-bottom:12px; }
+.au-engine-panel-17 { margin-top:8px; font-size:16px; font-weight:700; }
+.au-engine-panel-18 { margin-top:10px; font-weight:700; }
+.au-engine-panel-19 { margin-top:10px; }
+.au-engine-panel-20 { color:#1d4ed8; font-size:15px; font-weight:700; margin-bottom:8px; }
+.au-engine-panel-21 { color:#1d4ed8; font-size:16px; font-weight:700; }
+.au-engine-panel-22 { margin-top:8px; font-weight:700; }
+.au-engine-panel-23 { background:#ecfdf5; border:1px solid #86efac; border-radius:10px; padding:16px; }
+.au-engine-badge-8 { display:block; min-height:100%; margin:-8px -10px; padding:8px 10px; background:#e6d6ff !important; color:#4b0082 !important; font-weight:600 !important; border-left:3px solid #7b2cbf !important; }
+.au-engine-table-heading-2 { position:sticky; top:0; background:#f8fafc; z-index:1; min-width:165px; white-space:nowrap; }
+.au-engine-button-2 { min-width:70px; border-radius:12px; font-weight:600; }
+.au-engine-table-cell-2 { text-align:center; vertical-align:middle; white-space:nowrap; }
+.au-engine-table-cell-3 { padding:8px 10px; vertical-align:middle; font-weight:600; white-space:nowrap; }
+.au-engine-table-cell-4 { padding:8px 10px; vertical-align:middle; }
+.au-engine-table-cell-5 { padding:8px 10px; vertical-align:middle; white-space:nowrap; }
+.au-engine-table-cell-6 { padding:8px 10px; vertical-align:middle; white-space:nowrap; font-weight:600; }
+.au-engine-table-cell-7 { padding:8px 10px; text-align:center; vertical-align:middle; white-space:nowrap; }
+.au-engine-panel-24 { max-height:65vh; overflow:auto; }
+.au-engine-table-2 { margin-bottom:0; }
+.au-engine-panel-25 { padding:12px; margin-bottom:12px; border:1px solid #d1d8dd; border-radius:8px; background:#f8fafc; line-height:1.7; }
+.au-engine-table-heading-3 { position:sticky; top:0; background:#f8fafc; z-index:1; min-width:130px; white-space:nowrap; }
+.au-engine-button-3 { min-width:105px; border-radius:12px; font-weight:700; }
+.au-engine-button-4 { color:#1d4ed8; border:1px solid #2563eb; border-radius:12px; padding:2px 12px; font-weight:700; background:#eff6ff; }
+.au-engine-table-cell-8 { padding:8px 10px; border-bottom:1px solid #dbeafe; white-space:nowrap; }
+.au-engine-table-cell-9 { padding:8px 10px; border-bottom:1px solid #dbeafe; font-weight:600; }
+.au-engine-table-heading-4 { padding:8px 10px; text-align:left; width:130px; }
+.au-engine-table-heading-5 { padding:8px 10px; text-align:left; }
+.au-engine-table-heading-6 { padding:8px 10px; text-align:left; width:90px; }
+.au-engine-panel-26 { border:1px solid #2563eb; border-radius:10px; overflow:hidden; }
+.au-engine-panel-27 { background:#dbeafe; color:#1d4ed8; font-weight:900; padding:10px 12px; }
+.au-engine-panel-28 { overflow-x:auto; }
+.au-engine-table-3 { width:100%; border-collapse:collapse; }
+.au-engine-table-row-2 { background:#eff6ff; color:#1d4ed8; }
+.au-engine-table-heading-7 { padding:9px 10px; text-align:left; }
+.au-engine-panel-29 { display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+.au-engine-button-5 { color:#1d4ed8; border:1px solid #2563eb; border-radius:10px; background:#eff6ff; font-size:10px; font-weight:700; padding:2px 8px; white-space:nowrap; }
+.au-engine-panel-30 { padding:4px; }
+.au-engine-panel-31 { background:#eff6ff; border:1px solid #93c5fd; border-radius:10px; padding:18px; margin-bottom:14px; }
+.au-engine-panel-32 { font-size:13px; font-weight:700; color:#1e3a8a; margin-bottom:10px; }
+.au-engine-panel-33 { font-size:17px; line-height:1.7; font-weight:700; color:#111827; }
+.au-engine-panel-34 { background:#f8fafc; border:1px solid #d1d8dd; border-radius:10px; padding:16px; line-height:1.6; }
+
+.au-engine-invalid-cell, .au-engine-warning-cell, .availability-engine-shift-cell {
+    display:block; min-height:100%; margin:-8px -10px; padding:8px 10px;
+}
+.au-engine-invalid-cell { background:#fee2e2 !important; border-left:3px solid #dc2626 !important; }
+.au-engine-warning-cell { background:#ffedd5 !important; border-left:3px solid #f97316 !important; }
+.au-engine-day-cell { background:#eaf4ff !important; }
+.au-engine-night-cell { background:#f3f4f6 !important; }
+.au-engine-button-empty { opacity:.55; }
+
+.au-engine-formula-clickable { cursor:pointer; }

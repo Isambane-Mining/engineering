@@ -265,14 +265,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             === "industry_separator"
         ) {
             return `
-                <div style="
-                    background:#000000;
-                    width:100%;
-                    min-width:10px;
-                    height:34px;
-                    margin:-7px -8px;
-                    padding:0;
-                "></div>
+                <div class="au-engine-panel-1"></div>
             `;
         }
 
@@ -311,14 +304,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
                 && data.au_validation_level === "invalid"
             ) {
                 value = `
-                    <span style="
-                        display:inline-block;
-                        padding:3px 8px;
-                        border-radius:999px;
-                        background:#fee2e2;
-                        color:#991b1b;
-                        font-weight:700;
-                    ">
+                    <span class="au-engine-badge-1">
                         N/A
                     </span>
                 `;
@@ -341,22 +327,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
                 ${value}
                 <span
                     title="${problem_day_count} day(s) contain A&U warnings or invalid shifts"
-                    style="
-                        display:inline-flex;
-                        align-items:center;
-                        justify-content:center;
-                        min-width:18px;
-                        height:18px;
-                        margin-left:6px;
-                        padding:0 5px;
-                        border-radius:9px;
-                        background:#f97316;
-                        color:#ffffff;
-                        font-size:10px;
-                        font-weight:700;
-                        line-height:18px;
-                    "
-                >
+                 class="au-engine-badge-2">
                     ${problem_day_count}
                 </span>
             `;
@@ -405,14 +376,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
 
             if (invalid || contains_invalid) {
                 value = `
-                    <span style="
-                        display:inline-block;
-                        padding:3px 8px;
-                        border-radius:999px;
-                        background:#fee2e2;
-                        color:#991b1b;
-                        font-weight:700;
-                    ">
+                    <span class="au-engine-badge-1">
                         ${frappe.utils.escape_html(
                             data.invalid_pre_use_status
                         )}
@@ -435,18 +399,6 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
                 data.au_validation_level === "invalid"
             );
 
-            const background = (
-                is_invalid
-                ? "#fee2e2"
-                : "#ffedd5"
-            );
-
-            const border = (
-                is_invalid
-                ? "#dc2626"
-                : "#f97316"
-            );
-
             const safe_status = (
                 frappe.utils.escape_html(
                     data.au_validation_status || ""
@@ -456,14 +408,7 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
             value = `
                 <span
                     title="${safe_status}"
-                    style="
-                        display:block;
-                        min-height:100%;
-                        margin:-8px -10px;
-                        padding:8px 10px;
-                        background:${background} !important;
-                        border-left:3px solid ${border} !important;
-                    "
+                    class="${is_invalid ? 'au-engine-invalid-cell' : 'au-engine-warning-cell'}"
                 >
                     ${value || ""}
                 </span>
@@ -474,7 +419,6 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
     },
 
     onload: function(report) {
-        ensure_engine_filter_dropdowns_in_front();
         bind_engine_formula_header_clicks(report);
         add_engine_legend(report);
 
@@ -517,43 +461,6 @@ frappe.query_reports["Availability and Utilisation Engine"] = {
 };
 
 
-function ensure_engine_filter_dropdowns_in_front() {
-    const style_id = "availability-engine-filter-layer-style";
-
-    if (!document.getElementById(style_id)) {
-        const style = document.createElement("style");
-        style.id = style_id;
-        style.textContent = `
-            .page-form {
-                position: relative !important;
-                z-index: 50 !important;
-                overflow: visible !important;
-            }
-
-            .page-form .form-group,
-            .page-form .control-input-wrapper,
-            .page-form .control-input,
-            .page-form .awesomplete,
-            .page-form .frappe-control {
-                overflow: visible !important;
-            }
-
-            .page-form .dropdown-menu,
-            .page-form .awesomplete > ul,
-            .page-form .multiselect-list,
-            .page-form .multiselect-list .dropdown-menu {
-                z-index: 2000 !important;
-            }
-
-            .report-wrapper,
-            .datatable {
-                position: relative;
-                z-index: 1;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
 
 
 function add_engine_legend(report) {
@@ -569,54 +476,21 @@ function add_engine_legend(report) {
 
     const legend = `
         <div
-            class="availability-engine-legend"
-            style="
-                display:flex;
-                align-items:center;
-                gap:14px;
-                flex-wrap:wrap;
-                margin:6px 0 8px;
-                font-size:11px;
-                font-weight:600;
-            "
+            class="availability-engine-legend au-engine-panel-2"
         >
             <span
-                class="availability-engine-warning-legend"
+                class="availability-engine-warning-legend au-engine-badge-3"
                 title="Click to view warning rules"
-                style="
-                    display:inline-flex;
-                    align-items:center;
-                    gap:5px;
-                    cursor:pointer;
-                "
             >
-                <span style="
-                    width:12px;
-                    height:12px;
-                    border-radius:3px;
-                    background:#ffedd5;
-                    border-left:3px solid #f97316;
-                "></span>
+                <span class="au-engine-badge-4"></span>
                 A&amp;U Warning
             </span>
 
             <span
-                class="availability-engine-invalid-legend"
+                class="availability-engine-invalid-legend au-engine-badge-3"
                 title="Click to view invalid rules"
-                style="
-                    display:inline-flex;
-                    align-items:center;
-                    gap:5px;
-                    cursor:pointer;
-                "
             >
-                <span style="
-                    width:12px;
-                    height:12px;
-                    border-radius:3px;
-                    background:#fee2e2;
-                    border-left:3px solid #dc2626;
-                "></span>
+                <span class="au-engine-badge-5"></span>
                 Invalid A&amp;U
             </span>
 
@@ -627,32 +501,13 @@ function add_engine_legend(report) {
                     btn-xs
                     btn-default
                     availability-engine-invalid-view
-                "
-                style="
-                    border:1px solid #dc2626;
-                    color:#991b1b;
-                    background:#fff;
-                    font-size:11px;
-                    font-weight:700;
-                    padding:3px 9px;
-                    border-radius:6px;
-                "
+                 au-engine-button-1"
             >
                 View Invalid A&amp;U (0)
             </button>
 
-            <span style="
-                display:inline-flex;
-                align-items:center;
-                gap:5px;
-            ">
-                <span style="
-                    width:12px;
-                    height:12px;
-                    border-radius:3px;
-                    background:#e6d6ff;
-                    border-left:3px solid #7b2cbf;
-                "></span>
+            <span class="au-engine-badge-6">
+                <span class="au-engine-badge-7"></span>
                 Spare / Swing Machine
             </span>
         </div>
@@ -832,12 +687,7 @@ function update_invalid_au_button(report) {
         rows.length === 0
     );
 
-    $button.css(
-        "opacity",
-        rows.length === 0
-            ? "0.55"
-            : "1"
-    );
+    $button.toggleClass("au-engine-button-empty", rows.length === 0);
 
     $button.attr(
         "title",
@@ -975,11 +825,7 @@ function show_invalid_au_rows(report) {
                         <td>${pbm_hours}</td>
                         <td>${required_hours}</td>
                         <td
-                            style="
-                                color:#991b1b;
-                                min-width:280px;
-                            "
-                        >
+                         class="au-engine-table-cell-1">
                             ${reason}
                         </td>
                     </tr>
@@ -1006,135 +852,57 @@ function show_invalid_au_rows(report) {
         .invalid_rows_html
         .$wrapper
         .html(`
-            <div style="
-                padding:4px 2px 12px;
-            ">
-                <div style="
-                    display:flex;
-                    align-items:center;
-                    justify-content:space-between;
-                    gap:12px;
-                    flex-wrap:wrap;
-                    margin-bottom:12px;
-                    padding:12px 14px;
-                    background:#fee2e2;
-                    border:1px solid #dc2626;
-                    border-radius:8px;
-                ">
+            <div class="au-engine-panel-3">
+                <div class="au-engine-panel-4">
                     <div>
-                        <strong style="
-                            color:#991b1b;
-                            font-size:14px;
-                        ">
+                        <strong class="au-engine-heading-1">
                             ${rows.length}
                             invalid A&amp;U shift(s)
                         </strong>
 
-                        <div style="
-                            margin-top:3px;
-                            color:#7f1d1d;
-                            font-size:12px;
-                        ">
+                        <div class="au-engine-panel-5">
                             Current report filters only
                         </div>
                     </div>
 
-                    <div style="
-                        color:#7f1d1d;
-                        font-size:12px;
-                    ">
-                        Invalid shifts are excluded from
-                        A&amp;U KPI totals.
+                    <div class="au-engine-panel-6">
+                        Recorded working hours remain in A&amp;U totals
+                        when the Pre-Use meter integrity rules pass.
                     </div>
                 </div>
 
-                <div style="
-                    max-height:60vh;
-                    overflow:auto;
-                    border:1px solid #d1d8dd;
-                    border-radius:8px;
-                ">
+                <div class="au-engine-panel-7">
                     <table
-                        class="table table-bordered"
-                        style="
-                            margin:0;
-                            width:100%;
-                            font-size:12px;
-                            background:#fff;
-                        "
+                        class="table table-bordered au-engine-table-1"
                     >
                         <thead>
-                            <tr style="
-                                background:#f8fafc;
-                            ">
+                            <tr class="au-engine-table-row-1">
                                 <th
-                                    style="
-                                        position:sticky;
-                                        top:0;
-                                        background:#f8fafc;
-                                        z-index:1;
-                                    "
-                                >
+                                 class="au-engine-table-heading-1">
                                     Date
                                 </th>
                                 <th
-                                    style="
-                                        position:sticky;
-                                        top:0;
-                                        background:#f8fafc;
-                                        z-index:1;
-                                    "
-                                >
+                                 class="au-engine-table-heading-1">
                                     Shift
                                 </th>
                                 <th
-                                    style="
-                                        position:sticky;
-                                        top:0;
-                                        background:#f8fafc;
-                                        z-index:1;
-                                    "
-                                >
+                                 class="au-engine-table-heading-1">
                                     Machine
                                 </th>
                                 <th
-                                    style="
-                                        position:sticky;
-                                        top:0;
-                                        background:#f8fafc;
-                                        z-index:1;
-                                    "
-                                >
+                                 class="au-engine-table-heading-1">
                                     Work Hours
                                 </th>
                                 <th
-                                    style="
-                                        position:sticky;
-                                        top:0;
-                                        background:#f8fafc;
-                                        z-index:1;
-                                    "
-                                >
+                                 class="au-engine-table-heading-1">
                                     PBM Total Downtime
                                 </th>
                                 <th
-                                    style="
-                                        position:sticky;
-                                        top:0;
-                                        background:#f8fafc;
-                                        z-index:1;
-                                    "
-                                >
+                                 class="au-engine-table-heading-1">
                                     Required Hours
                                 </th>
                                 <th
-                                    style="
-                                        position:sticky;
-                                        top:0;
-                                        background:#f8fafc;
-                                        z-index:1;
-                                    "
-                                >
+                                 class="au-engine-table-heading-1">
                                     Invalid Reason
                                 </th>
                             </tr>
@@ -1165,44 +933,22 @@ function show_au_warning_explanation() {
     });
 
     dialog.fields_dict.warning_html.$wrapper.html(`
-        <div style="
-            padding:6px 4px 12px;
-            line-height:1.6;
-        ">
-            <div style="
-                background:#ffedd5;
-                border:1px solid #f97316;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:14px;
-            ">
-                <strong style="
-                    color:#9a3412;
-                    font-size:15px;
-                ">
+        <div class="au-engine-panel-8">
+            <div class="au-engine-panel-9">
+                <strong class="au-engine-heading-2">
                     What does an A&amp;U Warning mean?
                 </strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     The record is mathematically possible, but the
                     underlying hours are unusual and should be reviewed.
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-11">
                 <strong>Warning rules</strong>
 
-                <ul style="
-                    margin-top:8px;
-                    margin-bottom:0;
-                    padding-left:22px;
-                ">
+                <ul class="au-engine-list-1">
                     <!-- OLD UTILISATION AVAILABLE HOURS WARNING
                     <li>
                         Work Hours &gt; 0 while Utilisation Available Hours = 0.
@@ -1217,15 +963,10 @@ function show_au_warning_explanation() {
                 </ul>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-            ">
+            <div class="au-engine-panel-12">
                 <strong>Important</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     Warning rows are still included in the A&amp;U totals.
                     Orange does not automatically mean the data is wrong.
                 </div>
@@ -1250,44 +991,22 @@ function show_au_invalid_explanation() {
     });
 
     dialog.fields_dict.invalid_html.$wrapper.html(`
-        <div style="
-            padding:6px 4px 12px;
-            line-height:1.6;
-        ">
-            <div style="
-                background:#fee2e2;
-                border:1px solid #dc2626;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:14px;
-            ">
-                <strong style="
-                    color:#991b1b;
-                    font-size:15px;
-                ">
+        <div class="au-engine-panel-8">
+            <div class="au-engine-panel-13">
+                <strong class="au-engine-heading-3">
                     What does Invalid A&amp;U mean?
                 </strong>
 
-                <div style="margin-top:8px;">
-                    The individual shift contains a physically impossible
-                    or invalid combination of hours.
+                <div class="au-engine-panel-10">
+                    The individual shift has hours that conflict with its
+                    production plan or recorded mechanical downtime and needs investigation.
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-11">
                 <strong>Invalid rules</strong>
 
-                <ul style="
-                    margin-top:8px;
-                    margin-bottom:0;
-                    padding-left:22px;
-                ">
+                <ul class="au-engine-list-1">
                     <li>
                         Work Hours exceed Required Hours + Planned Downtime.
                     </li>
@@ -1305,16 +1024,10 @@ function show_au_invalid_explanation() {
                 </ul>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-11">
                 <strong>Example</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     Required Hours = 7<br>
                     Planned Downtime = 2<br>
                     Validation Limit = 9 hours<br>
@@ -1327,15 +1040,10 @@ function show_au_invalid_explanation() {
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-            ">
+            <div class="au-engine-panel-12">
                 <strong>Important</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     The validation limit for each individual shift is:
                     Required Hours + Planned Downtime.
 
@@ -1345,7 +1053,11 @@ function show_au_invalid_explanation() {
                     Date, machine and category rows may naturally total
                     more than one shift.
 
-                    Invalid shift rows are excluded from A&amp;U totals.
+                    A&amp;U flags do not remove recorded working hours from totals.
+                    Only shifts failing the Pre-Use meter integrity rules are excluded.
+                    Those rules remain 12 hours per shift and 24 hours per day;
+                    Saturdays planned at 7 hours use 9 hours per shift and 18 per day,
+                    while Saturdays planned at 9 hours use 12 and 24.
                 </div>
             </div>
         </div>
@@ -1520,7 +1232,7 @@ function mark_engine_formula_headers_clickable() {
         filter_content.prepend(formula_element);
 
         if (clickable_headers.includes(text)) {
-            header.style.cursor = "pointer";
+            header.classList.add("au-engine-formula-clickable");
             header.title = "Click to view formula";
         }
     });
@@ -1552,7 +1264,7 @@ function bind_shift_available_formula_header() {
         }
 
         header.dataset.shiftFormulaBound = "1";
-        header.style.cursor = "pointer";
+        header.classList.add("au-engine-formula-clickable");
         header.title = "Click to view formula";
 
         header.addEventListener(
@@ -1575,24 +1287,11 @@ function show_shift_available_formula() {
     });
 
     dialog.fields_dict.formula_html.$wrapper.html(`
-        <div style="
-            padding:6px 4px 12px;
-            line-height:1.6;
-        ">
-            <div style="
-                background:#eff6ff;
-                border:1px solid #93c5fd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:14px;
-            ">
+        <div class="au-engine-panel-8">
+            <div class="au-engine-panel-14">
                 <strong>Utilisation Available Hours Formula</strong>
 
-                <div style="
-                    margin-top:10px;
-                    font-size:16px;
-                    font-weight:700;
-                ">
+                <div class="au-engine-panel-15">
                     MAX(
                         Required Hours - PBM Total Downtime,
                         MIN(Work Hours, Required Hours)
@@ -1600,16 +1299,10 @@ function show_shift_available_formula() {
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-11">
                 <strong>Why is this formula used?</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     PBM downtime reduces the Required Hours available to work.
                     However, if the machine physically records more Work Hours
                     than that reduced amount, those Work Hours prove that the
@@ -1626,16 +1319,10 @@ function show_shift_available_formula() {
                 </div>
             </div>
 
-            <div style="
-                background:#ecfdf5;
-                border:1px solid #86efac;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-16">
                 <strong>Example — Machine recovers during the shift</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     Required Hours = 9<br>
                     Work Hours = 8<br>
                     PBM Total Downtime = 1.933<br><br>
@@ -1661,16 +1348,10 @@ function show_shift_available_formula() {
                 </div>
             </div>
 
-            <div style="
-                background:#ecfdf5;
-                border:1px solid #86efac;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-16">
                 <strong>Example — Recovery above Required Hours</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     Required Hours = 9<br>
                     Work Hours = 10<br>
                     PBM Total Downtime = 1.933<br><br>
@@ -1691,16 +1372,12 @@ function show_shift_available_formula() {
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-            ">
+            <div class="au-engine-panel-12">
                 <strong>Important</strong>
 
-                <div style="margin-top:8px;">
-                    If Required Hours are zero, Utilisation is 0%.
+                <div class="au-engine-panel-10">
+                    If Required Hours or Utilisation Available Hours are zero, Utilisation is N/A.
+                    Recorded working hours remain included when Pre-Use integrity rules pass.
                 </div>
             </div>
         </div>
@@ -1734,7 +1411,7 @@ function bind_available_hours_formula_header() {
         }
 
         header.dataset.formulaBound = "1";
-        header.style.cursor = "pointer";
+        header.classList.add("au-engine-formula-clickable");
         header.title = "Click to view formula";
 
         header.addEventListener(
@@ -1757,24 +1434,11 @@ function show_availability_available_hours_formula() {
     });
 
     dialog.fields_dict.formula_html.$wrapper.html(`
-        <div style="
-            padding:6px 4px 12px;
-            line-height:1.6;
-        ">
-            <div style="
-                background:#eff6ff;
-                border:1px solid #93c5fd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:14px;
-            ">
+        <div class="au-engine-panel-8">
+            <div class="au-engine-panel-14">
                 <strong>Availability Available Hours Formula</strong>
 
-                <div style="
-                    margin-top:8px;
-                    font-size:16px;
-                    font-weight:700;
-                ">
+                <div class="au-engine-panel-17">
                     MAX(
                         Work Hours,
                         MAX(
@@ -1785,30 +1449,21 @@ function show_availability_available_hours_formula() {
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-11">
                 <strong>Utilisation Available Hours</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     Utilisation uses a separate denominator:
                 </div>
 
-                <div style="
-                    margin-top:10px;
-                    font-weight:700;
-                ">
+                <div class="au-engine-panel-18">
                     MAX(
                         Required Hours - PBM Total Downtime,
                         MIN(Work Hours, Required Hours)
                     )
                 </div>
 
-                <div style="margin-top:10px;">
+                <div class="au-engine-panel-19">
                     This prevents the utilisation denominator from being lower
                     than hours the machine actually worked, while still
                     capping the denominator at Required Hours so recovery
@@ -1817,33 +1472,22 @@ function show_availability_available_hours_formula() {
             </div>
 
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-11">
                 <strong>Purpose</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     Availability can exceed 100% when the machine records
                     more Work Hours than its Required Hours.
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-            ">
+            <div class="au-engine-panel-12">
                 <strong>Totals</strong>
 
-                <div style="margin-top:8px;">
-                    Each valid shift is calculated first.
-                    Invalid shifts are excluded from the machine,
-                    date and category totals.
+                <div class="au-engine-panel-10">
+                    Each shift passing the Pre-Use meter integrity rules is included
+                    in machine, date and category totals. A&amp;U investigation
+                    flags remain visible without removing those hours.
                 </div>
             </div>
         </div>
@@ -1865,31 +1509,13 @@ function show_utilisation_formula() {
     });
 
     dialog.fields_dict.formula_html.$wrapper.html(`
-        <div style="
-            padding:6px 4px 12px;
-            line-height:1.6;
-        ">
-            <div style="
-                background:#eff6ff;
-                border:1px solid #93c5fd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:14px;
-            ">
-                <div style="
-                    color:#1d4ed8;
-                    font-size:15px;
-                    font-weight:700;
-                    margin-bottom:8px;
-                ">
+        <div class="au-engine-panel-8">
+            <div class="au-engine-panel-14">
+                <div class="au-engine-panel-20">
                     Utilisation Formula
                 </div>
 
-                <div style="
-                    color:#1d4ed8;
-                    font-size:16px;
-                    font-weight:700;
-                ">
+                <div class="au-engine-panel-21">
                     Work Hours
                     ÷
                     Utilisation Available Hours
@@ -1898,19 +1524,10 @@ function show_utilisation_formula() {
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-11">
                 <strong>Utilisation Available Hours</strong>
 
-                <div style="
-                    margin-top:8px;
-                    font-weight:700;
-                ">
+                <div class="au-engine-panel-22">
                     MAX(
                         Required Hours - PBM Total Downtime,
                         MIN(Work Hours, Required Hours)
@@ -1918,16 +1535,10 @@ function show_utilisation_formula() {
                 </div>
             </div>
 
-            <div style="
-                background:#f8fafc;
-                border:1px solid #d1d8dd;
-                border-radius:10px;
-                padding:16px;
-                margin-bottom:12px;
-            ">
+            <div class="au-engine-panel-11">
                 <strong>Example — Why the denominator adjusts</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     Required Hours = 9<br>
                     PBM Total Downtime = 1.933<br>
                     Work Hours = 8<br><br>
@@ -1955,15 +1566,10 @@ function show_utilisation_formula() {
                 </div>
             </div>
 
-            <div style="
-                background:#ecfdf5;
-                border:1px solid #86efac;
-                border-radius:10px;
-                padding:16px;
-            ">
+            <div class="au-engine-panel-23">
                 <strong>Combined / Total Utilisation</strong>
 
-                <div style="margin-top:8px;">
+                <div class="au-engine-panel-10">
                     Total Work Hours
                     ÷
                     Total Utilisation Available Hours
@@ -1980,22 +1586,10 @@ function show_utilisation_formula() {
 
 
 function apply_engine_shift_highlight(value, shift) {
-    const background = (
-        shift === "Day"
-        ? "#eaf4ff"
-        : "#f3f4f6"
-    );
 
     return `
         <span
-            class="availability-engine-shift-cell"
-            style="
-                display:block;
-                min-height:100%;
-                margin:-8px -10px;
-                padding:8px 10px;
-                background:${background} !important;
-            "
+            class="availability-engine-shift-cell ${shift === 'Day' ? 'au-engine-day-cell' : 'au-engine-night-cell'}"
         >
             ${value || ""}
         </span>
@@ -2049,18 +1643,8 @@ function apply_engine_spare_highlight(value, reason) {
 
     return `
         <span
-            class="availability-engine-spare-cell"
+            class="availability-engine-spare-cell au-engine-badge-8"
             title="${safe_reason}"
-            style="
-                display:block;
-                min-height:100%;
-                margin:-8px -10px;
-                padding:8px 10px;
-                background:#e6d6ff !important;
-                color:#4b0082 !important;
-                font-weight:600 !important;
-                border-left:3px solid #7b2cbf !important;
-            "
         >
             ${value || ""}
         </span>
@@ -2107,185 +1691,10 @@ function apply_engine_freeze_columns() {
 
     frappe.query_report.datatable.options.freezeColumns = 8;
 
-    apply_engine_styles();
 }
 
 
-function apply_engine_styles() {
-    const style_id = "availability-utilisation-engine-style";
-    const old_style = document.getElementById(style_id);
 
-    if (old_style) {
-        old_style.remove();
-    }
-
-    const style = document.createElement("style");
-
-    style.id = style_id;
-
-    style.innerHTML = `
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-row-filter {
-            min-height: 68px !important;
-            height: 68px !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-row-filter .dt-cell {
-            min-height: 68px !important;
-            height: 68px !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-row-filter .dt-cell__content {
-            height: 100% !important;
-            overflow: visible !important;
-            white-space: normal !important;
-        }
-
-        .availability-engine-header-formula {
-            margin-bottom: 5px;
-            padding: 4px 3px;
-            border: 1px solid #60a5fa;
-            border-radius: 4px;
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-size: 9px;
-            font-weight: 700;
-            line-height: 1.15;
-            text-align: center;
-            white-space: normal;
-        }
-
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-cell--header {
-            background: #dcfce7 !important;
-            color: #166534 !important;
-            font-weight: 800 !important;
-            border-bottom: 2px solid #16a34a !important;
-        }
-
-
-        .dt-cell--col-0,
-        .dt-cell--col-1,
-        .dt-cell--col-2,
-        .dt-cell--col-3,
-        .dt-cell--col-4,
-        .dt-cell--col-5,
-        .dt-cell--col-6,
-        .dt-cell--col-7 {
-            position: sticky !important;
-            background: #ffffff !important;
-            z-index: 30 !important;
-            box-shadow: 1px 0 0 #d1d8dd !important;
-        }
-
-        .dt-header .dt-cell--col-0,
-        .dt-header .dt-cell--col-1,
-        .dt-header .dt-cell--col-2,
-        .dt-header .dt-cell--col-3,
-        .dt-header .dt-cell--col-4,
-        .dt-header .dt-cell--col-5,
-        .dt-header .dt-cell--col-6,
-        .dt-header .dt-cell--col-7,
-        .dt-cell--header.dt-cell--col-0,
-        .dt-cell--header.dt-cell--col-1,
-        .dt-cell--header.dt-cell--col-2,
-        .dt-cell--header.dt-cell--col-3,
-        .dt-cell--header.dt-cell--col-4,
-        .dt-cell--header.dt-cell--col-5,
-        .dt-cell--header.dt-cell--col-6,
-        .dt-cell--header.dt-cell--col-7 {
-            position: sticky !important;
-            background: #dcfce7 !important;
-            z-index: 60 !important;
-        }
-
-        .dt-cell--col-0 {
-            left: 0 !important;
-        }
-
-        .dt-cell--col-1 {
-            left: 38px !important;
-        }
-
-        .dt-cell--col-2 {
-            left: 168px !important;
-        }
-
-        .dt-cell--col-3 {
-            left: 268px !important;
-        }
-
-        .dt-cell--col-4 {
-            left: 383px !important;
-        }
-
-        .dt-cell--col-5 {
-            left: 468px !important;
-        }
-
-        .dt-cell--col-6 {
-            left: 603px !important;
-        }
-
-        .dt-cell--col-7 {
-            left: 723px !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .availability-engine-spare-cell {
-            display: block;
-            min-height: 100%;
-            margin: -8px -10px;
-            padding: 8px 10px;
-            background: #e6d6ff !important;
-            color: #4b0082 !important;
-            font-weight: 600 !important;
-            border-left: 3px solid #7b2cbf !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-cell__tree-node,
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-tree-node,
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .dt-cell__toggle {
-            position: relative !important;
-            z-index: 20 !important;
-            color: #111111 !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .availability-engine-date-label {
-            font-weight: 600;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .availability-engine-row-expanded
-        .dt-cell {
-            border-top: 2px solid #22c55e !important;
-            border-bottom: 2px solid #22c55e !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .availability-engine-row-expanded
-        .dt-cell:first-child {
-            border-left: 3px solid #16a34a !important;
-        }
-
-        .query-report[data-report-name="Availability and Utilisation Engine"]
-        .availability-engine-row-expanded
-        .dt-cell:last-child {
-            border-right: 2px solid #22c55e !important;
-        }
-    `;
-
-    document.head.appendChild(style);
-}
 // BEGIN INVALID AU PBM DRILLDOWN
 
 function get_open_invalid_au_dialog() {
@@ -2408,15 +1817,7 @@ function add_invalid_au_pbm_view_column(
         <th
             class="
                 availability-engine-invalid-pbm-header
-            "
-            style="
-                position:sticky;
-                top:0;
-                background:#f8fafc;
-                z-index:1;
-                min-width:165px;
-                white-space:nowrap;
-            "
+             au-engine-table-heading-2"
         >
             PBM Total Downtime View
         </th>
@@ -2451,12 +1852,7 @@ function add_invalid_au_pbm_view_column(
                             btn-xs
                             btn-primary
                             availability-engine-invalid-pbm-view
-                        "
-                        style="
-                            min-width:70px;
-                            border-radius:12px;
-                            font-weight:600;
-                        "
+                         au-engine-button-2"
                     >
                         View
                     </button>
@@ -2473,12 +1869,7 @@ function add_invalid_au_pbm_view_column(
 
                 const $view_cell = $(`
                     <td
-                        style="
-                            text-align:center;
-                            vertical-align:middle;
-                            white-space:nowrap;
-                        "
-                    ></td>
+                     class="au-engine-table-cell-2"></td>
                 `);
 
                 $view_cell.append(
@@ -2702,13 +2093,7 @@ function show_invalid_au_pbm_record_dialog(
                 return `
                     <tr>
                         <td
-                            style="
-                                padding:8px 10px;
-                                vertical-align:middle;
-                                font-weight:600;
-                                white-space:nowrap;
-                            "
-                        >
+                         class="au-engine-table-cell-3">
                             ${frappe.utils.escape_html(
                                 String(
                                     record.name
@@ -2718,11 +2103,7 @@ function show_invalid_au_pbm_record_dialog(
                         </td>
 
                         <td
-                            style="
-                                padding:8px 10px;
-                                vertical-align:middle;
-                            "
-                        >
+                         class="au-engine-table-cell-4">
                             ${frappe.utils.escape_html(
                                 String(
                                     record.breakdown_reason
@@ -2732,12 +2113,7 @@ function show_invalid_au_pbm_record_dialog(
                         </td>
 
                         <td
-                            style="
-                                padding:8px 10px;
-                                vertical-align:middle;
-                                white-space:nowrap;
-                            "
-                        >
+                         class="au-engine-table-cell-5">
                             ${frappe.utils.escape_html(
                                 format_invalid_au_pbm_datetime(
                                     record.breakdown_start_datetime
@@ -2746,12 +2122,7 @@ function show_invalid_au_pbm_record_dialog(
                         </td>
 
                         <td
-                            style="
-                                padding:8px 10px;
-                                vertical-align:middle;
-                                white-space:nowrap;
-                            "
-                        >
+                         class="au-engine-table-cell-5">
                             ${frappe.utils.escape_html(
                                 format_invalid_au_pbm_datetime(
                                     record.resolved_datetime
@@ -2760,13 +2131,7 @@ function show_invalid_au_pbm_record_dialog(
                         </td>
 
                         <td
-                            style="
-                                padding:8px 10px;
-                                vertical-align:middle;
-                                white-space:nowrap;
-                                font-weight:600;
-                            "
-                        >
+                         class="au-engine-table-cell-6">
                             ${frappe.utils.escape_html(
                                 format_invalid_au_pbm_minutes(
                                     record.contributing_minutes
@@ -2775,13 +2140,7 @@ function show_invalid_au_pbm_record_dialog(
                         </td>
 
                         <td
-                            style="
-                                padding:8px 10px;
-                                text-align:center;
-                                vertical-align:middle;
-                                white-space:nowrap;
-                            "
-                        >
+                         class="au-engine-table-cell-7">
                             <button
                                 type="button"
                                 class="
@@ -2828,20 +2187,13 @@ function show_invalid_au_pbm_record_dialog(
         .$wrapper
         .html(`
             <div
-                style="
-                    max-height:65vh;
-                    overflow:auto;
-                "
-            >
+             class="au-engine-panel-24">
                 <table
                     class="
                         table
                         table-bordered
                         table-hover
-                    "
-                    style="
-                        margin-bottom:0;
-                    "
+                     au-engine-table-2"
                 >
                     <thead>
                         <tr>
@@ -3040,14 +2392,7 @@ function open_invalid_au_exclusion_dialog(
     });
 
     dialog.fields_dict.shift_summary.$wrapper.html(`
-        <div style="
-            padding:12px;
-            margin-bottom:12px;
-            border:1px solid #d1d8dd;
-            border-radius:8px;
-            background:#f8fafc;
-            line-height:1.7;
-        ">
+        <div class="au-engine-panel-25">
             <strong>${frappe.utils.escape_html(String(row.asset_name || ""))}</strong><br>
             Site: ${frappe.utils.escape_html(String(row.location || ""))}<br>
             Date: ${frappe.utils.escape_html(format_invalid_au_date(row.shift_date))}<br>
@@ -3087,15 +2432,7 @@ function add_invalid_au_exclusion_column(report) {
 
     $table.find("thead tr").first().append(`
         <th
-            class="availability-engine-invalid-exclusion-header"
-            style="
-                position:sticky;
-                top:0;
-                background:#f8fafc;
-                z-index:1;
-                min-width:130px;
-                white-space:nowrap;
-            "
+            class="availability-engine-invalid-exclusion-header au-engine-table-heading-3"
         >
             Flag Action
         </th>
@@ -3111,12 +2448,7 @@ function add_invalid_au_exclusion_column(report) {
         const $button = $(`
             <button
                 type="button"
-                class="btn btn-xs btn-danger"
-                style="
-                    min-width:105px;
-                    border-radius:12px;
-                    font-weight:700;
-                "
+                class="btn btn-xs btn-danger au-engine-button-3"
             >
                 Exclude Flag
             </button>
@@ -3131,11 +2463,7 @@ function add_invalid_au_exclusion_column(report) {
         });
 
         const $cell = $(`
-            <td style="
-                text-align:center;
-                vertical-align:middle;
-                white-space:nowrap;
-            "></td>
+            <td class="au-engine-table-cell-2"></td>
         `);
 
         $cell.append($button);
@@ -3250,15 +2578,7 @@ function add_invalid_au_exclusion_column(report) {
             return `
                 <button
                     type="button"
-                    class="btn btn-xs btn-default"
-                    style="
-                        color:#1d4ed8;
-                        border:1px solid #2563eb;
-                        border-radius:12px;
-                        padding:2px 12px;
-                        font-weight:700;
-                        background:#eff6ff;
-                    "
+                    class="btn btn-xs btn-default au-engine-button-4"
                     onclick="
                         window.show_au_engine_reason_popup(
                             '${asset}',
@@ -3410,19 +2730,11 @@ function add_invalid_au_exclusion_column(report) {
 
                             return `
                                 <tr>
-                                    <td style="
-                                        padding:8px 10px;
-                                        border-bottom:1px solid #dbeafe;
-                                        white-space:nowrap;
-                                    ">
+                                    <td class="au-engine-table-cell-8">
                                         ${date || "-"}
                                     </td>
 
-                                    <td style="
-                                        padding:8px 10px;
-                                        border-bottom:1px solid #dbeafe;
-                                        font-weight:600;
-                                    ">
+                                    <td class="au-engine-table-cell-9">
                                         ${reason || "-"}
                                     </td>
                                 </tr>
@@ -3432,27 +2744,15 @@ function add_invalid_au_exclusion_column(report) {
 
                         return `
                             <tr>
-                                <td style="
-                                    padding:8px 10px;
-                                    border-bottom:1px solid #dbeafe;
-                                    white-space:nowrap;
-                                ">
+                                <td class="au-engine-table-cell-8">
                                     ${date || "-"}
                                 </td>
 
-                                <td style="
-                                    padding:8px 10px;
-                                    border-bottom:1px solid #dbeafe;
-                                    white-space:nowrap;
-                                ">
+                                <td class="au-engine-table-cell-8">
                                     ${shift || "-"}
                                 </td>
 
-                                <td style="
-                                    padding:8px 10px;
-                                    border-bottom:1px solid #dbeafe;
-                                    font-weight:600;
-                                ">
+                                <td class="au-engine-table-cell-9">
                                     ${reason || "-"}
                                 </td>
                             </tr>
@@ -3465,43 +2765,25 @@ function add_invalid_au_exclusion_column(report) {
                 is_breakdown
                     ?
                     `
-                        <th style="
-                            padding:8px 10px;
-                            text-align:left;
-                            width:130px;
-                        ">
+                        <th class="au-engine-table-heading-4">
                             Date
                         </th>
 
-                        <th style="
-                            padding:8px 10px;
-                            text-align:left;
-                        ">
+                        <th class="au-engine-table-heading-5">
                             Breakdown Reason
                         </th>
                     `
                     :
                     `
-                        <th style="
-                            padding:8px 10px;
-                            text-align:left;
-                            width:130px;
-                        ">
+                        <th class="au-engine-table-heading-4">
                             Date
                         </th>
 
-                        <th style="
-                            padding:8px 10px;
-                            text-align:left;
-                            width:90px;
-                        ">
+                        <th class="au-engine-table-heading-6">
                             Shift
                         </th>
 
-                        <th style="
-                            padding:8px 10px;
-                            text-align:left;
-                        ">
+                        <th class="au-engine-table-heading-5">
                             Reason / Description
                         </th>
                     `;
@@ -3518,35 +2800,18 @@ function add_invalid_au_exclusion_column(report) {
 
 
             dialog.$body.html(`
-                <div style="
-                    border:1px solid #2563eb;
-                    border-radius:10px;
-                    overflow:hidden;
-                ">
+                <div class="au-engine-panel-26">
 
-                    <div style="
-                        background:#dbeafe;
-                        color:#1d4ed8;
-                        font-weight:900;
-                        padding:10px 12px;
-                    ">
+                    <div class="au-engine-panel-27">
                         ${title} for ${escape_html(asset_name)}
                     </div>
 
-                    <div style="
-                        overflow-x:auto;
-                    ">
+                    <div class="au-engine-panel-28">
 
-                        <table style="
-                            width:100%;
-                            border-collapse:collapse;
-                        ">
+                        <table class="au-engine-table-3">
 
                             <thead>
-                                <tr style="
-                                    background:#eff6ff;
-                                    color:#1d4ed8;
-                                ">
+                                <tr class="au-engine-table-row-2">
                                     ${headers}
                                 </tr>
                             </thead>
@@ -3630,15 +2895,7 @@ function add_invalid_au_exclusion_column(report) {
             return `
                 <button
                     type="button"
-                    class="btn btn-xs btn-default"
-                    style="
-                        color:#1d4ed8;
-                        border:1px solid #2563eb;
-                        border-radius:12px;
-                        padding:2px 12px;
-                        font-weight:700;
-                        background:#eff6ff;
-                    "
+                    class="btn btn-xs btn-default au-engine-button-4"
                     onclick="
                         window.show_au_engine_planned_maintenance_popup(
                             '${asset}'
@@ -3731,27 +2988,15 @@ function add_invalid_au_exclusion_column(report) {
                 records.map(
                     record => `
                         <tr>
-                            <td style="
-                                padding:8px 10px;
-                                border-bottom:1px solid #dbeafe;
-                                white-space:nowrap;
-                            ">
+                            <td class="au-engine-table-cell-8">
                                 ${esc(record.start)}
                             </td>
 
-                            <td style="
-                                padding:8px 10px;
-                                border-bottom:1px solid #dbeafe;
-                                white-space:nowrap;
-                            ">
+                            <td class="au-engine-table-cell-8">
                                 ${esc(record.resolved || "Open")}
                             </td>
 
-                            <td style="
-                                padding:8px 10px;
-                                border-bottom:1px solid #dbeafe;
-                                font-weight:600;
-                            ">
+                            <td class="au-engine-table-cell-9">
                                 ${esc(record.reason)}
                             </td>
                         </tr>
@@ -3772,55 +3017,29 @@ function add_invalid_au_exclusion_column(report) {
 
 
             dialog.$body.html(`
-                <div style="
-                    border:1px solid #2563eb;
-                    border-radius:10px;
-                    overflow:hidden;
-                ">
+                <div class="au-engine-panel-26">
 
-                    <div style="
-                        background:#dbeafe;
-                        color:#1d4ed8;
-                        font-weight:900;
-                        padding:10px 12px;
-                    ">
+                    <div class="au-engine-panel-27">
                         Planned Maintenance Reasons for
                         ${esc(asset_name)}
                     </div>
 
-                    <div style="
-                        overflow-x:auto;
-                    ">
+                    <div class="au-engine-panel-28">
 
-                        <table style="
-                            width:100%;
-                            border-collapse:collapse;
-                        ">
+                        <table class="au-engine-table-3">
 
                             <thead>
-                                <tr style="
-                                    background:#eff6ff;
-                                    color:#1d4ed8;
-                                ">
+                                <tr class="au-engine-table-row-2">
 
-                                    <th style="
-                                        padding:9px 10px;
-                                        text-align:left;
-                                    ">
+                                    <th class="au-engine-table-heading-7">
                                         Start
                                     </th>
 
-                                    <th style="
-                                        padding:9px 10px;
-                                        text-align:left;
-                                    ">
+                                    <th class="au-engine-table-heading-7">
                                         Resolved
                                     </th>
 
-                                    <th style="
-                                        padding:9px 10px;
-                                        text-align:left;
-                                    ">
+                                    <th class="au-engine-table-heading-7">
                                         Reason
                                     </th>
 
@@ -3870,27 +3089,10 @@ function add_invalid_au_exclusion_column(report) {
         return `
             <div
                 data-industry-formula-button="1"
-                style="
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    width:100%;
-                    height:100%;
-                "
-            >
+             class="au-engine-panel-29">
                 <button
                     type="button"
-                    class="btn btn-xs btn-default"
-                    style="
-                        color:#1d4ed8;
-                        border:1px solid #2563eb;
-                        border-radius:10px;
-                        background:#eff6ff;
-                        font-size:10px;
-                        font-weight:700;
-                        padding:2px 8px;
-                        white-space:nowrap;
-                    "
+                    class="btn btn-xs btn-default au-engine-button-5"
                     onclick="
                         window.${handler_name}();
                         return false;
@@ -4000,42 +3202,18 @@ function add_invalid_au_exclusion_column(report) {
             .formula_html
             .$wrapper
             .html(`
-                <div style="
-                    padding:4px;
-                ">
-                    <div style="
-                        background:#eff6ff;
-                        border:1px solid #93c5fd;
-                        border-radius:10px;
-                        padding:18px;
-                        margin-bottom:14px;
-                    ">
-                        <div style="
-                            font-size:13px;
-                            font-weight:700;
-                            color:#1e3a8a;
-                            margin-bottom:10px;
-                        ">
+                <div class="au-engine-panel-30">
+                    <div class="au-engine-panel-31">
+                        <div class="au-engine-panel-32">
                             Formula
                         </div>
 
-                        <div style="
-                            font-size:17px;
-                            line-height:1.7;
-                            font-weight:700;
-                            color:#111827;
-                        ">
+                        <div class="au-engine-panel-33">
                             ${formula}
                         </div>
                     </div>
 
-                    <div style="
-                        background:#f8fafc;
-                        border:1px solid #d1d8dd;
-                        border-radius:10px;
-                        padding:16px;
-                        line-height:1.6;
-                    ">
+                    <div class="au-engine-panel-34">
                         ${explanation}
                     </div>
                 </div>

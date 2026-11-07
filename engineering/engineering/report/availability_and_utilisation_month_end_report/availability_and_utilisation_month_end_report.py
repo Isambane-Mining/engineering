@@ -155,6 +155,7 @@ def get_columns():
 		{"label": _("Avail Hrs"), "fieldname": "available_hrs", "fieldtype": "Float", "precision": 1, "width": 95},
 		{"label": _("Avail Hrs Above 100"), "fieldname": "available_hrs_above_100", "fieldtype": "Float", "precision": 1, "width": 155},
 		{"label": _("Mechanical Downtime"), "fieldname": "mechanical_downtime", "fieldtype": "Float", "precision": 1, "width": 160},
+		{"label": _("A&U Validation"), "fieldname": "au_validation_status", "fieldtype": "Small Text", "width": 300},
 		{"label": _("Avail (%)"), "fieldname": "avail_percent", "fieldtype": "Percent", "precision": 1, "width": 100},
 		{"label": _("Util (%)"), "fieldname": "util_percent", "fieldtype": "Percent", "precision": 1, "width": 100},
 		{"label": _("Breakdown Reason"), "fieldname": "breakdown_reason", "fieldtype": "Small Text", "width": 300},
@@ -2182,6 +2183,31 @@ def _month_end_mpp_excluded_asset_keys(location, from_date, to_date):
 
     return keys
 
+def _month_end_attach_au_validation(row, summary, source_rows):
+    """Expose investigation flags without changing the Engine's hour totals."""
+    row["au_validation_level"] = summary.get("au_validation_level")
+    row["au_problem_day_count"] = summary.get("au_problem_day_count", 0)
+    details = []
+    for source in source_rows:
+        reasons = []
+        if source.get("invalid_pre_use"):
+            reasons.append(source.get("invalid_pre_use_status") or "Invalid Pre-Use")
+        if source.get("au_validation_level") in ("warning", "invalid"):
+            reasons.append(source.get("au_validation_status") or "A&U investigation required")
+        if reasons:
+            details.append({
+                "date": str(source.get("shift_date") or ""),
+                "shift": source.get("shift"),
+                "asset_name": source.get("asset_name"),
+                "reason": "; ".join(reasons),
+            })
+    row["au_validation_details"] = details
+    row["au_validation_status"] = "\n".join([
+        summary.get("au_validation_status") or "Valid",
+        *(f"{detail['date']} {detail['shift']} {detail['asset_name']}: {detail['reason']}"
+          for detail in details),
+    ])
+
 
 def _month_end_direct_rows(filters):
     filters = frappe._dict(filters or {})
@@ -2714,6 +2740,12 @@ def _month_end_direct_rows(filters):
                     )
                 )
 
+                _month_end_attach_au_validation(
+                    machine_row,
+                    au_row,
+                    engine_rows_by_key.get((category, asset_name), []),
+                )
+
                 machine_row["_au_source_row"] = (
                     au_row
                 )
@@ -2896,6 +2928,10 @@ def _month_end_direct_rows(filters):
                     au_scope_row.get(
                         "utilisation_percentage"
                     )
+                )
+
+                _month_end_attach_au_validation(
+                    scope_row, au_scope_row, source_rows,
                 )
 
                 # Keep the existing Employee Availability
