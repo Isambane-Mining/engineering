@@ -1,0 +1,49 @@
+{
+ "doctype": "DocType",
+ "name": "Pre Use Deviation Settings",
+ "module": "Engineering",
+ "issingle": 1,
+ "istable": 0,
+ "editable_grid": 1,
+ "field_order": [
+  "manage_recipients_tab",
+  "recipients_per_site"
+ ],
+ "fields": [
+  {
+   "fieldname": "manage_recipients_tab",
+   "fieldtype": "Tab Break",
+   "label": "Manage Recipients"
+  },
+  {
+   "fieldname": "recipients_per_site",
+   "fieldtype": "Table",
+   "label": "Recipients Per Site",
+   "options": "WearCheck Users",
+   "description": "Configure recipients for open Pre-Use Deviation notifications by site."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  }
+ ]
+}

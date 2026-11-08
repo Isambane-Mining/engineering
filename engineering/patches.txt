@@ -20,4 +20,3 @@ engineering.patches.seed_engineering_legals_sharepoint_config
 engineering.patches.seed_machine_reliability_settings
 engineering.patches.use_failure_classification
 engineering.patches.backfill_wearcheck_machine_mappings
-engineering.patches.remove_richard_breakdown_recipient_v1

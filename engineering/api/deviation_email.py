@@ -3,41 +3,31 @@ from collections import defaultdict
 from frappe.utils import nowdate
 
 
-SITE_MANAGER_EMAILS = {
-    "Koppie": [
-        "wimpie@isambane.co.za",
-        "dian@isambane.co.za",
-    ],
-    "Klipfontein": [
-        "grant@isambane.co.za",
-        "kobus@isambane.co.za",
-        "werner.french@isambane.co.za",
-        "lara@isambane.co.za",
-        "arno@isambane.co.za",
-        "grant.cummings@isambane.co.za",
-        "vusi@isambane.co.za",
-    ],
-    "Uitgevallen": [
-        "charles@excavo.co.za",
-        "saul@isambane.co.za",
-    ],
-    "Gwab": [
-        "grant@isambane.co.za",
-        "lara@isambane.co.za",
-        "arno@isambane.co.za",
-        "grant.cummings@isambane.co.za",
-        "vusi@isambane.co.za",
-    ],
-    "Bankfontein": [
-        "noel@isambane.co.za",
-        "j.semelane@excavo.co.za",
-    ],
-    "Kriel Rehabilitation": [
-        "carel@isambane.co.za",
-        "xolani@isambane.co.za",
-        "ishmael@isambane.co.za",
-    ],
-}
+
+def get_deviation_recipient_emails(site):
+    """Return configured Pre-Use Deviation recipients for one site."""
+    settings = frappe.get_single("Pre Use Deviation Settings")
+    recipients = []
+    seen = set()
+
+    for row in settings.get("recipients_per_site") or []:
+        if (row.location or "").strip() != (site or "").strip():
+            continue
+
+        user = (row.user or "").strip()
+        if not user:
+            continue
+
+        email = frappe.db.get_value("User", user, "email") or user
+        email = (email or "").strip()
+
+        if not email or email.lower() in seen:
+            continue
+
+        seen.add(email.lower())
+        recipients.append(email)
+
+    return recipients
 
 
 def send_open_deviation_emails():
@@ -70,7 +60,7 @@ def send_open_deviation_emails():
             grouped[site].append(row)
 
     for site, rows in grouped.items():
-        recipients = SITE_MANAGER_EMAILS.get(site, [])
+        recipients = get_deviation_recipient_emails(site)
         if not recipients:
             continue
 
