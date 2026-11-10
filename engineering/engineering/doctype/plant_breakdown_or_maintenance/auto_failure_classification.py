@@ -91,7 +91,7 @@ def classify_breakdown(reason):
 
     try:
         with urllib.request.urlopen(
-            request, timeout=12
+            request, timeout=45
         ) as response:
             result = json.load(response)
 
