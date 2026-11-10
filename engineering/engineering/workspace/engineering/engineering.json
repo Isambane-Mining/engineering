@@ -595,6 +595,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Pre Use Deviation Email Alerts",
+   "link_count": 0,
+   "link_to": "Pre Use Deviation Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Startup and Fatigue spesification",
    "link_count": 0,
    "link_to": "Startup and Fatigue spesification",
