@@ -1,16 +1,12 @@
 """Migrate report configuration only; retain retired columns and all source records."""
 import frappe
 from engineering.controllers.failure_classification import MASTER_DOCTYPE, prepare_settings
-from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS, seed_legacy_aliases
 
 
 def migrate_settings():
-    for label in INITIAL_CLASSIFICATIONS:
-        if not frappe.db.exists(MASTER_DOCTYPE, label):
-            frappe.get_doc(dict(doctype=MASTER_DOCTYPE, classification_name=label)).insert(ignore_permissions=True)
     names = frappe.get_all(MASTER_DOCTYPE, pluck='name', order_by='name', limit_page_length=0)
     settings = frappe.get_doc('Machine Reliability Settings')
-    rows = prepare_settings(settings.categories, names, legacy_aliases=seed_legacy_aliases())
+    rows = prepare_settings(settings.categories, names)
     settings.set('categories', [])
     for row in rows:
         settings.append('categories', row)

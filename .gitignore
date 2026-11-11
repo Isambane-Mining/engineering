@@ -5,3 +5,18 @@
 tags
 node_modules
 __pycache__
+
+# LAB validation: retained locally
+/_lab_validation/
+/engineering/engineering/doctype/plant_breakdown_or_maintenance/test_problem_category.py
+/engineering/engineering/page/daily_availability_and_utilization_dashboard/test_tyre_damage.py
+/engineering/engineering/page/monthly_tmm_assurance/test_downtime_hours.py
+/engineering/engineering/page/monthly_tmm_assurance/test_grant_feedback.py
+/engineering/engineering/page/monthly_tmm_assurance/test_integration.py
+/engineering/engineering/page/monthly_tmm_assurance/test_monthly_tmm_assurance.py
+/engineering/engineering/page/monthly_tmm_assurance/test_mpp_presentation.py
+/tests/test_classification_configuration.py
+/tests/test_engineering_legals_reports.py
+/tests/test_failure_classification.py
+/tests/test_failure_classification_migration.py
+/tests/test_monthly_tmm_assurance_browser.py

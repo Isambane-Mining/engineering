@@ -79,19 +79,21 @@ The only remaining feature blocker is the inaccessible classification PDF for ke
 
 ## Administrator-owned matching configuration
 
-Breakdown Failure Classification owns Display Order, Include in Tyre Damage Reports,
-Legacy Classification Names, and Description Matching Rules. Rules can define a
-standard subcategory with several phrases, a spelling correction, or an approved
-exact description. Disabled rules are ignored. Captured descriptions are preserved.
+Classification names, display order, tyre-report selection, legacy aliases,
+spelling corrections and description rules belong to Breakdown Failure
+Classification records and their child rows.
 
-Runtime controllers read the current masters, including custom or renamed categories.
-The frozen JSON in engineering/patches/data is a one-time migration snapshot, not a
-runtime category list. The new patch only initialises previously unconfigured existing
-masters; it never recreates deleted masters or rewrites breakdown records.
+DocTypes are deployed through normal Frappe schema synchronization.
+No configuration patch creates DocTypes or imports default master records.
 
-Deploy using the normal schema/patch migration before starting the new application
-code. The child DocType must be synced before the parent. LAB activation and
-production deployment are separate from preparing this code change.
+Configure and review the master records in LAB, then export them using
+Frappe's standard data export workflow. Review the exported records against
+the destination before importing; preserve destination-specific configuration.
+Transfer files remain outside the application repository.
 
-TMM page styles live in engineering/public/css/engineering.css. SharePoint monthly
-folder/frequency helpers live in engineering/controllers.
+The report-settings migration reads existing classification records and
+configured aliases. It does not seed a fixed list of classification names.
+
+Validation tests and their fixtures remain in LAB and are ignored by Git.
+TMM styles use engineering/public/css/engineering.css.
+SharePoint monthly helpers use engineering/controllers.
