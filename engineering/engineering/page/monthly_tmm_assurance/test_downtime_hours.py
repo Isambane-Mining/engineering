@@ -1,4 +1,8 @@
 """MPP downtime, deterministic local subcategories and editable export regressions."""
+from unittest.mock import patch as patch_classification_configuration
+
+from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS as TEST_CLASSIFICATIONS, seed_configuration
+TEST_CONFIGURATION = seed_configuration()
 from datetime import datetime, date
 from io import BytesIO
 import unittest
@@ -7,6 +11,7 @@ from pptx import Presentation
 from . import monthly_tmm_assurance as api
 from engineering.controllers import failure_classification as fc
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestDowntimeHours(unittest.TestCase):
     def test_support_groups_are_separate(self):
         rows=[dict(name=str(i),asset_category=c,shift_required_hours=10,shift_available_hours=i*2) for i,c in enumerate(('Diesel Bowsers','Water Bowser','TLB','Service Truck'))]
@@ -34,7 +39,7 @@ class TestDowntimeHours(unittest.TestCase):
         rows=[dict(name=str(i),failure_classification='Electrical',downtime_hours=h,breakdown_reason=reason) for i,(h,reason) in enumerate([(1,'headlight faulty'),(1,'head light not working'),(8,'batery faulty'),(1,'no power')])]
         rows.append(dict(name='tyre',failure_classification='Tyres / Wheels',downtime_hours=3,breakdown_reason='tyer puncture'))
         rows.append(dict(name='blank',failure_classification='',downtime_hours=100))
-        result=api.category_downtime(rows+[rows[0]],fc.INITIAL_CLASSIFICATIONS,{})
+        result=api.category_downtime(rows+[rows[0]],TEST_CLASSIFICATIONS,{})
         self.assertEqual(result['classified_hours'],14)
         self.assertEqual(result['unresolved_hours'],100)
         self.assertEqual(result['categories'][0]['category'],'Electrical')
@@ -43,18 +48,18 @@ class TestDowntimeHours(unittest.TestCase):
         sub=result['categories'][0]['subcategories']
         self.assertEqual([(x['subcategory'],x['count'],x['hours']) for x in sub],[('Lighting fault',2,2),('Battery fault',1,8)])
         self.assertEqual(result['categories'][0]['subcategory_review_hours'],1)
-        equal=api.category_downtime([dict(name=c,failure_classification=c,downtime_hours=1) for c in fc.INITIAL_CLASSIFICATIONS],fc.INITIAL_CLASSIFICATIONS,{})
+        equal=api.category_downtime([dict(name=c,failure_classification=c,downtime_hours=1) for c in TEST_CLASSIFICATIONS],TEST_CLASSIFICATIONS,{})
         self.assertEqual(equal['categories'][9]['cumulative_percent'],50)
         self.assertEqual(equal['priority_category_count'],16)
 
     def test_local_synonyms_specificity_conflicts_and_manual(self):
         for reason,category,label in [('tyre puncher','Tyres / Wheels','Tyre puncture'),('tyer puncture','Tyres / Wheels','Tyre puncture'),('tyer - puncher','Tyres / Wheels','Tyre puncture'),('head-light faulty','Electrical','Lighting fault'),('BATERY, faulty!','Electrical','Battery fault'),('head light not working','Electrical','Lighting fault')]:
-            self.assertEqual(fc.standard_subcategory(reason,category,{})['subcategory'],label)
+            self.assertEqual(fc.standard_subcategory(reason,category,{}, rule_config=TEST_CONFIGURATION)['subcategory'],label)
         for reason,category in [('does not start','Engine'),('oil leak','Hydraulic'),('no power','Electrical'),('battery faulty and headlight faulty','Electrical'),('battery faulty','Engine')]:
-            self.assertEqual(fc.standard_subcategory(reason,category,{})['status'],'Review')
-        self.assertEqual(fc.standard_subcategory('custom','Electrical',{},approved_mapping='Approved component')['subcategory'],'Approved component')
+            self.assertEqual(fc.standard_subcategory(reason,category,{}, rule_config=TEST_CONFIGURATION)['status'],'Review')
+        self.assertEqual(fc.standard_subcategory('custom','Electrical',{},approved_mapping='Approved component', rule_config=TEST_CONFIGURATION)['subcategory'],'Approved component')
         configured={'Hydraulic':['boom cylinder','cylinder']}
-        self.assertEqual(fc.standard_subcategory('boom cylinder leaking','Hydraulic',configured)['subcategory'],'Boom cylinder')
+        self.assertEqual(fc.standard_subcategory('boom cylinder leaking','Hydraulic',configured, rule_config=TEST_CONFIGURATION)['subcategory'],'Boom cylinder')
 
     def test_planning_helper_used_without_elapsed_fallback(self):
         with patch('engineering.engineering.report.availability_and_utilisation_month_end_report.availability_and_utilisation_month_end_report.get_required_downtime_minutes_for_breakdown',return_value={'required_downtime_minutes':90}) as fn:
@@ -65,7 +70,7 @@ class TestDowntimeHours(unittest.TestCase):
         from .test_mpp_presentation import fixture
         data=fixture()
         for g in data['groups']:
-            g['counts']=api.category_downtime([dict(name=c,failure_classification=c,downtime_hours=1) for c in fc.INITIAL_CLASSIFICATIONS],fc.INITIAL_CLASSIFICATIONS,{})
+            g['counts']=api.category_downtime([dict(name=c,failure_classification=c,downtime_hours=1) for c in TEST_CLASSIFICATIONS],TEST_CLASSIFICATIONS,{})
         deck=Presentation(BytesIO(api.presentation_bytes(data)))
         titles=[next(s.text for s in slide.shapes if s.name=='tmm-title') for slide in deck.slides]
         self.assertEqual(titles[:3],['Prime movers availability','Support equipment availability','ADT Pareto'])
@@ -75,6 +80,7 @@ class TestDowntimeHours(unittest.TestCase):
         self.assertEqual(list(charts[0].plots[0].categories),['ADTs','Excavators','Dozers','Drills'])
         self.assertTrue(all(chart.part.chart_workbook.xlsx_part is not None for chart in charts))
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestCanonicalPlanningCalculation(unittest.TestCase):
     def test_required_cap_startup_fatigue_and_zero_required_shift(self):
         from engineering.engineering.report.availability_and_utilisation_engine import availability_and_utilisation_engine as engine

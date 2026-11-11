@@ -1,3 +1,6 @@
+
+from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS as TEST_CLASSIFICATIONS, seed_configuration
+TEST_CONFIGURATION = seed_configuration()
 import unittest
 from unittest.mock import patch
 import frappe
@@ -6,13 +9,16 @@ from types import SimpleNamespace
 from engineering.engineering.page.daily_availability_and_utilization_dashboard import tyre_damage as tyre
 
 
+from unittest.mock import patch as patch_classification_configuration
+
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestTyreDamageMatching(unittest.TestCase):
     def test_only_explicit_classification_counts(self):
-        self.assertTrue(tyre.is_classified_tyre_damage(dict(failure_classification='Tyres / Wheels')))
+        self.assertTrue(tyre.is_classified_tyre_damage(dict(failure_classification='Tyres / Wheels'), classifications=TEST_CONFIGURATION['tyre_classifications']))
         for values in [{}, {'failure_classification': 'Mechanical'},
                        {'breakdown_reason': 'flat tyre', 'resolution_summary': 'tyre burst repaired'}]:
             with self.subTest(values=values):
-                self.assertFalse(tyre.is_classified_tyre_damage(values))
+                self.assertFalse(tyre.is_classified_tyre_damage(values, classifications=TEST_CONFIGURATION['tyre_classifications']))
 
     def test_more_than_one_damage_term_is_one_record(self):
         rows = [dict(name='A', category='ADT', machine='IS1'), dict(name='A', category='ADT', machine='IS1'),
@@ -22,6 +28,7 @@ class TestTyreDamageMatching(unittest.TestCase):
 
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestTyreDamageSources(unittest.TestCase):
     def test_query_and_count_follow_permitted_engine_scope_and_record_site_category(self):
         source = [dict(indent=3, asset_name='IS1', shift_date='2026-07-01', asset_category='ADT'),
@@ -36,9 +43,9 @@ class TestTyreDamageSources(unittest.TestCase):
             row.failure_classification = 'Tyres / Wheels' if row.name in ('yes', 'out', 'dozer') else ''
         identities=[frappe._dict(name='ASSET1',asset_name='IS1'),frappe._dict(name='DOZER1',asset_name='DZ1')]
         with patch.object(frappe,'has_permission',return_value=True),patch.object(frappe,'get_all',return_value=identities),patch.object(frappe,'get_list',return_value=rows) as read:
-            result=tyre.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-02')
+            result=tyre.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-02', tyre_classifications=TEST_CONFIGURATION['tyre_classifications'])
             for selected in ['ASSET1', 'IS1']:
-                restricted=tyre.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-02',selected)
+                restricted=tyre.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-02',selected, tyre_classifications=TEST_CONFIGURATION['tyre_classifications'])
                 self.assertEqual([x['name'] for x in restricted],['yes'])
         self.assertEqual([x['name'] for x in result],['yes','dozer'])
         self.assertEqual(tyre.damage_counts(result),{'ADT':1,'Dozer':1})
@@ -47,18 +54,19 @@ class TestTyreDamageSources(unittest.TestCase):
         self.assertIn(['downtime_type','=','Breakdown'],args['filters'])
         self.assertNotIn('resolution_summary',args['fields'])
         self.assertNotIn('breakdown_reason',args['fields'])
-        self.assertIn(['failure_classification', '=', 'Tyres / Wheels'], args['filters'])
+        self.assertIn(['failure_classification', 'in', list(TEST_CONFIGURATION['tyre_classifications'])], args['filters'])
         self.assertIn(['docstatus', '<', 2], args['filters'])
         self.assertLessEqual(args['limit_page_length'],20001)
 
     def test_empty_roster_and_missing_permission_do_not_query_records(self):
         with patch.object(frappe,'get_list') as read:
-            self.assertEqual(tyre.fetch_tyre_damage_records([],'Site','2026-07-01','2026-07-02'),[])
+            self.assertEqual(tyre.fetch_tyre_damage_records([],'Site','2026-07-01','2026-07-02', tyre_classifications=TEST_CONFIGURATION['tyre_classifications']),[])
             read.assert_not_called()
         with patch.object(frappe,'has_permission',return_value=False):
-            self.assertIsNone(tyre.fetch_tyre_damage_records([dict(indent=3,asset_name='A',shift_date='2026-07-01')],'Site','2026-07-01','2026-07-02'))
+            self.assertIsNone(tyre.fetch_tyre_damage_records([dict(indent=3,asset_name='A',shift_date='2026-07-01')],'Site','2026-07-01','2026-07-02', tyre_classifications=TEST_CONFIGURATION['tyre_classifications']))
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class DashboardFixtures(unittest.TestCase):
     """Real Engine aggregation/rendering with only external reads replaced."""
     def setUp(self):
@@ -91,16 +99,17 @@ class DashboardFixtures(unittest.TestCase):
             self.addCleanup(context.stop)
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestTyreDamageLiveDashboard(DashboardFixtures):
     def test_live_filters_and_scope_partition(self):
         from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
         results = {}
         for scope in ['Production + Swing/Spare Machines', 'Production Machines', 'Swing/Spare Machines']:
             source=dashboard.fetch_grouped_data('Klipfontein','2026-07-01','2026-07-31',scope,'85% A & U','Isambane & Excavo Assets')
-            records=tyre.fetch_tyre_damage_records(source,'Klipfontein','2026-07-01','2026-07-31')
+            records=tyre.fetch_tyre_damage_records(source,'Klipfontein','2026-07-01','2026-07-31', tyre_classifications=TEST_CONFIGURATION['tyre_classifications'])
             results[scope]={x['name'] for x in records}
             self.assertEqual(len(records),len(results[scope]))
-            selected=tyre.fetch_tyre_damage_records(source,'Klipfontein','2026-07-01','2026-07-31','IS587')
+            selected=tyre.fetch_tyre_damage_records(source,'Klipfontein','2026-07-01','2026-07-31','IS587', tyre_classifications=TEST_CONFIGURATION['tyre_classifications'])
             self.assertTrue(all(x['machine']=='IS587' for x in selected))
             self.assertTrue({x['name'] for x in selected}.issubset(results[scope]))
         self.assertEqual(results['Production + Swing/Spare Machines'],results['Production Machines']|results['Swing/Spare Machines'])
@@ -130,6 +139,7 @@ class TestTyreDamageLiveDashboard(DashboardFixtures):
                 self.assertEqual(len(card.parent.select(':scope > .frappe-card')),3)
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestTyreDamageRendering(DashboardFixtures):
     def test_shared_hours_graph_and_original_cards_do_not_change(self):
         import re
@@ -160,12 +170,13 @@ class TestTyreDamageRendering(DashboardFixtures):
             self.assertEqual({c['data-category']:c['data-count'] for c in panel.select('.daily-tyre-kpi')}, {'ADT':'1'})
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestTyreDrilldown(DashboardFixtures):
     def test_card_and_drilldown_use_the_same_unique_adt_records(self):
         from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
         from engineering.controllers import tyre_damage as controller
         source=dashboard.fetch_grouped_data('Old Site','2026-07-01','2026-07-01')
-        counted=controller.damage_counts(controller.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-01'))
+        counted=controller.damage_counts(controller.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-01', tyre_classifications=TEST_CONFIGURATION['tyre_classifications']))
         original_read=frappe.get_list
         def read(doctype,**kwargs):
             if isinstance(kwargs.get('filters'),dict):
@@ -190,7 +201,7 @@ class TestTyreDrilldown(DashboardFixtures):
                             ('wrong-site',dict(location='Other Site')),('wrong-machine',dict(asset_name='not-in-roster'))]:
             rows.append(frappe._dict(dict(common,**values),name=name))
         with patch.object(frappe,'get_list',return_value=rows):
-            result=controller.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-01')
+            result=controller.fetch_tyre_damage_records(source,'Old Site','2026-07-01','2026-07-01', tyre_classifications=TEST_CONFIGURATION['tyre_classifications'])
         self.assertEqual([x['name'] for x in result],['valid'])
 
     def test_drilldown_permission_and_dozer_category_are_rejected(self):

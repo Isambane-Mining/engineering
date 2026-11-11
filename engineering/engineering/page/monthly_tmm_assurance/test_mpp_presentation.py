@@ -1,4 +1,8 @@
 """Stored A&U / MPP / six-slide presentation contracts; no live writes."""
+from unittest.mock import patch as patch_classification_configuration
+
+from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS as TEST_CLASSIFICATIONS, seed_configuration
+TEST_CONFIGURATION = seed_configuration()
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
@@ -11,6 +15,7 @@ from pptx import Presentation
 from . import monthly_tmm_assurance as api
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 def fixture():
     data=dict(site='Klipfontein',**api.reporting_period('2026-10',today=date(2026,11,3)),groups=[])
     plans=[dict(name=str(i),prod_month_start_date=a,prod_month_end_date=b) for i,(a,b) in enumerate([
@@ -20,10 +25,11 @@ def fixture():
     for i,group in enumerate(api.GROUPS):
         records=[dict(name=f'PRIVATE-RECORD-{group}-{n}',failure_classification=c,downtime_hours=1,breakdown_reason='PRIVATE DESCRIPTION')
                  for n,c in enumerate(['Hydraulic','Hydraulic','Hydraulic','Engine','Engine','Safety Systems'])]
-        data['groups'].append(dict(group=group,availability=[None if i==2 else 80,0 if i==0 else 85,68.81332236842105],counts=api.category_downtime(records,api.INITIAL_CLASSIFICATIONS,{}),actions=[dict(action='PRIVATE ACTION')]))
+        data['groups'].append(dict(group=group,availability=[None if i==2 else 80,0 if i==0 else 85,68.81332236842105],counts=api.category_downtime(records,TEST_CLASSIFICATIONS,{}),actions=[dict(action='PRIVATE ACTION')]))
     return data
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestMPPPeriods(unittest.TestCase):
     def months(self,month='2026-10'):
         return api.reporting_period(month,today=date(2027,2,3))['months']
@@ -70,6 +76,7 @@ class TestMPPPeriods(unittest.TestCase):
         self.assertIn('No calendar-period substitution',fail.call_args.args[0])
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestStoredHours(unittest.TestCase):
     def test_sql_regression_full_precision_and_single_multiplier(self):
         result=api.availability_by_group([dict(asset_category='ADT',shift_required_hours=Decimal('18240'),shift_available_hours=Decimal('14766.5299999999'))])
@@ -98,6 +105,7 @@ class TestStoredHours(unittest.TestCase):
             self.assertIsNone(api.equipment_group(category))
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestMPPOverlap(unittest.TestCase):
     def test_october_ends_18th_and_carry_in_closed_once(self):
         rows=[dict(name='closed',breakdown_start_datetime='2026-08-01',resolved_datetime='2026-09-22'),
@@ -111,11 +119,12 @@ class TestMPPOverlap(unittest.TestCase):
         self.assertEqual([r['name'] for r in result],['closed','first','last'])
         november=api.monthly_population(rows,'2026-10-19','2026-11-15')
         self.assertIn('subsequent',{r['name'] for r in november})
-        counts=api.category_counts([dict(r,failure_classification='Hydraulic') for r in result])
+        counts=api.category_counts([dict(r,failure_classification='Hydraulic') for r in result], classifications=TEST_CLASSIFICATIONS)
         self.assertEqual(counts['categories'][0]['count'],3)
         self.assertEqual(counts['categories'][-1]['cumulative_percent'],100)
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestPresentation(unittest.TestCase):
     def test_six_slides_editable_charts_and_no_private_details(self):
         payload=api.presentation_bytes(fixture())
@@ -144,7 +153,7 @@ class TestPresentation(unittest.TestCase):
 
     def test_empty_groups_keep_six_slides_with_honest_empty_states(self):
         d=fixture()
-        for g in d['groups']:g['counts']=api.category_downtime([],api.INITIAL_CLASSIFICATIONS,{})
+        for g in d['groups']:g['counts']=api.category_downtime([],TEST_CLASSIFICATIONS,{})
         deck=Presentation(BytesIO(api.presentation_bytes(d)))
         self.assertEqual(len(deck.slides),5)
         for s in list(deck.slides)[2:]:
@@ -159,7 +168,7 @@ class TestPresentation(unittest.TestCase):
 
     def test_completeness_note_matches_hours_without_record_details(self):
         d=fixture()
-        d['groups'][0]['counts']=api.category_downtime([dict(name='classified',failure_classification='Engine',downtime_hours=3),dict(name='missing',downtime_hours=7)],api.INITIAL_CLASSIFICATIONS,{})
+        d['groups'][0]['counts']=api.category_downtime([dict(name='classified',failure_classification='Engine',downtime_hours=3),dict(name='missing',downtime_hours=7)],TEST_CLASSIFICATIONS,{})
         deck=Presentation(BytesIO(api.presentation_bytes(d)))
         text=' '.join(s.text for slide in deck.slides for s in slide.shapes if s.has_text_frame)
         self.assertIn('Classification review: 7.00 h (excluded)',text)
@@ -185,7 +194,7 @@ class TestPresentation(unittest.TestCase):
     def test_twenty_causes_stay_editable_and_cumulative_ends_at_100(self):
         d=fixture()
         for group in d['groups']:
-            group['counts']=api.category_downtime([dict(name=str(i),failure_classification=c,downtime_hours=1) for i,c in enumerate(api.INITIAL_CLASSIFICATIONS)],api.INITIAL_CLASSIFICATIONS,{})
+            group['counts']=api.category_downtime([dict(name=str(i),failure_classification=c,downtime_hours=1) for i,c in enumerate(TEST_CLASSIFICATIONS)],TEST_CLASSIFICATIONS,{})
         payload=api.presentation_bytes(d)
         Path('/tmp/tmm-mpp-presentation/dense.pptx').write_bytes(payload)
         deck=Presentation(BytesIO(payload))

@@ -1,4 +1,8 @@
 """Grant feedback: presentation and canonical categorisation regression tests."""
+from unittest.mock import patch as patch_classification_configuration
+
+from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS as TEST_CLASSIFICATIONS, seed_configuration
+TEST_CONFIGURATION = seed_configuration()
 import base64
 from datetime import date, timedelta
 import unittest
@@ -7,6 +11,7 @@ import xml.etree.ElementTree as ET
 from .monthly_tmm_assurance import GROUPS, reporting_period, month_offset
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestAvailabilityGraph(unittest.TestCase):
     def test_three_individual_months_missing_zero_and_above_100(self):
         from .monthly_tmm_assurance import availability_svg
@@ -24,12 +29,13 @@ class TestAvailabilityGraph(unittest.TestCase):
         self.assertIn('aria-label="ADTs',svg)
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestControlledCategories(unittest.TestCase):
     def test_schema_requires_classification_only_for_breakdowns(self):
         import json
         from pathlib import Path
-        from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS
-        self.assertEqual(len(INITIAL_CLASSIFICATIONS),20)
+
+        self.assertEqual(len(TEST_CLASSIFICATIONS),20)
         path=Path(__file__).resolve().parents[2]/'doctype/plant_breakdown_or_maintenance/plant_breakdown_or_maintenance.json'
         field=next(f for f in json.loads(path.read_text())['fields'] if f['fieldname']=='failure_classification')
         self.assertEqual(field['fieldtype'],'Link')
@@ -38,13 +44,14 @@ class TestControlledCategories(unittest.TestCase):
         self.assertEqual(field.get('mandatory_depends_on'), "eval:doc.downtime_type == 'Breakdown'")
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestCountPareto(unittest.TestCase):
     def test_counts_identity_not_days_and_denominator_excludes_unresolved(self):
         from .monthly_tmm_assurance import category_counts
         records=[dict(name='one',failure_classification='Hydraulic'),dict(name='one',failure_classification='Hydraulic'),
                  dict(name='two',failure_classification='Braking System'),dict(name='blank',failure_classification=''),
                  dict(name='legacy',failure_classification='Unknown legacy'),dict(name='cancelled',failure_classification='Braking System',docstatus=2)]
-        result=category_counts(records)
+        result=category_counts(records, classifications=TEST_CLASSIFICATIONS)
         self.assertEqual(result['total_count'],4)
         self.assertEqual(result['categorised_count'],2)
         self.assertEqual(result['unresolved_count'],2)
@@ -54,9 +61,9 @@ class TestCountPareto(unittest.TestCase):
 
     def test_80_crossing_ties_and_priority_beyond_top10(self):
         from .monthly_tmm_assurance import category_counts
-        from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS
-        result=category_counts([dict(name=str(i),failure_classification=c) for i,c in enumerate(INITIAL_CLASSIFICATIONS)])
-        self.assertEqual([r['category'] for r in result['categories']],[*INITIAL_CLASSIFICATIONS])
+
+        result=category_counts([dict(name=str(i),failure_classification=c) for i,c in enumerate(TEST_CLASSIFICATIONS)], classifications=TEST_CLASSIFICATIONS)
+        self.assertEqual([r['category'] for r in result['categories']],[*TEST_CLASSIFICATIONS])
         self.assertEqual(result['priority_category_count'],16)
         self.assertEqual(result['categories'][15]['priority'],True)
         self.assertEqual(result['categories'][16]['priority'],False)
@@ -64,9 +71,10 @@ class TestCountPareto(unittest.TestCase):
         self.assertEqual(result['omitted_count'],10)
         self.assertEqual(result['categories'][9]['cumulative_percent'],50.0)
         self.assertEqual(len(result['priority_records']),16)
-        self.assertEqual(category_counts([])['priority_records'],[])
+        self.assertEqual(category_counts([], classifications=TEST_CLASSIFICATIONS)['priority_records'],[])
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestCaptureController(unittest.TestCase):
     def test_mandatory_classification_keeps_signature_permissions(self):
         from unittest.mock import patch
@@ -74,7 +82,10 @@ class TestCaptureController(unittest.TestCase):
         from engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance import PlantBreakdownorMaintenance
         doc=object.__new__(PlantBreakdownorMaintenance)
         doc.__dict__.update(doctype='Plant Breakdown or Maintenance',downtime_type='Breakdown',failure_classification='',flags=frappe._dict())
-        with patch.object(doc,'enforce_signature_role_permissions') as signatures:
+        from types import SimpleNamespace
+        with patch.object(frappe, 'throw', side_effect=frappe.ValidationError), \
+             patch.object(frappe, 'db', SimpleNamespace(exists=lambda *args, **kwargs: True)), \
+             patch.object(doc,'enforce_signature_role_permissions') as signatures:
             with self.assertRaises(frappe.ValidationError):
                 doc.validate()
             doc.failure_classification='Safety Systems'
@@ -85,6 +96,7 @@ class TestCaptureController(unittest.TestCase):
             self.assertEqual(signatures.call_count,2)
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestMonthlyPopulation(unittest.TestCase):
     def test_overlapping_calendar_month_counts_carried_and_closed_records_once(self):
         from .monthly_tmm_assurance import monthly_population
@@ -112,12 +124,13 @@ class TestMonthlyPopulation(unittest.TestCase):
 
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestCountPresentation(unittest.TestCase):
     def test_top10_stops_below100_and_80_reference_and_priority_are_visible(self):
         from .monthly_tmm_assurance import category_counts
         from .monthly_tmm_assurance import count_chart_image, count_summary
-        from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS
-        result=category_counts([dict(name=str(i),failure_classification=c) for i,c in enumerate(INITIAL_CLASSIFICATIONS)])
+
+        result=category_counts([dict(name=str(i),failure_classification=c) for i,c in enumerate(TEST_CLASSIFICATIONS)], classifications=TEST_CLASSIFICATIONS)
         html=count_chart_image(result)
         svg=base64.b64decode(html.split('base64,')[1].split('"')[0]).decode()
         self.assertIn('80% reference',svg)
@@ -127,6 +140,7 @@ class TestCountPresentation(unittest.TestCase):
         self.assertIn('16 categories account for 80.0%',count_summary(result))
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestWhatsAppCapture(unittest.TestCase):
     def test_book_down_passes_explicit_controlled_category_without_text_inference(self):
         from unittest.mock import MagicMock, patch

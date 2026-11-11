@@ -1,0 +1,243 @@
+[
+ {
+  "classification_name": "Mechanical",
+  "name": "Mechanical",
+  "display_order": 1,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Hydraulic",
+  "name": "Hydraulic",
+  "display_order": 2,
+  "is_tyre_related": 0,
+  "legacy_aliases": "Hydraulics",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Electrical",
+  "name": "Electrical",
+  "display_order": 3,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": [
+   {
+    "rule_type": "Subcategory",
+    "match_text": "battery faulty\nbattery fault\nbattery will not hold charge",
+    "replacement": "Battery fault",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Subcategory",
+    "match_text": "headlight faulty\nheadlight not working\nheadlight fault",
+    "replacement": "Lighting fault",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Subcategory",
+    "match_text": "alternator faulty\nalternator fault\nalternator not charging",
+    "replacement": "Alternator fault",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "batery",
+    "replacement": "battery",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "head light",
+    "replacement": "headlight",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "alt.",
+    "replacement": "alternator",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "batt.",
+    "replacement": "battery",
+    "enabled": 1
+   }
+  ]
+ },
+ {
+  "classification_name": "Engine",
+  "name": "Engine",
+  "display_order": 4,
+  "is_tyre_related": 0,
+  "legacy_aliases": "Engine / Starting",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Transmission / Drivetrain",
+  "name": "Transmission / Drivetrain",
+  "display_order": 5,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Braking System",
+  "name": "Braking System",
+  "display_order": 6,
+  "is_tyre_related": 0,
+  "legacy_aliases": "Brakes",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Steering System",
+  "name": "Steering System",
+  "display_order": 7,
+  "is_tyre_related": 0,
+  "legacy_aliases": "Steering",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Cooling System",
+  "name": "Cooling System",
+  "display_order": 8,
+  "is_tyre_related": 0,
+  "legacy_aliases": "Cooling",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Fuel System",
+  "name": "Fuel System",
+  "display_order": 9,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Lubrication System",
+  "name": "Lubrication System",
+  "display_order": 10,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Undercarriage / Suspension",
+  "name": "Undercarriage / Suspension",
+  "display_order": 11,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Tyres / Wheels",
+  "name": "Tyres / Wheels",
+  "display_order": 12,
+  "is_tyre_related": 1,
+  "legacy_aliases": "",
+  "matching_rules": [
+   {
+    "rule_type": "Subcategory",
+    "match_text": "tyre puncture",
+    "replacement": "Tyre puncture",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "tyer",
+    "replacement": "tyre",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "tire",
+    "replacement": "tyre",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "tyre puncher",
+    "replacement": "tyre puncture",
+    "enabled": 1
+   },
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "tyre punctured",
+    "replacement": "tyre puncture",
+    "enabled": 1
+   }
+  ]
+ },
+ {
+  "classification_name": "Structural",
+  "name": "Structural",
+  "display_order": 13,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Pneumatic / Air System",
+  "name": "Pneumatic / Air System",
+  "display_order": 14,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Electronic / Control System",
+  "name": "Electronic / Control System",
+  "display_order": 15,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Air Conditioning / Cab",
+  "name": "Air Conditioning / Cab",
+  "display_order": 16,
+  "is_tyre_related": 0,
+  "legacy_aliases": "Air Conditioning",
+  "matching_rules": [
+   {
+    "rule_type": "Spelling correction",
+    "match_text": "a/c",
+    "replacement": "air conditioning",
+    "enabled": 1
+   }
+  ]
+ },
+ {
+  "classification_name": "Safety Systems",
+  "name": "Safety Systems",
+  "display_order": 17,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Attachments / Implements",
+  "name": "Attachments / Implements",
+  "display_order": 18,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Pump / Fluid Transfer Systems",
+  "name": "Pump / Fluid Transfer Systems",
+  "display_order": 19,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ },
+ {
+  "classification_name": "Tipping / Body Hoist Systems",
+  "name": "Tipping / Body Hoist Systems",
+  "display_order": 20,
+  "is_tyre_related": 0,
+  "legacy_aliases": "",
+  "matching_rules": []
+ }
+]

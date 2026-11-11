@@ -3,6 +3,10 @@
 Run with TMM_TEST_SITES=/tmp/production-summary-validation-tmm/sites and bench Python.
 Never reads credentials or connects to the working bench's site.
 """
+from unittest.mock import patch as patch_classification_configuration
+
+from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS as TEST_CLASSIFICATIONS, seed_configuration
+TEST_CONFIGURATION = seed_configuration()
 import json
 import os
 from pathlib import Path
@@ -15,6 +19,7 @@ from . import monthly_tmm_assurance as api
 from .monthly_tmm_assurance import GROUPS
 
 
+@patch_classification_configuration('engineering.controllers.failure_classification.get_configuration', new=lambda: TEST_CONFIGURATION)
 class TestTMMLabIntegration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -56,9 +61,9 @@ class TestTMMLabIntegration(unittest.TestCase):
             *[dict(fieldname=f,fieldtype='Data') for f in ['asset_name','asset_category','failure_classification','downtime_type','open_closed','breakdown_reason']],
             dict(fieldname='exclude_from_au',fieldtype='Check'),dict(fieldname='breakdown_start_datetime',fieldtype='Datetime'),
             dict(fieldname='resolved_datetime',fieldtype='Datetime')])
-        from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS, MASTER_DOCTYPE
+        from engineering.controllers.failure_classification import MASTER_DOCTYPE
         cls.schema(MASTER_DOCTYPE, [dict(fieldname='classification_name',fieldtype='Data')])
-        for label in INITIAL_CLASSIFICATIONS:
+        for label in TEST_CLASSIFICATIONS:
             cls.fixture(MASTER_DOCTYPE,label,classification_name=label)
         meta=frappe.get_doc('DocType',api.PBM)
         field=next(f for f in meta.fields if f.fieldname=='failure_classification')
@@ -309,7 +314,7 @@ class TestTMMLabIntegration(unittest.TestCase):
 
     def test_capture_controller_persists_all_master_choices_and_blank_history(self):
         from engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance import PlantBreakdownorMaintenance
-        from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS
+
         from contextlib import ExitStack
         # Block unrelated breakdown workflow side effects while testing the actual
         # controller, Link validator and database writes on the disposable site.
@@ -321,7 +326,7 @@ class TestTMMLabIntegration(unittest.TestCase):
                     asset_category='ADT',downtime_type='Breakdown',failure_classification=category,
                     breakdown_start_datetime='2026-09-01 08:00:00'))
             with self.assertRaises(frappe.ValidationError):make('').insert()
-            for category in INITIAL_CLASSIFICATIONS:
+            for category in TEST_CLASSIFICATIONS:
                 doc=make(category).insert()
                 self.assertEqual(frappe.db.get_value(api.PBM,doc.name,'failure_classification'),category)
             frappe.db.set_value(api.PBM,doc.name,'failure_classification','')
@@ -364,10 +369,10 @@ class TestTMMLabIntegration(unittest.TestCase):
             result['groups'].append(dict(group=group,availability=[None,0,85],
                 counts=category_counts(monthly_population([dict(name=group+'-'+str(i),failure_classification='Hydraulic' if i<2 else 'Engine',
                     asset_name='TEST',breakdown_start_datetime='2026-08-15 12:00:00' if i==0 else '2026-09-15 12:00:00',
-                    resolved_datetime='2026-09-20 12:00:00') for i in range(3)],'2026-09-01','2026-09-30')),actions=saved['actions']))
+                    resolved_datetime='2026-09-20 12:00:00') for i in range(3)],'2026-09-01','2026-09-30'), classifications=TEST_CLASSIFICATIONS),actions=saved['actions']))
         for group in result['groups']:
             rows=[dict(row,downtime_hours=1) for category in group['counts']['categories'] for row in category['records']]
-            group['counts']=api.category_downtime(rows,api.INITIAL_CLASSIFICATIONS,{})
+            group['counts']=api.category_downtime(rows,TEST_CLASSIFICATIONS,{})
         with patch.object(api,'get_report',return_value=result):
             api.download_pdf('Koppie','2026-09-01')
         pdf=frappe.local.response.filecontent

@@ -76,3 +76,22 @@ Final installed-app source scan: old field-name references remain only in migrat
 - https://juan.isambane.co.za/app/machine-reliability-settings
 
 The only remaining feature blocker is the inaccessible classification PDF for keyword seeding. Production remains untouched.
+
+## Administrator-owned matching configuration
+
+Breakdown Failure Classification owns Display Order, Include in Tyre Damage Reports,
+Legacy Classification Names, and Description Matching Rules. Rules can define a
+standard subcategory with several phrases, a spelling correction, or an approved
+exact description. Disabled rules are ignored. Captured descriptions are preserved.
+
+Runtime controllers read the current masters, including custom or renamed categories.
+The frozen JSON in engineering/patches/data is a one-time migration snapshot, not a
+runtime category list. The new patch only initialises previously unconfigured existing
+masters; it never recreates deleted masters or rewrites breakdown records.
+
+Deploy using the normal schema/patch migration before starting the new application
+code. The child DocType must be synced before the parent. LAB activation and
+production deployment are separate from preparing this code change.
+
+TMM page styles live in engineering/public/css/engineering.css. SharePoint monthly
+folder/frequency helpers live in engineering/controllers.

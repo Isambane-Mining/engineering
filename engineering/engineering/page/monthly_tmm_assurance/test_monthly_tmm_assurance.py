@@ -1,4 +1,5 @@
 import unittest
+from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS as TEST_CLASSIFICATIONS
 from datetime import date, datetime
 
 
@@ -67,7 +68,7 @@ class TestReportData(unittest.TestCase):
         from .monthly_tmm_assurance import count_chart_image, report_html
         from .monthly_tmm_assurance import category_counts
         from .monthly_tmm_assurance import reporting_period, GROUPS
-        counts=category_counts([dict(name=str(i),failure_classification='Hydraulic',status_label='Open (current)') for i in range(4)]+[dict(name='last',failure_classification='Engine')])
+        counts=category_counts([dict(name=str(i),failure_classification='Hydraulic',status_label='Open (current)') for i in range(4)]+[dict(name='last',failure_classification='Engine')], classifications=TEST_CLASSIFICATIONS)
         chart=count_chart_image(counts)
         self.assertIn('data:image/svg+xml;base64,',chart)
         import base64,re
@@ -76,7 +77,7 @@ class TestReportData(unittest.TestCase):
             self.assertIn(label,svg)
         data=dict(site='A < B',**reporting_period('2026-09',today=date(2026,10,2)),
                   population='Distinct breakdown events overlapping the reporting calendar month, including carried-in and repaired/closed events',counting_unit='One breakdown record',status_basis='Current status',
-                  groups=[dict(group=g,availability=[None,0,85],counts=counts if g=='FELs' else category_counts([]),
+                  groups=[dict(group=g,availability=[None,0,85],counts=counts if g=='FELs' else category_counts([], classifications=TEST_CLASSIFICATIONS),
                     actions=[dict(cause='Engine',action='Repair saved',owner_name='Engineer',due_date='2026-10-03',status='Open')] if g=='Dozers' else []) for g in GROUPS])
         html=report_html(data)
         for text in ['A &lt; B','Repair saved','FELs','Dozers','Three-month availability by equipment group','first 80%']:

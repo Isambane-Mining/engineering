@@ -1,9 +1,12 @@
 """Exercise the migration against an in-memory store; no active LAB schema changes."""
+
+from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS as TEST_CLASSIFICATIONS, seed_configuration
+TEST_CONFIGURATION = seed_configuration()
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 import frappe
-from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS,MASTER_DOCTYPE
+from engineering.controllers.failure_classification import MASTER_DOCTYPE
 from engineering.patches import use_failure_classification as migration
 
 
@@ -40,7 +43,7 @@ class TestMigration(unittest.TestCase):
             migration.execute()
             first=[dict(x) for x in settings.categories]
             migration.execute()
-        self.assertEqual(masters,set(INITIAL_CLASSIFICATIONS)|{'Custom master'})
+        self.assertEqual(masters,set(TEST_CLASSIFICATIONS)|{'Custom master'})
         self.assertEqual(first,[dict(x) for x in settings.categories])
         self.assertEqual(len([x for x in first if x['category']]),21)
         self.assertEqual(next(x for x in first if x['category']=='Braking System')['keywords'],'custom brake phrase')

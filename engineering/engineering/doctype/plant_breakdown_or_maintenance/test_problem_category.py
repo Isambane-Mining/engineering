@@ -1,7 +1,8 @@
 """Transaction-only saves after the failure-classification migration is activated."""
 import unittest
 import frappe
-from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS, MASTER_DOCTYPE
+from engineering.controllers.failure_classification import MASTER_DOCTYPE
+from engineering.patches.failure_classification_seed import INITIAL_CLASSIFICATIONS as TEST_CLASSIFICATIONS
 from engineering.engineering.page.machine_reliability.machine_reliability import get_dashboard
 
 PBM = 'Plant Breakdown or Maintenance'
@@ -22,7 +23,7 @@ class TestFailureClassificationSave(unittest.TestCase):
         frappe.set_user('Administrator')
         self.old_flags={key:frappe.flags.get(key) for key in ('in_test','in_import','mute_emails')}
         frappe.flags.update(in_test=True,in_import=True,mute_emails=True)
-        for label in INITIAL_CLASSIFICATIONS:
+        for label in TEST_CLASSIFICATIONS:
             if not frappe.db.exists(MASTER_DOCTYPE,label):
                 frappe.get_doc(dict(doctype=MASTER_DOCTYPE,classification_name=label)).insert(ignore_permissions=True)
         self.asset=frappe.db.sql('''select a.name,a.location from `tabAsset` a
@@ -51,7 +52,7 @@ class TestFailureClassificationSave(unittest.TestCase):
         self.assertFalse(doc.reload().failure_classification)
 
     def test_all_twenty_classifications_save_and_filter_without_keywords(self):
-        for label in INITIAL_CLASSIFICATIONS:
+        for label in TEST_CLASSIFICATIONS:
             with self.subTest(classification=label):
                 doc=self.make_breakdown(failure_classification=label).insert(ignore_permissions=True)
                 self.assertEqual(doc.reload().failure_classification,label)

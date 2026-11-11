@@ -16,7 +16,7 @@ from urllib.parse import quote
 import frappe
 from frappe.utils import getdate, nowdate, now_datetime, get_url
 
-from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS, classification_names, standard_subcategory, terms
+from engineering.controllers.failure_classification import classification_names, standard_subcategory, terms
 
 
 GROUPS = ('ADTs', 'Excavators', 'Drills', 'Graders', 'FELs', 'Dozers', 'Diesel bowsers', 'Water bowsers', 'TLBs', 'Service trucks')
@@ -111,7 +111,7 @@ def pareto(hours_by_cause):
 
 
 def category_counts(records, classifications=None):
-    classifications = tuple(INITIAL_CLASSIFICATIONS if classifications is None else classifications)
+    classifications = tuple(classification_names() if classifications is None else classifications)
     by_name = {}
     for record in records:
         if record.get('docstatus') == 2:
