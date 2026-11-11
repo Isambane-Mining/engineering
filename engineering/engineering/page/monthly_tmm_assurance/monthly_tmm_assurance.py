@@ -1,4 +1,4 @@
-"""Monthly assurance calculations, record counts, rendering and permission-checked API.
+"""Monthly assurance calculations, measured downtime, rendering and permission-checked API.
 
 Source reports and the Daily A&U Engine Dashboard remain unchanged.
 """
@@ -14,16 +14,17 @@ import textwrap
 from urllib.parse import quote
 
 import frappe
-from frappe.utils import getdate, nowdate, get_url
+from frappe.utils import getdate, nowdate, now_datetime, get_url
 
-from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS, classification_names
+from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS, classification_names, standard_subcategory, terms
 
 
-GROUPS = ('ADTs', 'Excavators', 'Drills', 'Graders', 'FELs', 'Dozers', 'Ancillary')
+GROUPS = ('ADTs', 'Excavators', 'Drills', 'Graders', 'FELs', 'Dozers', 'Diesel bowsers', 'Water bowsers', 'TLBs', 'Service trucks')
+ACTION_GROUPS = GROUPS + ('Ancillary',)
 CATEGORY_GROUPS = {'ADT': 'ADTs', 'Excavator': 'Excavators', 'Drills': 'Drills',
                    'Grader': 'Graders', 'Loader': 'FELs', 'Dozer': 'Dozers',
-                   'Service Truck': 'Ancillary', 'TLB': 'Ancillary',
-                   'Water Bowser': 'Ancillary', 'Diesel Bowsers': 'Ancillary'}
+                   'Service Truck': 'Service trucks', 'TLB': 'TLBs',
+                   'Water Bowser': 'Water bowsers', 'Diesel Bowsers': 'Diesel bowsers'}
 BASIS = '85 × SUM(stored available hours) / SUM(stored required hours)'
 ACTIONS = 'Monthly TMM Assurance Actions'
 PBM = 'Plant Breakdown or Maintenance'
@@ -184,7 +185,8 @@ def percent(value):
 def availability_svg(data):
     """Three independently calculated monthly values per group; no averaging."""
     width, height, left, right, top, bottom = 1200, 290, 65, 1180, 30, 220
-    values = [v for g in data['groups'] for v in g['availability'] if v is not None]
+    groups = [g for g in data['groups'] if g['group'] in GROUPS]
+    values = [v for g in groups for v in g['availability'] if v is not None]
     maximum = max(100, math.ceil(max(values, default=100)/20)*20)
     colors = ('#234f87', '#3293ff', '#9ad0ff')
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="Availability by equipment group for three individual months" style="width:100%;height:auto;min-width:850px">',
@@ -194,8 +196,8 @@ def availability_svg(data):
         y = bottom - (bottom-top)*tick/5
         svg.extend([f'<path d="M{left} {y}H{right}" stroke="#e5eaf0"/>',
                     f'<text x="{left-10}" y="{y+4}" text-anchor="end">{maximum*tick/5:g}</text>'])
-    step = (right-left)/len(data['groups'])
-    for i, group in enumerate(data['groups']):
+    step = (right-left)/len(groups)
+    for i, group in enumerate(groups):
         x = left + step*(i+.5)
         label = escape(group['group'], quote=True)
         svg.append(f'<g data-group="{label}" tabindex="0" role="button" aria-label="{label}: view breakdown categories and actions" style="cursor:pointer">')
@@ -206,8 +208,8 @@ def availability_svg(data):
             text = percent(value)
             month = escape(data['months'][j]['label'])
             svg.append(f'<rect data-month="{month}" x="{bar_x}" y="{bottom-bar_h}" width="{step*.22}" height="{bar_h}" fill="{colors[j]}"><title>{label} · {month}: {text}</title></rect>')
-            svg.append(f'<text x="{bar_x+step*.11}" y="{bottom-bar_h-8}" text-anchor="middle" font-size="11">{text}</text>')
-        svg.append(f'<text x="{x}" y="{bottom+22}" text-anchor="middle">{label}</text></g>')
+            svg.append(f'<text x="{bar_x+step*.11}" y="{bottom-bar_h-8}" text-anchor="middle" font-size="10">{text}</text>')
+        svg.append(f'<text x="{x}" y="{bottom+22}" text-anchor="middle" font-size="11">{label}</text></g>')
     for j, month in enumerate(data['months']):
         x = 400 + j*180
         svg.append(f'<rect x="{x}" y="265" width="14" height="14" fill="{colors[j]}"/><text x="{x+22}" y="277">{escape(month["label"])}</text>')
@@ -222,23 +224,30 @@ def availability_image(data):
 
 
 def count_summary(counts):
-    if not counts['categorised_count']:
-        return 'No categorised breakdown records in this population.'
-    return f"{counts['priority_category_count']} categories account for {counts['priority_percent']:.1f}% of categorised breakdown records."
+    if 'classified_hours' not in counts:
+        return f"{counts['priority_category_count']} categories account for {counts['priority_percent']:.1f}% of categorised breakdown records."
+    if not counts['classified_hours']:
+        return 'No classified planning-adjusted breakdown downtime in this period.'
+    return f"{counts['priority_category_count']} classifications account for {counts['priority_percent']:.1f}% of classified downtime ({counts['classified_hours']:.2f} h)."
 
 
 def completeness(counts):
-    return (f"{counts['categorised_count']} categorised + {counts['unresolved_count']} unresolved = "
-            f"{counts['total_count']} breakdown records. Cumulative percentages exclude unresolved categories.")
+    records = (f"{counts['categorised_count']} categorised + {counts['unresolved_count']} unresolved = "
+               f"{counts['total_count']} breakdown records.")
+    if 'classified_hours' in counts:
+        return records + f" Classified: {counts['classified_hours']:.2f} h; classification review: {counts['unresolved_hours']:.2f} h (excluded from denominator). Timestamp review: {len(counts['invalid_records'])}."
+    return records + ' Cumulative percentages exclude unresolved categories.'
 
 
 def count_chart_image(counts, limit=10):
+    metric = 'hours' if 'classified_hours' in counts else 'count'
+    axis_title = 'Breakdown downtime (hours)' if metric == 'hours' else 'Number of breakdown records'
     rows = counts['categories'] if limit is None else counts['categories'][:limit]
     if not rows:
-        return '<p class="text-muted">No categorised breakdown records for this reporting month.</p>'
+        return '<p class="text-muted">No classified breakdown downtime for this reporting month.</p>'
     width = max(1200, len(rows)*110+140)
     left, right, top, bottom = 75, width-80, 40, 230
-    maximum = max(r['count'] for r in rows)
+    maximum = max(r[metric] for r in rows)
     maximum = max(1, math.ceil(maximum/5)*5) if maximum > 5 else maximum
     step = (right-left)/len(rows)
     labels = [textwrap.wrap(r['category'],width=18) for r in rows]
@@ -250,20 +259,20 @@ def count_chart_image(counts, limit=10):
         y = bottom-(bottom-top)*tick/5
         svg.extend([f'<path d="M{left} {y}H{right}" stroke="#e5eaf0"/>',
                     f'<text x="{right+10}" y="{y+4}">{tick*20}%</text>'])
-    for tick in range(0, maximum+1, max(1, math.ceil(maximum/5))):
+    for tick in range(0, math.ceil(maximum)+1, max(1, math.ceil(maximum/5))):
         y = bottom-(bottom-top)*tick/maximum
         svg.append(f'<text x="{left-10}" y="{y+4}" text-anchor="end">{tick}</text>')
     y80 = bottom-(bottom-top)*.8
     points=[]
     for index,row in enumerate(rows):
         x=left+step*(index+.5)
-        y=bottom-(bottom-top)*row['count']/maximum
+        y=bottom-(bottom-top)*row[metric]/maximum
         cy=bottom-(bottom-top)*row['cumulative_percent']/100
         points.append(f'{x},{cy}')
         fill='#3293ff' if row['priority'] else '#9ab7d8'
         svg.append(f'<rect x="{x-step*.29}" y="{y}" width="{step*.58}" height="{bottom-y}" fill="{fill}"/>')
         label_y=y+16 if abs(cy-y)<28 else max(y-7,15)
-        svg.append(f'<text x="{x}" y="{label_y}" text-anchor="middle" font-weight="bold">{row["count"]}</text>')
+        svg.append(f'<text x="{x}" y="{label_y}" text-anchor="middle" font-weight="bold">{row[metric]:.2f}</text>')
         for line,label in enumerate(labels[index]):
             svg.append(f'<text x="{x}" y="{bottom+21+line*15}" text-anchor="middle">{escape(label)}</text>')
     svg.extend([f'<path d="M{left} {y80}H{right}" stroke="#c18016" stroke-dasharray="6 5"/>',
@@ -274,12 +283,12 @@ def count_chart_image(counts, limit=10):
         x,cy=points[index].split(',')
         svg.extend([f'<circle cx="{x}" cy="{cy}" r="4" fill="#ff9400"/>',
                     f'<text x="{x}" y="{float(cy)-10}" text-anchor="middle">{row["cumulative_percent"]:.1f}%</text>'])
-    svg.extend(['<text transform="translate(18 140) rotate(-90)" text-anchor="middle">Number of breakdown records</text>',
+    svg.extend([f'<text transform="translate(18 140) rotate(-90)" text-anchor="middle">{axis_title}</text>',
                 f'<text transform="translate({width-12} 140) rotate(-90)" text-anchor="middle">Cumulative percentage</text>',
-                f'<text x="{left}" y="{height-12}">Blue bars: first 80% priority set · Orange line: cumulative percentage of all categorised records</text>',
+                f'<text x="{left}" y="{height-12}">Blue bars: first 80% priority set · Orange line: cumulative percentage of all classified downtime</text>',
                 '</g></svg>'])
     encoded=base64.b64encode(''.join(svg).encode()).decode()
-    return f'<img class="tmm-pareto-image" alt="Breakdown record counts and cumulative percentage" src="data:image/svg+xml;base64,{encoded}" style="width:100%;height:auto"/>'
+    return f'<img class="tmm-pareto-image" alt="Breakdown downtime hours and cumulative percentage" src="data:image/svg+xml;base64,{encoded}" style="width:100%;height:auto"/>'
 
 
 def record_table(records, base_url='', add_action=False):
@@ -291,13 +300,13 @@ def record_table(records, base_url='', add_action=False):
         url=base_url.rstrip('/')+'/app/plant-breakdown-or-maintenance/'+quote(row['name'],safe='')
         category=row.get('failure_classification') or 'Missing classification'
         cells=[esc(category),esc(row.get('asset_name')),f'<a href="{esc(url)}" target="_blank" rel="noopener">{esc(row["name"])}</a>',
-               esc(row.get('breakdown_start_datetime')),esc(row.get('breakdown_reason')),esc(row.get('status_label'))]
+               esc(row.get('breakdown_start_datetime')),esc(row.get('breakdown_reason')),esc(row.get('status_label')), ('N/A' if row.get('downtime_hours') is None else f"{row['downtime_hours']:.2f} h"), esc(row.get('timestamp_review') or row.get('review_reason'))]
         if add_action:
             cells.append(f'<button class="btn btn-default btn-xs tmm-action-for-record" data-reference="{esc(row["name"])}">Add action</button>')
         rows.append('<tr>'+''.join('<td>'+value+'</td>' for value in cells)+'</tr>')
-    headers=['Failure Classification','Machine','Breakdown Reference','Reported Date','Description','Status (current)']+([''] if add_action else [])
+    headers=['Failure Classification','Machine','Breakdown Reference','Reported Date','Description','Status (current)','Adjusted downtime','Review']+([''] if add_action else [])
     cols='<colgroup>'+''.join('<col style="width:'+width+'">' for width in ['16%','11%','17%','15%','27%','14%'])+'</colgroup>' if not add_action else ''
-    return '<table class="tmm-breakdowns">'+cols+'<thead><tr>'+''.join('<th>'+x+'</th>' for x in headers)+'</tr></thead><tbody>'+''.join(rows)+'</tbody></table>'
+    return '<table class="tmm-breakdowns">'+'<thead><tr>'+''.join('<th>'+x+'</th>' for x in headers)+'</tr></thead><tbody>'+''.join(rows)+'</tbody></table>'
 
 
 def report_html(data):
@@ -314,16 +323,16 @@ def report_html(data):
             cells=[]
             for offset in (0,midpoint):
                 row=all_rows[index+offset] if index+offset<len(all_rows) else None
-                cells.extend([esc(row['category']),str(row['count']),'Yes' if row['priority'] else ''] if row else ['','',''])
+                cells.extend([esc(row['category']),f"{row.get('hours', row['count']):.2f}",'Yes' if row['priority'] else ''] if row else ['','',''])
             full_rows.append('<tr>'+''.join('<td>'+value+'</td>' for value in cells)+'</tr>')
         cols='<colgroup>'+''.join('<col style="width:'+width+'">' for width in ['30%','8%','12%']*2)+'</colgroup>'
-        category_table='<table class="tmm-category-counts">'+cols+'<thead><tr><th>Category — full breakdown</th><th>Count</th><th>80% set</th><th>Category — continued</th><th>Count</th><th>80% set</th></tr></thead><tbody>'+''.join(full_rows)+'</tbody></table>'
+        category_table='<table class="tmm-category-counts">'+cols+'<thead><tr><th>Category — full breakdown</th><th>Hours</th><th>80% set</th><th>Category — continued</th><th>Hours</th><th>80% set</th></tr></thead><tbody>'+''.join(full_rows)+'</tbody></table>'
         actions=[]
         for action in group['actions']:
             actions.append('<tr>'+''.join(f'<td>{esc(action.get(k))}</td>' for k in ('cause','action','owner_name','due_date','status','breakdown_reference'))+'</tr>')
         action_table='<table><thead><tr><th>Category</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th><th>Breakdown Reference</th></tr></thead><tbody>'+''.join(actions)+'</tbody></table>' if actions else '<p class="text-muted">No saved corrective actions.</p>'
-        omitted=f"Top 10 shown; {counts['omitted_categories']} categories / {counts['omitted_count']} records omitted from chart (included in the denominator and full breakdown below)." if counts['omitted_categories'] else 'All categories with records are shown.'
-        sections.append(f'<section class="group-detail"><h2>{esc(group["group"])} · Breakdown records by category</h2><p>{esc(data["population"])} · {esc(data["month_label"])}</p>{count_chart_image(counts)}<p>{esc(count_summary(counts))}</p><p>{esc(completeness(counts))}</p><p>{esc(omitted)}</p>{category_table}<h3>Breakdowns contributing to the first 80%</h3>{record_table(counts["priority_records"],data.get("base_url",""))}<h3>Unresolved categorisation — review</h3>{record_table(counts["unresolved_records"],data.get("base_url",""))}<h3>Corrective actions · {esc(group["group"])}</h3>{action_table}</section>')
+        omitted=f"Top 10 shown; {counts['omitted_categories']} categories / {counts.get('omitted_hours',0):.2f} hours omitted from chart (included in the denominator and full breakdown below)." if counts['omitted_categories'] else 'All categories with records are shown.'
+        sections.append(f'<section class="group-detail"><h2>{esc(group["group"])} · Breakdown downtime by classification</h2><p>{esc(data["population"])} · {esc(data["month_label"])}</p>{count_chart_image(counts)}<p>{esc(count_summary(counts))}</p><p>{esc(completeness(counts))}</p><p>{esc(omitted)}</p>{category_table}<h3>Breakdowns contributing to the first 80%</h3>{record_table(counts["priority_records"],data.get("base_url",""))}<h3>Unresolved categorisation — review</h3>{record_table(counts["unresolved_records"],data.get("base_url",""))}<h3>Corrective actions · {esc(group["group"])}</h3>{action_table}</section>')
     if data.get('unassigned_records'):
         sections.append('<section class="group-detail"><h2>Equipment group requires review</h2>'+record_table(data['unassigned_records'],data.get('base_url',''))+'</section>')
     if not sections:
@@ -348,7 +357,7 @@ def _period(value=None):
 
 
 def _scope(site, month, group=GROUPS[0], permission='read'):
-    if not site or group not in GROUPS:
+    if not site or group not in ACTION_GROUPS:
         frappe.throw('Select a valid Site and Equipment Group.')
     from engineering.engineering.doctype.monthly_tmm_assurance_actions.monthly_tmm_assurance_actions import scope_name
     doc = frappe.get_doc(dict(doctype=ACTIONS, __islocal=1, site=site, reporting_month=month, equipment_group=group))
@@ -458,44 +467,132 @@ def _shift_rows(site, month):
                 'invalid_pre_use_hours','docstatus'])
 
 
-def breakdown_counts_by_group(site, month, period_end):
-    """Confirmed population: distinct breakdown records overlapping the MPP period.
+def planning_downtime(site, record, start, end):
+    """Existing Month End / Engine MPP-required overlap, at its minute precision."""
+    from engineering.engineering.report.availability_and_utilisation_month_end_report import availability_and_utilisation_month_end_report as month_end
+    measured = month_end.get_required_downtime_minutes_for_breakdown(
+        frappe._dict(location=site), record.get('asset_name'), start, end)
+    return measured['required_downtime_minutes'] / 60.0
 
-    Counts include closed/repaired and A&U-excluded records, including carry-ins.
-    Planning, Pre-Use validity and measured downtime do not affect counts. Blank legacy types remain breakdowns.
-    Group uses captured asset_category, with permission-filtered Asset fallback.
+
+def measure_records(records, period_start, period_end, current_time, measure):
+    """Distinct PBMs, current TMM midnight MPP boundaries, never future hours.
+
+    Invalid timestamps remain review rows with unknown hours (None), never 0.
+    A&U-excluded, cancelled and Planned Maintenance events do not contribute.
     """
-    start = datetime.combine(getdate(month), time.min)
-    end = datetime.combine(getdate(period_end) + timedelta(days=1), time.min)
-    rows = frappe.get_list(PBM, filters=[['location', '=', site], ['docstatus', '<', 2],
-                                    ['breakdown_start_datetime', '<', end]],
-                           or_filters=[['breakdown_start_datetime', '>=', start - timedelta(seconds=1)],
-                                       ['resolved_datetime', '>', start - timedelta(seconds=1)],
-                                       ['resolved_datetime', 'is', 'not set']],
-                           fields=['name', 'asset_name', 'asset_category', 'breakdown_start_datetime',
-                                   'resolved_datetime', 'failure_classification', 'downtime_type',
-                                   'breakdown_reason', 'docstatus'],
-                           order_by='breakdown_start_datetime asc, name asc', limit=0)
-    # The exact half-open MPP window is enforced here too. A one-second
-    # query guard tolerates SQLite's legacy timestamp text lacking microseconds.
-    rows = monthly_population(rows, month, period_end)
-    # Asset fallback must not bypass Asset permissions. Do not require a machine
-    # to remain at this site today to count its recorded breakdown at this site.
+    start = datetime.combine(getdate(period_start), time.min)
+    end = min(datetime.combine(getdate(period_end) + timedelta(days=1), time.min), current_time)
+    result, seen = [], set()
+    for source in records:
+        name = source.get('name')
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        if source.get('docstatus') == 2 or source.get('exclude_from_au') or str(source.get('downtime_type') or '').strip() not in ('', 'Breakdown'):
+            continue
+        row = dict(source, downtime_hours=None, timestamp_review='', elapsed_overlap_hours=None)
+        row['status_label'] = 'Closed (current)' if row.get('resolved_datetime') else 'Open (current)'
+        try:
+            a = datetime.fromisoformat(str(row.get('breakdown_start_datetime')))
+            b = datetime.fromisoformat(str(row['resolved_datetime'])) if row.get('resolved_datetime') else end
+            if a.tzinfo or b.tzinfo:
+                raise ValueError('Expected site-local timestamps')
+            if a >= end:
+                continue
+            if b < a:
+                raise ValueError('Resolved timestamp precedes start')
+        except (ValueError, TypeError) as exc:
+            row['timestamp_review'] = 'Invalid or missing timestamp: ' + str(exc)
+            result.append(row)
+            continue
+        if a >= end or b < start or (a < start and b <= start):
+            continue
+        a, b = max(a, start), min(b, end)
+        row['elapsed_overlap_hours'] = max(0, (b-a).total_seconds()/3600)
+        row['downtime_hours'] = measure(row, a, b) if b > a else 0.0
+        if not math.isfinite(row['downtime_hours']) or row['downtime_hours'] < 0:
+            raise ValueError('Invalid planning-adjusted downtime result')
+        result.append(row)
+    return result
+
+
+def category_downtime(records, classifications, configured):
+    unique = {r['name']: dict(r) for r in records if r.get('docstatus') != 2}
+    # Retain event counts for supporting details, while percentages use hours only.
+    result = category_counts(list(unique.values()), classifications)
+    grouped = {c: [] for c in classifications}
+    for row in unique.values():
+        row.update(standard_subcategory(row.get('breakdown_reason'), row.get('failure_classification'), configured))
+        if row.get('failure_classification') in grouped:
+            grouped[row['failure_classification']].append(row)
+    categories = []
+    invalid = [r for r in unique.values() if r.get('timestamp_review')]
+    for category, rows in grouped.items():
+        hours = sum(r.get('downtime_hours') or 0 for r in rows)
+        subs = defaultdict(list)
+        review = []
+        for row in rows:
+            if row['subcategory'] and not row.get('timestamp_review'):
+                subs[row['subcategory']].append(row)
+            else:
+                review.append(row)
+        ranked = sorted((dict(subcategory=label, count=len(items), hours=sum(r.get('downtime_hours') or 0 for r in items)) for label, items in subs.items()), key=lambda r: (-r['count'], r['subcategory'].casefold()))
+        categories.append(dict(category=category, count=len(rows), records=rows, hours=hours,
+            subcategories=ranked[:3], subcategory_review_records=review,
+            subcategory_review_hours=sum(r.get('downtime_hours') or 0 for r in review)))
+    positive = sorted((r for r in categories if r['hours'] > 0), key=lambda r: (-r['hours'], classifications.index(r['category'])))
+    total = sum(r['hours'] for r in positive)
+    running, priority_records = 0.0, []
+    for index, row in enumerate(positive):
+        row['priority'] = running < total*.8 - 1e-10
+        running += row['hours']
+        row['cumulative_percent'] = 100.0 if index == len(positive)-1 else running/total*100
+        if row['priority']:
+            priority_records.extend(row['records'])
+    for row in categories:
+        if row['hours'] <= 0:
+            row.update(priority=False, cumulative_percent=100 if total else 0)
+    unresolved = [r for r in unique.values() if r.get('failure_classification') not in grouped]
+    result.update(categories=positive, all_categories=positive+[r for r in categories if r['hours']<=0],
+        classified_hours=total, unresolved_hours=sum(r.get('downtime_hours') or 0 for r in unresolved),
+        unresolved_records=unresolved, invalid_records=invalid, priority_records=priority_records,
+        priority_category_count=sum(r['priority'] for r in positive),
+        priority_percent=sum(r['hours'] for r in positive if r['priority'])/total*100 if total else 0,
+        displayed_count=min(len(positive),10), omitted_categories=max(0,len(positive)-10),
+        omitted_count=sum(r['count'] for r in positive[10:]), omitted_hours=sum(r['hours'] for r in positive[10:]))
+    return result
+
+
+def _subcategory_configuration():
+    settings = frappe.get_single('Machine Reliability Settings')
+    return {r.category: terms(r.keywords) for r in settings.categories if r.category}
+
+
+def breakdown_counts_by_group(site, month, period_end):
+    # Read the permitted site's records, including invalid/missing timestamps for
+    # review; measure_records enforces the exact reporting overlap once per PBM.
+    rows = _complete_records(PBM, filters={'location':site,'docstatus':['<',2]},
+        fields=['name','asset_name','asset_category','breakdown_start_datetime','resolved_datetime',
+                'failure_classification','downtime_type','breakdown_reason','exclude_from_au','docstatus'],
+        order_by='breakdown_start_datetime asc, name asc')
+    rows = measure_records(rows, month, period_end, now_datetime(),
+        lambda record, a, b: planning_downtime(site, record, a, b))
     identifiers = list({r.get('asset_name') for r in rows if r.get('asset_name')})
-    assets = frappe.get_list('Asset', or_filters=[['name', 'in', identifiers], ['asset_name', 'in', identifiers]],
-                             fields=['name', 'asset_name', 'asset_category'], limit=0) if identifiers else []
-    asset_categories = {str(key).strip(): a.asset_category for a in assets for key in (a.name, a.asset_name) if key}
-    grouped = {g: [] for g in GROUPS}
-    unassigned = []
+    assets = frappe.get_list('Asset', or_filters=[['name','in',identifiers],['asset_name','in',identifiers]],
+        fields=['name','asset_name','asset_category'], limit=0) if identifiers else []
+    fallback = {str(key).strip(): a.asset_category for a in assets for key in (a.name,a.asset_name) if key}
+    grouped, unassigned = {g: [] for g in GROUPS}, []
     for row in rows:
-        group = equipment_group(row.get('asset_category') or asset_categories.get(str(row.get('asset_name') or '').strip()))
+        group = equipment_group(row.get('asset_category') or fallback.get(str(row.get('asset_name') or '').strip()))
         if group:
             grouped[group].append(row)
         else:
             row['review_reason'] = 'Missing or unsupported equipment group'
             unassigned.append(row)
+    configured = _subcategory_configuration()
     choices = classification_names()
-    return {g: category_counts(records, choices) for g, records in grouped.items()}, unassigned
+    return {g: category_downtime(records, choices, configured) for g, records in grouped.items()}, unassigned
 
 
 def _saved(scope):
@@ -544,10 +641,15 @@ def get_report(site, reporting_month=None):
                            summary=count_summary(counts[group]), **saved,
                            can_write=bool(scope.has_permission('write') and
                                           (frappe.db.exists(ACTIONS, scope.name) or scope.has_permission('create')))))
+    legacy_scope = _scope(site, period['reporting_month'], 'Ancillary')
+    legacy = _saved(legacy_scope)
+    if legacy['actions']:
+        empty = category_downtime([], classification_names(), {})
+        groups.append(dict(group='Ancillary', availability=[None]*3, counts=empty, pareto=[], chart='', full_chart='', summary='Historical combined Ancillary actions; availability is now split by equipment category.', can_write=bool(legacy_scope.has_permission('write')), **legacy))
     result = dict(site=site, **period, groups=groups, basis=BASIS, warnings=warnings, unsupported_categories=unsupported)
     result.update(availability_chart=availability_svg(result), failure_classifications=classification_names(),
-                  population='Distinct breakdown events overlapping the reporting MPP period, including carried-in and repaired/closed events',
-                  counting_unit='One Plant Breakdown or Maintenance record',
+                  population='Planning-adjusted breakdown downtime overlapping the MPP period; distinct PBM records, including carried-in and repaired/closed events',
+                  counting_unit='Required downtime minutes from A&U/Month End divided by 60; one clipped contribution per PBM',
                   status_basis='Current status shown; open and repaired/closed events are included when their recorded interval overlaps the MPP period',
                   unassigned_records=unassigned, base_url=get_url())
     return result
@@ -601,220 +703,204 @@ def download_pdf(site, reporting_month):
     frappe.local.response.type = 'pdf'
 
 def presentation_bytes(data):
-    """Six-slide report; charts and their source workbooks remain editable.
+    """Editable prime/support availability and three downtime Paretos.
 
-    Only aggregated authorised data is embedded, never individual records or
-    saved actions. No historical template figures enter this export.
+    Priority subcategory detail uses continuation slides, never raw PBM records.
+    All source values are the same authorised period totals used on the Page.
     """
     from copy import deepcopy
+    from pathlib import Path
     from pptx import Presentation
     from pptx.chart.data import CategoryChartData
     from pptx.chart.datalabel import DataLabels
     from pptx.dml.color import RGBColor
     from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION
+    from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
     from pptx.oxml.xmlchemy import OxmlElement
     from pptx.util import Inches, Pt
 
-    from pathlib import Path
     prs = Presentation(Path(__file__).with_name('monthly_tmm_template.pptx'))
+    for node in list(prs.slides._sldIdLst):
+        prs.part.drop_rel(node.rId)
+        prs.slides._sldIdLst.remove(node)
     navy, blue, orange = '19324F', '3293FF', 'ED8B00'
     palette = ('234F87','3293FF','9AD0FF')
+    selected = data['selected_period']
+    caption = f"{data['site']} · {data['month_label']} · {selected['dates_label']}"
 
     def text(slide, value, x, y, w, h, size=16, color=navy, bold=False):
-        shape=slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
-        frame=shape.text_frame
-        frame.word_wrap=True
-        for i,line in enumerate(str(value).split('\n')):
-            p=frame.paragraphs[0] if not i else frame.add_paragraph()
-            p.text=line
-            p.font.name='Arial';p.font.size=Pt(size)
-            p.font.bold=bold;p.font.color.rgb=RGBColor.from_string(color)
+        shape = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+        shape.text_frame.word_wrap = True
+        for index, line in enumerate(str(value).split('\n')):
+            paragraph = shape.text_frame.paragraphs[0] if index == 0 else shape.text_frame.add_paragraph()
+            paragraph.text = line
+            paragraph.font.name = 'Arial'
+            paragraph.font.size = Pt(size)
+            paragraph.font.bold = bold
+            paragraph.font.color.rgb = RGBColor.from_string(color)
         return shape
 
-    selected=data['selected_period']
-    caption=f"{data['site']} · {data['month_label']} · {selected['dates_label']} · Due {data['due_date']}"
-    slide_index=0
     def slide(title):
-        nonlocal slide_index
-        index=slide_index;slide_index+=1
-        result=prs.slides[index]
-        if index==1:
-            heading=text(result,title,1.44,.65,10.99,.55,28,'FFFFFF',True)
-            text(result,caption,1.44,1.27,10.99,.5,12,'FFFFFF')
-        elif index>=2:
-            heading=text(result,title,.61,.70,12.26,.81,32,'FFFFFF')
-            from pptx.enum.text import PP_ALIGN
-            heading.text_frame.paragraphs[0].alignment=PP_ALIGN.CENTER
-            text(result,caption,.61,1.57,12.26,.4,13)
-        else:
-            heading=text(result,title,.6,.25,12.0,.55,26,bold=True)
-            text(result,caption,.6,.88,12.0,.45,13)
-        heading.name='tmm-title'
+        result = prs.slides.add_slide(prs.slide_layouts[6])
+        for shape in list(result.shapes):
+            shape._element.getparent().remove(shape._element)
+        result.background.fill.solid()
+        result.background.fill.fore_color.rgb = RGBColor(255,255,255)
+        band = result.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,0,0,prs.slide_width,Inches(.85))
+        band.fill.solid();band.fill.fore_color.rgb = RGBColor.from_string(navy)
+        band.line.fill.background()
+        heading = text(result,title,.45,.12,12.4,.65,28,'FFFFFF',True)
+        heading.name = 'tmm-title'
+        text(result,caption,.45,.92,12.4,.55,15)
+        text(result,f"Monthly TMM Assurance · Due {data['due_date']} · {len(prs.slides)}",.45,7.06,12.4,.3,11)
         return result
 
     def style(chart):
-        chart.has_legend=True
-        chart.legend.position=XL_LEGEND_POSITION.BOTTOM
-        chart.legend.include_in_layout=False
-        chart.legend.font.size=Pt(11)
-        chart.category_axis.tick_labels.font.size=Pt(11)
-        chart.value_axis.tick_labels.font.size=Pt(11)
-        chart.value_axis.minimum_scale=0
-        chart.value_axis.has_title=True
-        chart.chart_style=10
-        chart.plots[0].gap_width=55
+        chart.has_legend = True
+        chart.legend.position = XL_LEGEND_POSITION.BOTTOM
+        chart.legend.include_in_layout = False
+        chart.legend.font.size = Pt(12)
+        chart.category_axis.tick_labels.font.size = Pt(12)
+        chart.value_axis.tick_labels.font.size = Pt(12)
+        chart.value_axis.minimum_scale = 0
+        chart.value_axis.has_title = True
+        chart.chart_style = 10
+        chart.plots[0].gap_width = 55
 
-    s=slide('Availability by equipment group')
-    cd=CategoryChartData();cd.categories=list(GROUPS)
-    for i,month in enumerate(data['months']):
-        cd.add_series(month['label'],[g['availability'][i] for g in data['groups']])
-    chart=s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,Inches(.45),Inches(1.48),Inches(12.4),Inches(3.25),cd).chart
-    style(chart)
-    chart.value_axis.axis_title.text_frame.text='Availability (%) — 85% basis'
-    maximum=max((v for g in data['groups'] for v in g['availability'] if v is not None),default=100)
-    chart.value_axis.maximum_scale=max(100,math.ceil(maximum/20)*20)
-    chart.value_axis.major_unit=chart.value_axis.maximum_scale/5
-    chart.plots[0].has_data_labels=True
-    chart.plots[0].data_labels.number_format='0.00"%"'
-    chart.plots[0].data_labels.font.size=Pt(9)
-    chart.plots[0].data_labels.position=XL_LABEL_POSITION.OUTSIDE_END
-    for i,series in enumerate(chart.series):
-        series.format.fill.solid();series.format.fill.fore_color.rgb=RGBColor.from_string(palette[i])
-        series.format.line.fill.background()
-    text(s,'\n'.join(f"{m['label']}: {m['dates_label']}" for m in data['months']),.55,4.9,8.7,.65,11)
-    missing=[f"{m['label']}: "+', '.join(g['group'] for g in data['groups'] if g['availability'][i] is None)
-             for i,m in enumerate(data['months']) if any(g['availability'][i] is None for g in data['groups'])]
-    text(s,'85 × Σ stored available hours / Σ stored required hours. Scaling applied once; no 85% cap.',.55,5.55,12.2,.3,10)
-    if missing:
-        text(s,'N/A (not zero):\n'+'\n'.join(missing),9.2,4.9,3.7,.65,9)
-
-    # Rebuild the first slide's flattened footer as editable native elements.
-    from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
-    banner=s.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,0,Inches(5.95),prs.slide_width,Inches(1.55))
-    banner.fill.solid();banner.fill.fore_color.rgb=RGBColor.from_string('0A3040')
-    banner.line.fill.background()
-    text(s,'Fleet Availability Past 3 Months',.8,6.1,8.0,1.2,30,'FFFFFF')
-    text(s,data['period_label'],9.0,6.4,4.0,.65,20,'FFFFFF')
-
-    s=slide('Categorisation completeness')
-    total=sum(g['counts']['total_count'] for g in data['groups'])+len(data.get('unassigned_records',[]))
-    known=sum(g['counts']['categorised_count'] for g in data['groups'])
-    unresolved=sum(g['counts']['unresolved_count'] for g in data['groups'])
-    other=len(data.get('unassigned_records',[]))
-    primary=(f"{total} distinct breakdown records overlap this MPP period.\n\n"
-             f"{known} have a recognised classification and equipment group.")
-    text(s,primary,1.44,1.95,10.99,2.35,30,'FFFFFF')
-    note=(f"{unresolved} grouped records require classification review; {other} require equipment-group review. "
-          'Pareto percentages use classified records in each group. Review details remain on the ERP page. '
-          'No historical classifications have been inferred or backfilled.')
-    text(s,note,1.48,5.1,10.94,1.25,18)
-    if data.get('warnings'):
-        text(s,'Planning/data notes: '+' '.join(data['warnings']),1.48,6.4,10.94,.65,10)
+    by_group = {g['group']:g for g in data['groups']}
+    for title, names in [
+        ('Prime movers availability', ('ADTs','Excavators','Dozers','Drills')),
+        ('Support equipment availability', ('Diesel bowsers','Water bowsers','TLBs','Service trucks')),
+    ]:
+        page = slide(title)
+        cd = CategoryChartData();cd.categories = names
+        for index, month in enumerate(data['months']):
+            cd.add_series(month['label'],[by_group[name]['availability'][index] for name in names])
+        chart = page.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,Inches(.5),Inches(1.65),Inches(12.3),Inches(3.85),cd).chart
+        style(chart)
+        chart.value_axis.axis_title.text_frame.text = 'Availability (%) — 85% basis'
+        maximum = max((v for name in names for v in by_group[name]['availability'] if v is not None),default=100)
+        chart.value_axis.maximum_scale = max(100,math.ceil(maximum/20)*20)
+        chart.plots[0].has_data_labels = True
+        chart.plots[0].data_labels.number_format = '0.00"%"'
+        chart.plots[0].data_labels.font.size = Pt(12)
+        chart.plots[0].data_labels.position = XL_LABEL_POSITION.OUTSIDE_END
+        for index, series in enumerate(chart.series):
+            series.format.fill.solid();series.format.fill.fore_color.rgb = RGBColor.from_string(palette[index])
+            series.format.line.fill.background()
+        text(page,'\n'.join(f"{m['label']}: {m['dates_label']}" for m in data['months']),.55,5.65,12.2,.9,15)
+        missing = [f"{m['label']}: "+', '.join(n for n in names if by_group[n]['availability'][i] is None)
+                   for i,m in enumerate(data['months']) if any(by_group[n]['availability'][i] is None for n in names)]
+        text(page,'85 × Σ stored available hours / Σ stored required hours. N/A = no valid denominator; blank bars are N/A.',.55,6.56,12.2,.4,12)
+        # Four groups × three months fit as native editable text in a dedicated
+        # continuation if missing-data notes exceed the available caption area.
 
     def element(tag, **attrs):
-        node=OxmlElement('c:'+tag)
+        node = OxmlElement('c:'+tag)
         for key,value in attrs.items():node.set(key,str(value))
         return node
 
-    for group,title in [('ADTs','ADT Pareto'),('Excavators','Excavator Pareto'),
-                        ('Graders','Grader Pareto'),('Ancillary','Ancillary Pareto')]:
-        s=slide(title)
-        counts=next(g['counts'] for g in data['groups'] if g['group']==group)
-        rows=counts['categories']
-        if not rows:
-            text(s,'No classified breakdown records for this equipment group in the selected MPP period.',.8,2.5,11.7,1.4,25)
-            text(s,completeness(counts),.8,4.3,11.7,1.0,17)
-            continue
-        cd=CategoryChartData()
-        cd.categories=['\n'.join(textwrap.wrap(r['category'],width=22 if len(rows)>10 else 18,break_long_words=False)) for r in rows]
-        cd.add_series('Breakdown records',[r['count'] for r in rows])
-        cd.add_series('Cumulative percentage',[r['cumulative_percent'] for r in rows])
-        cd.add_series('80% reference',[80]*len(rows))
-        chart=s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,Inches(.45),Inches(2.1),Inches(12.4),Inches(4.1),cd).chart
-        style(chart)
-        chart.category_axis.tick_labels.font.size=Pt(8 if len(rows)>10 else 11)
-        # Explicit label spacing/rotation prevents dense categories disappearing.
-        axis=chart.category_axis._element
-        axis.get_or_add_txPr().bodyPr.set('rot','-2700000' if len(rows)>10 else '0')
-        auto=axis.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}auto')
-        if auto is not None:auto.set('val','0')
-        before=axis.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}noMultiLvlLbl')
-        offset=list(axis).index(before) if before is not None else len(axis)
-        axis.insert(offset,element('tickLblSkip',val=1))
-        axis.insert(offset+1,element('tickMarkSkip',val=1))
-        chart.value_axis.axis_title.text_frame.text='Number of breakdown records'
-        maximum=max(1,math.ceil(max(r['count'] for r in rows)*1.2))
-        chart.value_axis.maximum_scale=maximum
-        chart.value_axis.major_unit=max(1,math.ceil(maximum/5))
-        plot=chart.plots[0]
-        plot.has_data_labels=True
-        plot.data_labels.position=XL_LABEL_POSITION.OUTSIDE_END
-        plot.data_labels.font.size=Pt(12)
-        plot.data_labels.font.bold=True
-        labels=DataLabels(chart.series[0]._element.get_or_add_dLbls())
-        labels.show_value=True
-        labels.show_category_name=False;labels.show_series_name=False
-        labels.number_format='0'
-        for index,row in enumerate(rows):
-            label=chart.series[0].points[index].data_label
-            label.font.size=Pt(10 if len(rows)>10 else 12);label.font.bold=True
-            label.position=(XL_LABEL_POSITION.INSIDE_END if len(rows)>10 or
-                abs(row['count']/maximum-row['cumulative_percent']/100)<.10 else XL_LABEL_POSITION.OUTSIDE_END)
-        chart.series[0].format.fill.solid()
-        chart.series[0].format.fill.fore_color.rgb=RGBColor.from_string(blue)
-        chart.series[0].format.line.fill.background()
-        # Native combo chart with a separate 0–100 percentage axis. The complete
-        # editable source workbook contains counts, cumulative % and reference %.
-        space=chart._chartSpace
-        area=space.xpath('.//c:plotArea')[0]
-        bars=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}barChart')
-        lines=element('lineChart');lines.append(element('grouping',val='standard'))
-        series=list(bars.findall('{http://schemas.openxmlformats.org/drawingml/2006/chart}ser'))
-        for index,ser in enumerate(series[1:]):
-            bars.remove(ser);lines.append(ser)
-            # Native line styling; reference line remains dashed without labels.
-            sp=OxmlElement('c:spPr');ln=OxmlElement('a:ln');ln.set('w','25400')
-            fill=OxmlElement('a:solidFill');color=OxmlElement('a:srgbClr')
-            color.set('val',orange if index==0 else '9B8B70');fill.append(color);ln.append(fill)
-            if index==1:
-                dash=OxmlElement('a:prstDash');dash.set('val','dash');ln.append(dash)
-            sp.append(ln)
-            ser.insert(3,sp)
-            marker=element('marker');marker.append(element('symbol',val='circle' if index==0 else 'none'))
-            if index==0:marker.append(element('size',val=5))
-            # spPr/marker precede category/value references in CT_LineSer.
-            ser.insert(4,marker)
-            if index==0:
-                labels=element('dLbls');labels.append(element('numFmt',formatCode='0.0"%"',sourceLinked=0))
-                labels.append(element('dLblPos',val='t'))
-                for flag,value in [('showLegendKey',0),('showVal',1),('showCatName',0),('showSerName',0),('showPercent',0),('showBubbleSize',0)]:
-                    labels.append(element(flag,val=value))
-                DataLabels(labels).font.size=Pt(10 if len(rows)>10 else 12)
-                ser.insert(5,labels)
-        cat=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}catAx')
-        val=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}valAx')
-        cat_id=int(cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').get('val'))+10
-        val_id=int(val.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').get('val'))+10
-        lines.append(element('axId',val=cat_id));lines.append(element('axId',val=val_id))
-        # Chart-type nodes must precede axes in OOXML.
-        area.insert(list(area).index(cat),lines)
-        secondary_cat=deepcopy(cat)
-        secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').set('val',str(cat_id))
-        secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}crossAx').set('val',str(val_id))
-        deleted=secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}delete')
-        if deleted is None:secondary_cat.insert(2,element('delete',val=1))
-        else:deleted.set('val','1')
-        area.append(secondary_cat)
-        secondary_val=element('valAx');secondary_val.append(element('axId',val=val_id))
-        scaling=element('scaling');scaling.extend([element('orientation',val='minMax'),element('max',val=100),element('min',val=0)])
-        secondary_val.extend([scaling,element('delete',val=0),element('axPos',val='r'),
-            element('numFmt',formatCode='0"%"',sourceLinked=0),element('majorTickMark',val='none'),
-            element('minorTickMark',val='none'),element('tickLblPos',val='nextTo'),
-            element('crossAx',val=cat_id),element('crosses',val='max'),element('crossBetween',val='between'),element('majorUnit',val=20)])
-        area.append(secondary_val)
-        text(s,'Right axis: cumulative percentage (0–100%). Dashed line: 80% reference.',.65,6.4,12.0,.35,12)
-        text(s,count_summary(counts)+' '+completeness(counts),.65,6.87,12.0,.45,12)
-    output=BytesIO();prs.save(output)
+    for group,title in [('ADTs','ADT Pareto'),('Excavators','Excavator Pareto'),('Dozers','Dozer Pareto')]:
+        page = slide(title)
+        counts = by_group[group]['counts']
+        rows = counts['categories'][:10]
+        if rows:
+            cd = CategoryChartData()
+            cd.categories = ['\n'.join(textwrap.wrap(r['category'],width=18,break_long_words=False)) for r in rows]
+            cd.add_series('Breakdown downtime (hours)',[r['hours'] for r in rows])
+            cd.add_series('Cumulative percentage',[r['cumulative_percent'] for r in rows])
+            cd.add_series('80% reference',[80]*len(rows))
+            chart = page.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,Inches(.45),Inches(1.6),Inches(12.4),Inches(4.2),cd).chart
+            style(chart)
+            chart.category_axis.tick_labels.font.size = Pt(11)
+            chart.value_axis.axis_title.text_frame.text = 'Breakdown downtime (hours)'
+            chart.value_axis.maximum_scale = max(1,max(r['hours'] for r in rows)*1.25)
+            plot = chart.plots[0]
+            plot.has_data_labels = True
+            plot.data_labels.position = XL_LABEL_POSITION.OUTSIDE_END
+            plot.data_labels.font.size = Pt(12)
+            labels = DataLabels(chart.series[0]._element.get_or_add_dLbls())
+            labels.show_value = True;labels.number_format = '0.00'
+            labels.show_category_name = False;labels.show_series_name = False
+            for index,row in enumerate(rows):
+                point = chart.series[0].points[index]
+                point.format.fill.solid()
+                point.format.fill.fore_color.rgb = RGBColor.from_string(blue if row['priority'] else '9AB7D8')
+                point.format.line.fill.background()
+            space=chart._chartSpace
+            area=space.xpath('.//c:plotArea')[0]
+            bars=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}barChart')
+            lines=element('lineChart');lines.append(element('grouping',val='standard'))
+            series=list(bars.findall('{http://schemas.openxmlformats.org/drawingml/2006/chart}ser'))
+            for index,ser in enumerate(series[1:]):
+                bars.remove(ser);lines.append(ser)
+                # Native line styling; reference line remains dashed without labels.
+                sp=OxmlElement('c:spPr');ln=OxmlElement('a:ln');ln.set('w','25400')
+                fill=OxmlElement('a:solidFill');color=OxmlElement('a:srgbClr')
+                color.set('val',orange if index==0 else '9B8B70');fill.append(color);ln.append(fill)
+                if index==1:
+                    dash=OxmlElement('a:prstDash');dash.set('val','dash');ln.append(dash)
+                sp.append(ln)
+                ser.insert(3,sp)
+                marker=element('marker');marker.append(element('symbol',val='circle' if index==0 else 'none'))
+                if index==0:marker.append(element('size',val=5))
+                # spPr/marker precede category/value references in CT_LineSer.
+                ser.insert(4,marker)
+                if index==0:
+                    labels=element('dLbls');labels.append(element('numFmt',formatCode='0.0"%"',sourceLinked=0))
+                    labels.append(element('dLblPos',val='t'))
+                    for flag,value in [('showLegendKey',0),('showVal',1),('showCatName',0),('showSerName',0),('showPercent',0),('showBubbleSize',0)]:
+                        labels.append(element(flag,val=value))
+                    DataLabels(labels).font.size=Pt(11)
+                    ser.insert(5,labels)
+            cat=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}catAx')
+            val=area.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}valAx')
+            cat_id=int(cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').get('val'))+10
+            val_id=int(val.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').get('val'))+10
+            lines.append(element('axId',val=cat_id));lines.append(element('axId',val=val_id))
+            # Chart-type nodes must precede axes in OOXML.
+            area.insert(list(area).index(cat),lines)
+            secondary_cat=deepcopy(cat)
+            secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}axId').set('val',str(cat_id))
+            secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}crossAx').set('val',str(val_id))
+            deleted=secondary_cat.find('{http://schemas.openxmlformats.org/drawingml/2006/chart}delete')
+            if deleted is None:secondary_cat.insert(2,element('delete',val=1))
+            else:deleted.set('val','1')
+            area.append(secondary_cat)
+            secondary_val=element('valAx');secondary_val.append(element('axId',val=val_id))
+            scaling=element('scaling');scaling.extend([element('orientation',val='minMax'),element('max',val=100),element('min',val=0)])
+            secondary_val.extend([scaling,element('delete',val=0),element('axPos',val='r'),
+                element('numFmt',formatCode='0"%"',sourceLinked=0),element('majorTickMark',val='none'),
+                element('minorTickMark',val='none'),element('tickLblPos',val='nextTo'),
+                element('crossAx',val=cat_id),element('crosses',val='max'),element('crossBetween',val='between'),element('majorUnit',val=20)])
+            area.append(secondary_val)
+        else:
+            text(page,'No classified planning-adjusted breakdown downtime for this group in the selected MPP period.',.7,2.3,11.9,1.3,24)
+        text(page,count_summary(counts),.55,5.95,12.2,.45,16,bold=True)
+        text(page,f"Top 10 shown; percentages use all {counts['classified_hours']:.2f} classified hours. Blue: first 80% set; grey: remaining. Dashed line: 80%.",.55,6.43,12.2,.4,12)
+        text(page,f"Classification review: {counts['unresolved_hours']:.2f} h (excluded); invalid timestamp records: {len(counts['invalid_records'])} — review in ERP.",.55,6.78,12.2,.3,12)
+        priority = [row for row in counts['categories'] if row['priority']]
+        for offset in range(0,len(priority),2):
+            detail = slide(title+' · priority detail continued')
+            text(detail,'Top matched subcategories ranked by distinct event frequency; hours use the same MPP overlap.',.55,1.55,12.1,.5,16)
+            for index,row in enumerate(priority[offset:offset+2]):
+                y = 2.0 + index*2.5
+                text(detail,f"{row['category']} — {row['hours']:.2f} h · cumulative {row['cumulative_percent']:.1f}%",.6,y,12.0,.55,19,bold=True)
+                table_rows = row['subcategories']
+                if table_rows:
+                    table = detail.shapes.add_table(len(table_rows)+1,3,Inches(.65),Inches(y+.6),Inches(11.9),Inches(.38*(len(table_rows)+1))).table
+                    table.columns[0].width = Inches(7.5)
+                    table.columns[1].width = Inches(1.8)
+                    table.columns[2].width = Inches(2.6)
+                    values = [('Subcategory','Events','Downtime (h)')]+[(r['subcategory'],str(r['count']),f"{r['hours']:.2f}") for r in table_rows]
+                    for ri,values_row in enumerate(values):
+                        for ci,value in enumerate(values_row):
+                            cell = table.cell(ri,ci);cell.text = value
+                            for paragraph in cell.text_frame.paragraphs:paragraph.font.size = Pt(15)
+                else:
+                    text(detail,'No approved component matches.',.65,y+.6,11.9,.45,16)
+                text(detail,f"Description/timestamp review: {len(row['subcategory_review_records'])} events · {row['subcategory_review_hours']:.2f} known hours. Details remain in ERP.",.65,y+2.2,11.9,.25,11)
+    output = BytesIO();prs.save(output)
     return output.getvalue()
 
 

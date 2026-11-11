@@ -76,3 +76,81 @@ def validate_failure_classification(value):
     if value and not frappe.db.exists(MASTER_DOCTYPE, value):
         frappe.throw('Choose an existing Failure Classification or leave it blank.')
     return value
+
+
+# Explicit local vocabulary. Changes are reviewed in source control; no fuzzy or
+# external inference is used. These aliases never alter the captured complaint.
+DESCRIPTION_SYNONYMS = {
+    'tyer': 'tyre', 'tire': 'tyre', 'batery': 'battery',
+    'head light': 'headlight', 'tyre puncher': 'tyre puncture',
+    'tyre punctured': 'tyre puncture', 'a/c': 'air conditioning',
+    'alt.': 'alternator', 'batt.': 'battery',
+}
+SUBCATEGORY_PHRASES = {
+    'Tyres / Wheels': {'Tyre puncture': ('tyre puncture',)},
+    'Electrical': {
+        'Battery fault': ('battery faulty', 'battery fault', 'battery will not hold charge'),
+        'Lighting fault': ('headlight faulty', 'headlight not working', 'headlight fault'),
+        'Alternator fault': ('alternator faulty', 'alternator fault', 'alternator not charging'),
+    },
+}
+# Explicit manual approvals keyed by (recorded classification, normalised reason).
+# An approved value wins over automatic matching; never auto-populate this map.
+APPROVED_SUBCATEGORY_MAPPINGS = {}
+
+
+def matching_phrases(text, keywords):
+    """Shared existing whole-phrase matcher used by Machine Reliability and TMM."""
+    text = str(text or '').casefold()
+    return [word for word in keywords if re.search(
+        r'(?<!\w)' + r'[\s\-/]+'.join(re.escape(p) for p in re.split(r'[\s\-/]+', word)) + r'(?!\w)', text)]
+
+
+def normalise_description(value):
+    value = str(value or '').casefold()
+    for old, new in sorted(DESCRIPTION_SYNONYMS.items(), key=lambda pair: -len(pair[0])):
+        value = re.sub(r'(?<!\w)' + re.escape(old) + r'(?!\w)', new, value)
+    value = ' '.join(re.sub(r'[^\w\s]', ' ', value).split())
+    # Punctuation can split an approved phrase (head-light); token corrections
+    # can expose another explicit phrase (tyer puncher). Two deterministic passes
+    # resolve these combinations without approximate/fuzzy matching.
+    for _ in range(2):
+        for old, new in sorted(DESCRIPTION_SYNONYMS.items(), key=lambda pair: -len(pair[0])):
+            value = re.sub(r'(?<!\w)' + re.escape(old) + r'(?!\w)', new, value)
+    return value
+
+
+def standard_subcategory(reason, classification, configured, approved_mapping=None):
+    """One stable label or an explicit review result; never diagnose vague text."""
+    text = normalise_description(reason)
+    approved = approved_mapping or APPROVED_SUBCATEGORY_MAPPINGS.get((classification, text))
+    if approved:
+        return dict(status='Approved', subcategory=approved, matched_phrases=[], review_reason='')
+    review = lambda why: dict(status='Review', subcategory=None, matched_phrases=[], review_reason=why)
+    if not text or text in ('does not start', 'no power', 'oil leak', 'not starting', 'wont start', 'will not start'):
+        return review('Insufficient component detail')
+    vocabulary = {}
+    for category in set(configured) | set(SUBCATEGORY_PHRASES):
+        phrases = {}
+        for label, aliases in SUBCATEGORY_PHRASES.get(category, {}).items():
+            for phrase in aliases:
+                phrases[normalise_description(phrase)] = label
+        for phrase in configured.get(category, []):
+            normalized = normalise_description(phrase)
+            if normalized and normalized not in AMBIGUOUS_TERMS:
+                phrases.setdefault(normalized, phrase.strip().capitalize())
+        vocabulary[category] = phrases
+    matches = []
+    for category, phrases in vocabulary.items():
+        found = matching_phrases(text, list(phrases))
+        # Contained generic phrases cannot override a more specific component.
+        found = [p for p in found if not any(p != q and matching_phrases(q, [p]) for q in found)]
+        matches.extend((category, phrases[p], p) for p in found)
+    local = {(label, phrase) for category, label, phrase in matches if category == classification}
+    other = {category for category, _, _ in matches if category != classification}
+    if other:
+        return review('Description conflicts with or spans Failure Classifications')
+    labels = {label for label, _ in local}
+    if len(labels) != 1:
+        return review('Several subcategories match' if labels else 'No approved component phrase matches')
+    return dict(status='Matched', subcategory=next(iter(labels)), matched_phrases=sorted(p for _, p in local), review_reason='')

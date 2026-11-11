@@ -18,9 +18,9 @@ def fixture():
     data['months']=api.resolve_mpp_periods(plans,data['months'])
     data.update(selected_period=data['months'][-1],warnings=[],unassigned_records=[])
     for i,group in enumerate(api.GROUPS):
-        records=[dict(name=f'PRIVATE-RECORD-{group}-{n}',failure_classification=c,breakdown_reason='PRIVATE DESCRIPTION')
+        records=[dict(name=f'PRIVATE-RECORD-{group}-{n}',failure_classification=c,downtime_hours=1,breakdown_reason='PRIVATE DESCRIPTION')
                  for n,c in enumerate(['Hydraulic','Hydraulic','Hydraulic','Engine','Engine','Safety Systems'])]
-        data['groups'].append(dict(group=group,availability=[None if i==2 else 80,0 if i==0 else 85,68.81332236842105],counts=api.category_counts(records),actions=[dict(action='PRIVATE ACTION')]))
+        data['groups'].append(dict(group=group,availability=[None if i==2 else 80,0 if i==0 else 85,68.81332236842105],counts=api.category_downtime(records,api.INITIAL_CLASSIFICATIONS,{}),actions=[dict(action='PRIVATE ACTION')]))
     return data
 
 
@@ -85,7 +85,8 @@ class TestStoredHours(unittest.TestCase):
               dict(name='bad',asset_category='Grader',shift_required_hours=100,shift_available_hours=100,invalid_pre_use_hours=1),
               dict(name='cancelled',asset_category='Drills',shift_required_hours=10,shift_available_hours=10,docstatus=2)]
         result=api.availability_by_group(rows+[rows[0]])
-        self.assertEqual(result['Ancillary'],21.25)
+        self.assertEqual(result['TLBs'],85)
+        self.assertEqual(result['Water bowsers'],0)
         self.assertEqual(result['ADTs'],0)
         self.assertEqual(result['FELs'],170)
         self.assertIsNone(result['Graders']);self.assertIsNone(result['Drills'])
@@ -121,9 +122,9 @@ class TestPresentation(unittest.TestCase):
         Path('/tmp/tmm-mpp-presentation').mkdir(exist_ok=True)
         Path('/tmp/tmm-mpp-presentation/fixture.pptx').write_bytes(payload)
         deck=Presentation(BytesIO(payload))
-        self.assertEqual(len(deck.slides),6)
+        self.assertEqual(len(deck.slides),8)
         titles=[next(x.text for x in s.shapes if x.name=='tmm-title') for s in deck.slides]
-        self.assertEqual(titles,['Availability by equipment group','Categorisation completeness','ADT Pareto','Excavator Pareto','Grader Pareto','Ancillary Pareto'])
+        self.assertEqual([t for t in titles if 'continued' not in t],['Prime movers availability','Support equipment availability','ADT Pareto','Excavator Pareto','Dozer Pareto'])
         z=ZipFile(BytesIO(payload))
         slides=''.join(z.read(n).decode() for n in z.namelist() if n.startswith('ppt/slides/slide') and n.endswith('.xml'))
         for forbidden in ('PRIVATE-RECORD','PRIVATE DESCRIPTION','PRIVATE ACTION'):
@@ -132,7 +133,7 @@ class TestPresentation(unittest.TestCase):
         charts=[n for n in z.namelist() if n.startswith('ppt/charts/chart') and n.endswith('.xml')]
         self.assertEqual(len(charts),5)
         ns={'c':'http://schemas.openxmlformats.org/drawingml/2006/chart'}
-        for name in charts[1:]:
+        for name in charts[2:]:
             xml=etree.fromstring(z.read(name))
             self.assertEqual(len(xml.xpath('//c:lineChart/c:ser',namespaces=ns)),2)
             series=xml.xpath('//c:lineChart/c:ser',namespaces=ns)
@@ -143,11 +144,11 @@ class TestPresentation(unittest.TestCase):
 
     def test_empty_groups_keep_six_slides_with_honest_empty_states(self):
         d=fixture()
-        for g in d['groups']:g['counts']=api.category_counts([])
+        for g in d['groups']:g['counts']=api.category_downtime([],api.INITIAL_CLASSIFICATIONS,{})
         deck=Presentation(BytesIO(api.presentation_bytes(d)))
-        self.assertEqual(len(deck.slides),6)
+        self.assertEqual(len(deck.slides),5)
         for s in list(deck.slides)[2:]:
-            self.assertIn('No classified breakdown records',' '.join(x.text for x in s.shapes if x.has_text_frame))
+            self.assertIn('No classified planning-adjusted breakdown downtime',' '.join(x.text for x in s.shapes if x.has_text_frame))
 
     def test_template_has_no_historical_charts_images_notes_or_preview(self):
         with ZipFile(Path(api.__file__).with_name('monthly_tmm_template.pptx')) as z:
@@ -156,16 +157,13 @@ class TestPresentation(unittest.TestCase):
             self.assertNotIn('consentrated',slides)
             self.assertNotIn('August–October 2026',slides)
 
-    def test_completeness_note_matches_counts_without_record_details(self):
+    def test_completeness_note_matches_hours_without_record_details(self):
         d=fixture()
-        d['groups'][0]['counts']=api.category_counts([dict(name='classified',failure_classification='Engine'),dict(name='missing')])
-        d['unassigned_records']=[dict(name='unassigned')]
+        d['groups'][0]['counts']=api.category_downtime([dict(name='classified',failure_classification='Engine',downtime_hours=3),dict(name='missing',downtime_hours=7)],api.INITIAL_CLASSIFICATIONS,{})
         deck=Presentation(BytesIO(api.presentation_bytes(d)))
-        text=' '.join(s.text for s in deck.slides[1].shapes if s.has_text_frame)
-        self.assertIn('39 distinct breakdown records',text)
-        self.assertIn('37 have a recognised classification',text)
-        self.assertIn('1 grouped records require classification review; 1 require equipment-group review',text)
-        self.assertNotIn('unassigned',text)
+        text=' '.join(s.text for slide in deck.slides for s in slide.shapes if s.has_text_frame)
+        self.assertIn('Classification review: 7.00 h (excluded)',text)
+        self.assertNotIn('PRIVATE DESCRIPTION',text)
 
     def test_export_permission_before_building_deck(self):
         with patch.object(api,'get_report',return_value=fixture()),patch.object(api,'_scope') as scope,patch.object(api,'presentation_bytes') as build:
@@ -187,14 +185,14 @@ class TestPresentation(unittest.TestCase):
     def test_twenty_causes_stay_editable_and_cumulative_ends_at_100(self):
         d=fixture()
         for group in d['groups']:
-            group['counts']=api.category_counts([dict(name=str(i),failure_classification=c) for i,c in enumerate(api.INITIAL_CLASSIFICATIONS)])
+            group['counts']=api.category_downtime([dict(name=str(i),failure_classification=c,downtime_hours=1) for i,c in enumerate(api.INITIAL_CLASSIFICATIONS)],api.INITIAL_CLASSIFICATIONS,{})
         payload=api.presentation_bytes(d)
         Path('/tmp/tmm-mpp-presentation/dense.pptx').write_bytes(payload)
         deck=Presentation(BytesIO(payload))
         chart=next(shape.chart for shape in deck.slides[2].shapes if shape.has_chart)
-        self.assertEqual(len(chart.series[0].values),20)
-        self.assertEqual(list(chart.series[0].values),[1]*20)
-        self.assertEqual(chart.series[1].values[-1],100)
+        self.assertEqual(len(chart.series[0].values),10)
+        self.assertEqual(list(chart.series[0].values),[1]*10)
+        self.assertEqual(chart.series[1].values[-1],50)
         ns={'c':'http://schemas.openxmlformats.org/drawingml/2006/chart'}
-        self.assertEqual(chart._chartSpace.xpath('.//c:catAx/c:tickLblSkip/@val'),['1','1'])
+        self.assertTrue(any('continued' in shape.text for slide in deck.slides for shape in slide.shapes if shape.has_text_frame))
         self.assertEqual(chart._chartSpace.xpath('.//c:barChart/c:ser/c:dLbls/c:showVal/@val'),['1'])

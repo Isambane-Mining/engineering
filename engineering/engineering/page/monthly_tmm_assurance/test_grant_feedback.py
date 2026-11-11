@@ -16,8 +16,8 @@ class TestAvailabilityGraph(unittest.TestCase):
         svg=availability_svg(data)
         root=ET.fromstring(svg)
         ns={'s':'http://www.w3.org/2000/svg'}
-        self.assertEqual(len(root.findall('.//s:g[@data-group]',ns)),7)
-        self.assertEqual(len(root.findall('.//s:rect[@data-month]',ns)),21)
+        self.assertEqual(len(root.findall('.//s:g[@data-group]',ns)),len(GROUPS))
+        self.assertEqual(len(root.findall('.//s:rect[@data-month]',ns)),len(GROUPS)*3)
         self.assertEqual([g['availability'] for g in data['groups']],before)
         for label in ['N/A','0.00%','105.00%','Jul 2026','Aug 2026','Sep 2026','Availability (%)']:
             self.assertIn(label,svg)
@@ -25,7 +25,7 @@ class TestAvailabilityGraph(unittest.TestCase):
 
 
 class TestControlledCategories(unittest.TestCase):
-    def test_schema_and_capture_share_optional_master_link(self):
+    def test_schema_requires_classification_only_for_breakdowns(self):
         import json
         from pathlib import Path
         from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS
@@ -35,7 +35,7 @@ class TestControlledCategories(unittest.TestCase):
         self.assertEqual(field['fieldtype'],'Link')
         self.assertEqual(field['options'],'Breakdown Failure Classification')
         self.assertFalse(field.get('reqd'))
-        self.assertFalse(field.get('mandatory_depends_on'))
+        self.assertEqual(field.get('mandatory_depends_on'), "eval:doc.downtime_type == 'Breakdown'")
 
 
 class TestCountPareto(unittest.TestCase):
@@ -68,15 +68,19 @@ class TestCountPareto(unittest.TestCase):
 
 
 class TestCaptureController(unittest.TestCase):
-    def test_optional_classification_keeps_signature_permissions(self):
+    def test_mandatory_classification_keeps_signature_permissions(self):
         from unittest.mock import patch
         import frappe
         from engineering.engineering.doctype.plant_breakdown_or_maintenance.plant_breakdown_or_maintenance import PlantBreakdownorMaintenance
         doc=object.__new__(PlantBreakdownorMaintenance)
         doc.__dict__.update(doctype='Plant Breakdown or Maintenance',downtime_type='Breakdown',failure_classification='',flags=frappe._dict())
         with patch.object(doc,'enforce_signature_role_permissions') as signatures:
-            doc.validate()
+            with self.assertRaises(frappe.ValidationError):
+                doc.validate()
             doc.failure_classification='Safety Systems'
+            doc.validate()
+            doc.downtime_type='Planned Maintenance'
+            doc.failure_classification=''
             doc.validate()
             self.assertEqual(signatures.call_count,2)
 

@@ -1,178 +1,154 @@
 # Monthly TMM Assurance
 
-Current implementation: MPP reporting periods, approved stored A&U calculation,
-count-based breakdown Pareto, saved corrective actions, and a six-slide editable
-PowerPoint export. Source calculations/rendering/API code remains consolidated in
-`engineering/engineering/page/monthly_tmm_assurance/monthly_tmm_assurance.py`.
+Native Desk page: `/app/monthly-tmm-assurance`. Site and reporting-month filters
+only; the default is the previous completed month. Submission is due on the 3rd
+of the following month. There are no scheduler/email jobs.
 
-## Reporting periods
+## Reporting periods and availability
 
-The Reporting Month is the **month of the MPP end date**. The default remains the
-previous completed month; its preceding two labels are also displayed across
-year boundaries. Action scope keys remain Site / Reporting Month / Group, so
-existing saved actions retain their identities.
+Resolve each of the three labels from that site's Monthly Production Planning
+(MPP) end-date month. Display the actual inclusive plan start/end dates. Missing
+plans give N/A; missing/conflicting selected plans block the report/export.
+Identical duplicate intervals are warned about and deduplicated; conflicting or
+overlapping periods are rejected. Calendar dates are never substituted.
 
-The report resolves each label from the selected site's non-cancelled Monthly
-Production Planning records (`location`, `prod_month_start_date`,
-`prod_month_end_date`, `docstatus`). Dates are inclusive. No dates are hard-coded.
+Availability remains **85 × SUM(shift_available_hours) /
+SUM(shift_required_hours)** from stored Availability and Utilisation rows by
+location and inclusive shift_date. Apply scaling once, using unrounded sums.
+Exclude cancelled rows and invalid_pre_use_hours = 1. Deduplicate by row name.
+Zero denominator is N/A; genuine zero availability stays zero; there is no cap.
+This stored-data calculation intentionally does not apply the dashboard's
+ownership/fleet filters. Existing A&U engines are unchanged.
 
-- Identical MPP intervals are deduplicated and flagged with a visible warning.
-  A shift is never multiplied by the number of plans.
-- Different intervals with the same end-month label, inverted/missing start
-  dates, and overlapping intervals are conflicts.
-- Missing/conflicting historical periods display N/A and a warning, without
-  querying substitute calendar dates.
-- A missing/conflicting selected period prevents report/export generation with
-  an explicit error. Existing filter/save protections remain in place.
-- Gaps are not filled. Every displayed period shows its actual dates.
+Explicit mappings:
 
-The supplied 2026 example resolves August 20 July–23 August, September
-24 August–20 September, October 21 September–18 October **only if these plans
-exist in ERP**. October then excludes 19–31 October. These example dates occur in
-tests and documentation, not runtime period resolution.
-
-## Availability source — intentionally different from the previous dashboard
-
-For each equipment group and resolved period:
-
-```
-availability percentage = 85 × SUM(shift_available_hours)
-                             / SUM(shift_required_hours)
-```
-
-Values come directly from stored **Availability and Utilisation** records:
-`location`, `shift_date`, `asset_category`, `shift_required_hours`,
-`shift_available_hours`, `docstatus`, `invalid_pre_use_hours`.
-
-The site and inclusive MPP dates select the records, equivalent to a site/date
-EXISTS join with MPP. Cancelled records and `invalid_pre_use_hours = 1` are
-excluded. Null invalid flags are not treated as invalid. Identity deduplication
-also prevents repeated source rows from contributing twice.
-
-The ratio uses full stored precision. Scaling is applied exactly once. Stored
-percentages are not read, machine percentages are not averaged, and no 85% cap
-is imposed. Zero required hours and missing groups are N/A; valid zero available
-hours with positive required hours is 0%. All-null available hours is N/A.
-
-**This is not the Daily A&U Engine Dashboard calculation.** It has no dashboard
-ownership, submitted-Asset/fleet, production/swing or additional synthesized
-shift filters. The existing dashboard and A&U engines are unchanged. Source
-record permissions still apply; partial source access fails closed instead of
-presenting a partial fleet total.
-
-Explicit mappings, with no inferred aliases:
-
-| Stored category | Equipment group |
-| --- | --- |
+| Stored category | Page group |
+|---|---|
 | ADT | ADTs |
 | Excavator | Excavators |
 | Drills | Drills |
 | Grader | Graders |
 | Loader | FELs |
 | Dozer | Dozers |
-| Service Truck, TLB, Water Bowser, Diesel Bowsers | Ancillary |
+| Diesel Bowsers | Diesel bowsers |
+| Water Bowser | Water bowsers |
+| TLB | TLBs |
+| Service Truck | Service trucks |
 
-Unsupported/blank availability categories are flagged on the page and in the
-presentation's factual data notes; they are not reassigned to Ancillary.
+Unsupported categories are flagged. Support categories are calculated separately;
+there is no combined Ancillary availability. Existing Ancillary action scopes
+remain separately accessible through **Historical Ancillary actions**; they are
+never copied to the four new scopes.
 
-Regression example: required 18,240, available displayed 14,766.53, approved
-availability 68.81%. Query/calculation keeps the available-hours precision;
-rounding occurs only for display; availability labels show two decimal places.
+## Planning-adjusted breakdown hours
 
-## Breakdown population and corrective actions
+The source is `Plant Breakdown or Maintenance` (PBM), not hourly entries or stored
+elapsed `breakdown_hours`. Include carried-in and repaired/closed events.
+Deduplicate by PBM name. Exclude cancelled records, `exclude_from_au`, and event
+types other than Breakdown (blank legacy event type remains eligible). Planned
+Maintenance is not a Failure Classification and stays outside this Pareto.
 
-Pareto uses the **selected MPP period**. One distinct Plant Breakdown or
-Maintenance name counts once per overlapping period, including earlier starts,
-open records, and repaired/closed records. Cancelled and Planned Maintenance
-records remain excluded; legacy blank downtime type remains eligible.
+Preserve the approved TMM **midnight** boundary convention: MPP start at 00:00
+through the day after the inclusive MPP end at 00:00. Clip the recorded interval
+to those boundaries and to `frappe.utils.now_datetime()` (site-local time).
+Never count future/negative time. A missing/open resolution uses the earlier of
+period end and current site time. Invalid/missing starts, reversed timestamps or
+timezone-bearing source timestamps remain explicit review records with unknown
+hours (N/A), never manufactured zero hours. Invalid timestamps cannot be reliably
+assigned to a month, so the site's timestamp-review records remain visible.
 
-The interval is `[MPP start 00:00, day after MPP end 00:00)`. An earlier record
-must remain open or resolve strictly after period start. A start within the
-period counts even for an instantaneous record. Ending exactly at period start
-or beginning after the last included day does not count.
+For each clipped PBM call the existing authoritative
+`availability_and_utilisation_month_end_report.get_required_downtime_minutes_for_breakdown`.
+It reads producing MPP plans and their Monthly Production Days, uses Engine
+shift systems/required hours (including shifts spanning midnight), subtracts
+configured Startup and Fatigue specification windows, caps overlap at required
+shift hours and skips shifts without required hours. Divide its returned whole
+required-downtime minutes by 60. Do not independently round hours or substitute
+elapsed time when planning gives zero. Elapsed clipped hours remain supporting
+ERP detail only. No trust-date, fleet-ownership or free-text-diagnosis filters
+are added to TMM's population.
 
-`failure_classification` and the existing master remain authoritative. No old
-category fields, free-text inference or historical backfill are introduced.
-Counts, full category views, 80% details, drill-downs and exports share the same
-population. Missing/unsupported classifications remain visible for review and
-are excluded from the existing classified-Pareto percentage denominator.
+Each distinct PBM contributes once; repeated query/hourly entries cannot allocate
+its full time again. Separate PBM records remain separate events, as in the
+canonical per-breakdown helper; no arbitrary reallocation between classifications
+is performed. The helper's established per-record minute precision is retained.
 
-Cause counts descend; the cumulative percentage ends at 100% when classified
-records exist. The page retains all seven groups, records, unresolved details,
-full category tables and corrective-action tables. Saved-action concurrency,
-server-side Site permissions, read/write/print checks and unsaved-change
-protections remain intact.
+## Pareto and component review
 
-## Download Presentation
+Use the latest selected MPP period. Sort classifications by adjusted hours,
+then canonical master order for ties. Percentages use **all classified hours**,
+not the displayed top ten. Highlight the first 80% set including its crossing
+classification. All classifications and records remain accessible in the page;
+additional priority classifications are included in presentation continuations.
 
-The primary action calls `download_presentation(site, reporting_month)` and
-returns an actual `.pptx`, with exactly these six slides for the selected Site:
+Missing/unsupported classifications retain their associated known hours in a
+separate review total, excluded from the classified denominator. Timestamp-review
+records have unknown hours. Page, drill-down, PDF and presentation consume the
+same measured records and totals.
 
-1. Seven-group availability for three MPP periods, with dates and 85% basis.
-2. Concise categorisation completeness counts and factual planning/data notes.
-3. ADT Pareto.
-4. Excavator Pareto.
-5. Grader Pareto.
-6. Ancillary Pareto.
+Component matching is entirely local and deterministic, in
+`engineering/controllers/failure_classification.py`. It reuses Machine Reliability
+Settings' configured classification keywords and the same whole-phrase matcher.
+The existing twenty masters remain authoritative; no master or historical
+complaint is inferred, renamed or backfilled.
 
-`monthly_tmm_template.pptx` is a sanitised design-only derivative of
-`/home/juan/Grant_Report_Fixed.pptx`. It retains the original theme, categorisation
-slide artwork and black Pareto title bands. All historical figures, original
-note text, slide images, notes and preview thumbnail were removed. The flattened
-availability footer is recreated with editable shapes and current period text.
-No deployment depends on the original file in `/home/juan`.
+Maintain explicit stable labels/aliases in `SUBCATEGORY_PHRASES`, spelling and
+abbreviation rules in `DESCRIPTION_SYNONYMS`, and reviewed manual mappings in
+`APPROVED_SUBCATEGORY_MAPPINGS`, keyed by `(recorded classification, normalized
+reason)`. These are reviewable source configuration, with no external services,
+fuzzy technical-name substitution or new mapping DocType. Existing approved
+mappings take precedence. Additional approved phrases can be maintained in
+Machine Reliability Settings; their capitalized phrase is the stable display
+label unless an explicit label/alias is supplied in the shared controller.
 
-Charts are native editable PowerPoint charts with embedded data workbooks. Each
-Pareto contains all positive classified categories, count bars, a 0–100%
-secondary axis, cumulative line and an 80% reference. A missing classified
-population produces an explicit empty state; it does not invent bars.
+Specific contained phrases suppress generic matches. Multiple components,
+conflicting classifications, vague symptoms and absent vocabulary return Review.
+Original `breakdown_reason` and Failure Classification stay unchanged. Examples:
+tyre puncher/tyer puncture → Tyre puncture; batery faulty → Battery fault;
+head light not working/headlight faulty → Lighting fault. “No power”, “does not
+start” and “oil leak” do not establish a component diagnosis.
 
-Only aggregate figures are exported. There are no individual breakdown lists,
-unresolved-record lists, full category tables, saved-action tables or extra group
-slides. The exporter enforces source/Site read access and scope print permission
-before constructing the deck. Unsaved actions must save successfully before the
-page starts downloading. The existing PDF API remains for compatibility; it is
-not the primary page action and now uses the same MPP/stored-data source.
+For each priority classification show up to three matched subcategories ranked
+by distinct PBM count, then case-insensitive stable label. Display adjusted hours
+as well. Each PBM receives at most one subcategory allocation. Unmatched records
+and known hours remain accessible in review details.
 
-## Validation and current LAB data limitation
+## Exports, actions and access
 
-Checks cover stored-hour weighting, a single multiplier, values over 85/100,
-zero/missing/invalid/cancelled data, explicit category mapping, MPP duplicates,
-conflicts, adjacency, year rollover, overlap boundaries/deduplication, action
-persistence/concurrency, permissions, exports and unsaved-change protection.
-The six-slide PPTX is inspected structurally and rendered with LibreOffice for
-visual/data verification. LibreOffice is a temporary test tool, not a runtime
-dependency. Runtime export uses `python-pptx` (declared in `pyproject.toml`).
+Primary download is an editable `.pptx`, using the bundled design-only template:
 
-On **3 November 2026**, read-only SELECTs on LAB found August plans for Gwab and
-Klipfontein but no September/October plans for those sites. Consequently the
-supplied October total is verified with fixtures, not claimed as a reproduced
-live LAB figure. A real August Klipfontein deck was generated read-only, and its
-Python availability results matched independent SQL sums. No MPP/A&U records or
-historical breakdowns were changed to make the example pass.
+1. Prime movers availability: ADTs, Excavators, Dozers, Drills.
+2. Support availability: Diesel bowsers, Water bowsers, TLBs, Service trucks.
+3. ADT Pareto, with priority component continuations.
+4. Excavator Pareto, with priority component continuations.
+5. Dozer Pareto, with priority component continuations.
 
-Artifacts and fresh logs: `/tmp/tmm-mpp-presentation/`.
+Charts, embedded workbooks, text and component tables are editable. Top-ten charts
+retain the full-population denominator. Each continuation holds at most two
+priority classifications; missing component matches are explicit. Site/month/MPP
+dates appear on every slide. No FEL/combined Ancillary availability slide, raw
+breakdown lists, action tables or unrelated sections are exported. Empty groups
+retain an explicit empty Pareto slide. Legacy PDF remains available and includes
+all relevant page groups and saved actions.
 
-## Exact LAB activation
+Read/site permissions are checked server-side. Stored A&U, MPP and PBM sources fail closed on partial record access before
+raw canonical helper queries. Startup/Fatigue specifications are internal
+calculation configuration, read through the unchanged canonical helper; users
+do not need configuration-editing roles to read their authorised site report. Export checks print permission before generating content. Action saves
+retain normal Frappe create/write/site checks, immutable scope, child validation
+and optimistic concurrency. Filter changes and refresh protect unsaved actions.
+No broad permission changes were introduced. CSS is loaded as native Page CSS.
 
-`python-pptx 1.0.2` is already installed in the LAB bench environment. No schema
-change, migration or asset bundle build is required for this change. Standard
-Page JS and the packaged design-only template load from the app files.
+## Validation and LAB activation
 
-```bash
-cd /home/juan/juan-bench
-bench --site juan.isambane.co.za clear-cache
-sudo supervisorctl restart juan-bench-web:juan-bench-frappe-web
-```
+Tests live beside the Page (`test_downtime_hours.py`, `test_mpp_presentation.py`,
+existing integration tests), plus the shared classification and browser suites.
+Integration tests use only a disposable SQLite site; MariaDB-specific planning
+readers are adapted to fixture plans while the real Month End helper executes.
 
-Refresh Desk after the web process is ready. For a future bench missing the new
-runtime dependency, install it into that bench's environment first:
-
-```bash
-/home/juan/juan-bench/env/bin/pip install 'python-pptx>=1.0,<2'
-```
-
-These activation commands were **not run** during this update: live verification
-was restricted to SELECTs. No scheduler, email, commit, push, merge or production
-change was introduced. The missing LAB plans must be resolved through the normal
-planning workflow before September/October reports can be produced there.
+The action group's Select options changed. On LAB, reload the parent action
+DocType, clear the site cache, and restart the LAB web process through the
+operator's normal service mechanism. Page CSS is read by Frappe's page loader;
+there is no asset-bundle build requirement or data backfill for this change.
+Do not run a blanket migration merely for TMM, because unrelated pending patches
+must be reviewed separately. Historical records and retired columns stay intact.

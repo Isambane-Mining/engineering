@@ -28,7 +28,7 @@
   {
    "fieldname": "equipment_group",
    "fieldtype": "Select",
-   "options": "ADTs\nExcavators\nDrills\nGraders\nFELs\nDozers\nAncillary",
+   "options": "ADTs\nExcavators\nDrills\nGraders\nFELs\nDozers\nDiesel bowsers\nWater bowsers\nTLBs\nService trucks\nAncillary",
    "label": "Equipment Group",
    "reqd": 1,
    "in_list_view": 1

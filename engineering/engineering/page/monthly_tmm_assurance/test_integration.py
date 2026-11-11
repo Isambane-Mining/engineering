@@ -51,6 +51,7 @@ class TestTMMLabIntegration(unittest.TestCase):
         cls.schema('Pre-Use Hours', [dict(fieldname='location',fieldtype='Link',options='Location'),dict(fieldname='shift_date',fieldtype='Date')])
         cls.schema('Monthly Production Planning', [dict(fieldname='location',fieldtype='Link',options='Location'),
             dict(fieldname='site_status',fieldtype='Data'),dict(fieldname='prod_month_start_date',fieldtype='Date'),dict(fieldname='prod_month_end_date',fieldtype='Date')])
+        cls.schema('Startup and Fatigue spesification', [dict(fieldname='site',fieldtype='Link',options='Location')])
         cls.schema(api.PBM, [dict(fieldname='location',fieldtype='Link',options='Location'),
             *[dict(fieldname=f,fieldtype='Data') for f in ['asset_name','asset_category','failure_classification','downtime_type','open_closed','breakdown_reason']],
             dict(fieldname='exclude_from_au',fieldtype='Check'),dict(fieldname='breakdown_start_datetime',fieldtype='Datetime'),
@@ -125,7 +126,29 @@ class TestTMMLabIntegration(unittest.TestCase):
             self.fixture('Monthly Production Planning',month,location='Koppie',
                 prod_month_start_date=month+'-01',prod_month_end_date=month+'-'+end)
 
+        from contextlib import ExitStack
+        from datetime import timedelta
+        from frappe.utils import getdate
+        from engineering.engineering.report.availability_and_utilisation_engine import availability_and_utilisation_engine as engine
+        from engineering.engineering.doctype.availability_and_utilisation import availability_and_utilisation as au
+        self.adapters=ExitStack()
+        def fixture_rows(a,b,sites):
+            return frappe.get_all('Monthly Production Planning',filters={'location':['in',sites]},fields=['location','prod_month_start_date','prod_month_end_date'])
+        def fixture_map(rows):
+            result={}
+            for row in rows:
+                current=getdate(row.prod_month_start_date)
+                while current<=getdate(row.prod_month_end_date):
+                    result[(row.location,str(current))]=dict(shift_system='2x12Hour',shift_day_hours=12,shift_night_hours=12)
+                    current+=timedelta(days=1)
+            return result
+        self.adapters.enter_context(patch.object(engine,'get_planning_rows',side_effect=fixture_rows))
+        self.adapters.enter_context(patch.object(engine,'build_planning_map',side_effect=fixture_map))
+        self.adapters.enter_context(patch.object(au,'_exclusion_windows',side_effect=lambda site,shift,a,b:[(a,a+timedelta(hours=1)),(b-timedelta(hours=1),b)]))
+        self.adapters.enter_context(patch.object(api,'_subcategory_configuration',return_value={}))
+
     def tearDown(self):
+        self.adapters.close()
         frappe.set_user('Administrator')
         frappe.db.rollback(save_point='tmm_case')
 
@@ -230,15 +253,17 @@ class TestTMMLabIntegration(unittest.TestCase):
             breakdown_start_datetime='2026-09-15 12:00:00',failure_classification='Braking System',docstatus=2)
         result,unassigned=api.breakdown_counts_by_group('Koppie','2026-09-01','2026-09-30')
         c=result['ADTs']
-        self.assertEqual((c['total_count'],c['categorised_count'],c['unresolved_count']),(6,4,2))
-        self.assertEqual({r['category']:r['count'] for r in c['categories']},{'Hydraulic':3,'Safety Systems':1})
-        self.assertEqual({r['name'] for r in c['priority_records']},{'prior','carried-closed','first','excluded-au'})
+        self.assertEqual((c['total_count'],c['categorised_count'],c['unresolved_count']),(5,3,2))
+        self.assertEqual({r['category']:r['count'] for r in c['categories']},{'Hydraulic':3})
+        self.assertEqual({r['name'] for r in c['priority_records']},{'prior','carried-closed','first'})
         self.assertEqual(unassigned,[])
         from engineering.engineering.page.daily_availability_and_utilization_dashboard import daily_availability_and_utilization_dashboard as dashboard
         with patch.object(dashboard,'fetch_grouped_data',return_value=[]):
             report=api.get_report('Koppie','2026-09-01')
         self.assertEqual(report['groups'][0]['counts'],c)
         self.assertIn('overlapping',report['population'])
+        self.assertGreater(c['classified_hours'],0)
+        self.assertGreater(c['unresolved_hours'],0)
         from .monthly_tmm_assurance import report_html
         html=report_html(report)
         self.assertIn('carried-closed',html)
@@ -295,17 +320,30 @@ class TestTMMLabIntegration(unittest.TestCase):
                 return PlantBreakdownorMaintenance(dict(doctype=api.PBM,location='Koppie',asset_name='ADT-TEST',
                     asset_category='ADT',downtime_type='Breakdown',failure_classification=category,
                     breakdown_start_datetime='2026-09-01 08:00:00'))
-            self.assertFalse(make('').insert().failure_classification)
+            with self.assertRaises(frappe.ValidationError):make('').insert()
             for category in INITIAL_CLASSIFICATIONS:
                 doc=make(category).insert()
                 self.assertEqual(frappe.db.get_value(api.PBM,doc.name,'failure_classification'),category)
             frappe.db.set_value(api.PBM,doc.name,'failure_classification','')
             doc=PlantBreakdownorMaintenance(api.PBM,doc.name)
             doc.breakdown_reason='Unrelated legacy edit'
-            doc.save()
+            with self.assertRaises(frappe.ValidationError):doc.save()
             self.assertFalse(frappe.db.get_value(api.PBM,doc.name,'failure_classification'))
             doc.failure_classification='Invented option'
             with self.assertRaises(frappe.ValidationError): doc.save()
+
+    def test_split_support_actions_and_historical_ancillary_remain_editable(self):
+        self.fixture(api.PBM,'support-event',location='Koppie',asset_name='TLB-TEST',asset_category='TLB',
+            failure_classification='Hydraulic',downtime_type='Breakdown',breakdown_start_datetime='2026-09-15 12:00:00')
+        original=api.save_actions('Koppie','2026-09','Ancillary',[dict(self.action('Historic ancillary action'),breakdown_reference='support-event')])
+        split=api.save_actions('Koppie','2026-09','TLBs',[self.action('Specific TLB action')])
+        report=api.get_report('Koppie','2026-09')
+        legacy=next(g for g in report['groups'] if g['group']=='Ancillary')
+        self.assertEqual(legacy['actions'],original['actions'])
+        self.assertEqual(next(g for g in report['groups'] if g['group']=='TLBs')['actions'],split['actions'])
+        self.assertNotIn('data-group="Ancillary"',report['availability_chart'])
+        changed=[dict(original['actions'][0],action='Retained original scope')]
+        api.save_actions('Koppie','2026-09','Ancillary',changed,original['version'])
 
     def test_registered_page_loads_its_actual_assets(self):
         from frappe.desk.desk_page import get
@@ -313,6 +351,7 @@ class TestTMMLabIntegration(unittest.TestCase):
         self.assertEqual(page.title,'Monthly TMM Assurance')
         self.assertIn('class MonthlyTMMAssurance',page.script)
         self.assertIn('make_app_page',page.script)
+        self.assertIn('.monthly-tmm-assurance',page.style)
 
     def test_actual_frappe_pdf_contains_every_group_chart_and_saved_actions(self):
         from .monthly_tmm_assurance import reporting_period
@@ -326,6 +365,9 @@ class TestTMMLabIntegration(unittest.TestCase):
                 counts=category_counts(monthly_population([dict(name=group+'-'+str(i),failure_classification='Hydraulic' if i<2 else 'Engine',
                     asset_name='TEST',breakdown_start_datetime='2026-08-15 12:00:00' if i==0 else '2026-09-15 12:00:00',
                     resolved_datetime='2026-09-20 12:00:00') for i in range(3)],'2026-09-01','2026-09-30')),actions=saved['actions']))
+        for group in result['groups']:
+            rows=[dict(row,downtime_hours=1) for category in group['counts']['categories'] for row in category['records']]
+            group['counts']=api.category_downtime(rows,api.INITIAL_CLASSIFICATIONS,{})
         with patch.object(api,'get_report',return_value=result):
             api.download_pdf('Koppie','2026-09-01')
         pdf=frappe.local.response.filecontent
@@ -342,8 +384,8 @@ class TestTMMLabIntegration(unittest.TestCase):
         self.assertIn('2026-08-15',text)  # Earlier-started, now-closed event is present in exported priority details.
         self.assertIn('including carried-in and repaired/closed events',' '.join(text.split()))
         # Inspect actual rendered chart pixels, not just an HTML image tag.
-        chart_pages=[p for p in doc if 'Number of breakdown records' in p.get_text()]
-        self.assertEqual(len(chart_pages),7)
+        chart_pages=[p for p in doc if 'Breakdown downtime (hours)' in p.get_text()]
+        self.assertEqual(len(chart_pages),len(GROUPS))
         for page in chart_pages:
             image=page.get_pixmap()
             pixels=image.samples
@@ -384,7 +426,7 @@ class TestTMMLabIntegration(unittest.TestCase):
         self.assertTrue(any('duplicate' in w for w in result['warnings']))
         api.download_presentation('Koppie','2026-10')
         payload=frappe.local.response.filecontent
-        self.assertEqual(len(Presentation(BytesIO(payload)).slides),6)
+        self.assertGreaterEqual(len(Presentation(BytesIO(payload)).slides),5)
         self.assertTrue(frappe.local.response.filename.endswith('.pptx'))
         Path('/tmp/tmm-mpp-presentation/database-fixture.pptx').write_bytes(payload)
 

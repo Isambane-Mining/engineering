@@ -9,7 +9,7 @@ from pathlib import Path
 import unittest
 
 from playwright.sync_api import sync_playwright
-from engineering.engineering.page.monthly_tmm_assurance.monthly_tmm_assurance import category_counts
+from engineering.engineering.page.monthly_tmm_assurance.monthly_tmm_assurance import category_downtime
 from engineering.controllers.failure_classification import INITIAL_CLASSIFICATIONS
 from engineering.engineering.page.monthly_tmm_assurance.monthly_tmm_assurance import GROUPS, reporting_period
 from engineering.engineering.page.monthly_tmm_assurance.monthly_tmm_assurance import count_chart_image, count_summary, availability_svg
@@ -27,10 +27,10 @@ def fixture():
         month['dates_label']=month['start']+' – '+month['end']
     for index, group in enumerate(GROUPS):
         records=[dict(name=f'{group}-{i}',failure_classification=c,asset_name='TEST-MACHINE',
-                      breakdown_start_datetime='2026-09-15 08:00:00',breakdown_reason='Test-only recorded description',status_label='Open (current)')
+                      downtime_hours=1,breakdown_start_datetime='2026-09-15 08:00:00',breakdown_reason='Test-only recorded description',status_label='Open (current)')
                  for i,c in enumerate(INITIAL_CLASSIFICATIONS)] if index<2 else []
         records += [dict(name=group+'-blank',failure_classification='',status_label='Open (current)')] if index<2 else []
-        counts=category_counts(records)
+        counts=category_downtime(records,INITIAL_CLASSIFICATIONS,{})
         data['groups'].append(dict(group=group,availability=[82+index,85+index,88+index],counts=counts,pareto=counts['categories'],
             chart=count_chart_image(counts),full_chart=count_chart_image(counts,limit=None),summary=count_summary(counts),actions=[],version=None,can_write=True))
     data.update(failure_classifications=INITIAL_CLASSIFICATIONS,population='Distinct breakdown events overlapping the reporting calendar month, including carried-in and repaired/closed events',unassigned_records=[])
@@ -56,6 +56,7 @@ class TestBrowser(unittest.TestCase):
         self.page.on('pageerror',lambda error:self.errors.append(str(error)))
         css=next((APP.parents[1]/'sites/assets/frappe/dist/css').glob('desk.bundle.*.css')).read_text()
         self.page.set_content('<!doctype html><html><head><style>'+css+'</style></head><body><div style="padding:25px;max-width:1300px;margin:auto"><div style="display:flex;justify-content:space-between"><h2>Monthly TMM Assurance</h2><div id="buttons"></div></div><div id="filters" style="display:flex;gap:18px;border:1px solid #ddd;padding:12px"></div><main></main></div></body></html>')
+        self.page.add_style_tag(path=str(APP/'engineering/engineering/page/monthly_tmm_assurance/monthly_tmm_assurance.css'))
         self.page.add_script_tag(path=str(FRAPPE/'node_modules/jquery/dist/jquery.min.js'))
         self.page.evaluate('''data => {
             window.__ = text => text;
@@ -92,7 +93,7 @@ class TestBrowser(unittest.TestCase):
         self.assertEqual(self.page.locator('[data-filter]').count(),2)
         self.assertEqual(self.page.get_by_role('button',name='Download Presentation').count(),1)
         self.assertIn('2026-09-30',self.page.locator('.tmm-periods').inner_text())
-        self.assertEqual(self.page.locator('[data-group]').count(),7)
+        self.assertEqual(self.page.locator('[data-group]').count(),len(GROUPS))
         self.add()
         self.page.locator('[data-group="Excavators"]').click()
         self.page.locator('[data-group="ADTs"]').click()
@@ -175,7 +176,7 @@ class TestBrowser(unittest.TestCase):
     def test_read_only_and_empty_states(self):
         self.page.evaluate("view.data.groups.forEach(g=>{g.can_write=false;g.availability=[null,null,0];g.pareto=[];g.chart='<p>No measured breakdown downtime for this reporting month.</p>'});view.render()")
         self.assertTrue(self.page.get_by_role('button',name='+ Add Action').is_disabled())
-        self.assertEqual(self.page.locator('.tmm-availability [data-group]').count(),7)
+        self.assertEqual(self.page.locator('.tmm-availability [data-group]').count(),len(GROUPS))
         self.assertIn('No saved corrective actions',self.page.locator('.tmm-details').inner_text())
 
 

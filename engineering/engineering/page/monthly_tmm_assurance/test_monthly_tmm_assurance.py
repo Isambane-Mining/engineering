@@ -20,7 +20,7 @@ class TestCalculations(unittest.TestCase):
     def test_group_mapping_is_explicit_with_known_ancillaries(self):
         from .monthly_tmm_assurance import equipment_group
         for category, group in [('ADT', 'ADTs'), ('Loader', 'FELs'), ('Drills', 'Drills'),
-                                ('TLB', 'Ancillary'), ('Diesel Bowsers', 'Ancillary')]:
+                                ('TLB', 'TLBs'), ('Diesel Bowsers', 'Diesel bowsers')]:
             self.assertEqual(equipment_group(category), group)
         self.assertIsNone(equipment_group('Unknown'))
 
@@ -57,7 +57,8 @@ class TestReportData(unittest.TestCase):
                 dict(asset_category='Loader',shift_required_hours=20,shift_available_hours=20,invalid_pre_use_hours=1),
                 dict(asset_category='TLB',shift_required_hours=999,shift_available_hours=999,docstatus=2)]
         values=availability_by_group(rows)
-        self.assertEqual(values['Ancillary'],21.25)
+        self.assertEqual(values['TLBs'],85)
+        self.assertEqual(values['Water bowsers'],0)
         self.assertEqual(values['ADTs'],0)
         self.assertIsNone(values['FELs']);self.assertIsNone(values['Drills'])
 
