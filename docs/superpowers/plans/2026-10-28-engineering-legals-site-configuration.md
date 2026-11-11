@@ -5,6 +5,12 @@
 **Architecture:** One server resolver supplies legacy and site rules, capture requirements,
 expiry previews and immutable per-record provenance. Historical dates remain authoritative.
 Reports and SharePoint use recorded reporting metadata, never recalculate expiry.
+The existing Engineering Legals SharePoint Config remains a singleton for global
+Graph credentials, connection settings and sync status. Site policy stays in one
+Engineering Legals Site Configuration per unique Link Location, with an Enabled
+flag, Effective From date and Engineering Legals Site Section Rule child rows.
+Credentials are not duplicated into policy documents; see the site-configuration
+documentation for the responsibility and lifecycle decision.
 **Tech stack:** Existing Frappe Python/JSON DocTypes, Desk JS and Jinja portal.
 
 ## Global constraints
@@ -65,9 +71,8 @@ Reports and SharePoint use recorded reporting metadata, never recalculate expiry
   changed required fleet, no-expiry/date-filter ordering, stored draft ownership,
   persisted creation in preview, and edits during asynchronous Desk field application.
 - Runbook review: maintenance browser acceptance now explicitly uses read-only transactions.
-- Additional isolated coverage: Machine File stored dates, Machine Reliability calculations,
-  LAB-only audit guard, baseline comparison and schema/index/disabled-empty acceptance check.
-- Verification: 52 Python tests; Desk and portal JavaScript behavior suites; compilation,
+- Additional isolated coverage: Machine File stored dates and Machine Reliability calculations.
+- Original Phase 2 verification: 52 Python tests; Desk and portal JavaScript behavior suites; compilation,
   JSON/Jinja/JS syntax; Ruff correctness checks; new-file Ruff checks; whitespace checks.
 - No migration, seed, activation, database connection, production credentials, notifications,
   live sync, commit, push, merge or deployment. custom_docperm.json checksum unchanged.
@@ -86,3 +91,7 @@ DB writes, seeding, activation, deployment and merge remain prohibited.
 - Review fixes cover direct Supplier controller scope, configured service history
   pagination, and explicit acceptance/preservation of missing attachment references.
 - Stale generic backup instructions replaced with the reviewed operator gates.
+- Review cleanup: temporary migration-verification code and its isolated tests removed
+  from the application repository; no normal hooks, APIs or scheduled jobs depend on it.
+  The separate private V2 historical baseline, LAB backup/runbook and migration evidence
+  remain preserved outside the repository. Their operator approval gates still apply.
