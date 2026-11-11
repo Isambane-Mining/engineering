@@ -11,9 +11,7 @@ from engineering.controllers import engineering_legals_rules as rules
 from engineering.engineering.doctype.engineering_legals import (
     engineering_legals as legals,
 )
-from engineering.engineering.doctype.engineering_legals import (
-    sharepoint_monthly_frequency as sync,
-)
+from engineering.controllers import sharepoint_monthly_frequency as sync
 from engineering.engineering.report.engineering_legals_monthly_summary import (
     engineering_legals_monthly_summary as monthly,
 )
