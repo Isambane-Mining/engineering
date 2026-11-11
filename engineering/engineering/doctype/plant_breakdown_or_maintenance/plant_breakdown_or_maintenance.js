@@ -388,6 +388,20 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
     function reason_changed(frm) {
         cancel_pending(frm);
 
+        // An old suggestion must not apply to a new description.
+        if (frm.doc.ai_classification_audit && !frm.is_new()) {
+            // Existing audit references must remain intact.
+            // The server validates historical descriptions.
+            return;
+        }
+
+        if (frm.doc.ai_classification_audit) {
+            frm.set_value("ai_classification_audit", "")
+                .catch(error => console.warn(
+                    "Could not clear AI audit reference:", error
+                ));
+        }
+
         // Never overwrite an existing manual selection.
         if (frm._pbom_ai_manual) return;
 
@@ -438,13 +452,45 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
 
             const classification =
                 (response.message || {}).classification;
+            const audit_id =
+                (response.message || {}).audit_id;
 
-            if (!classification) return;
+            // Never apply an unaudited AI suggestion.
+            if (!classification || !audit_id) return;
 
             frm._pbom_ai_auto_value = classification;
             frm._pbom_ai_writing = true;
 
             try {
+                await frm.set_value(
+                    "ai_classification_audit",
+                    audit_id
+                );
+
+                // The operator may have changed the form while
+                // the audit reference was being applied.
+                const still_current =
+                    request_id === frm._pbom_ai_request &&
+                    frm.doc.name === document_name &&
+                    frm.doc.downtime_type === "Breakdown" &&
+                    (frm.doc.breakdown_reason || "").trim() === reason &&
+                    !frm._pbom_ai_manual &&
+                    !frm.doc.failure_classification &&
+                    frm.doc.ai_classification_audit === audit_id;
+
+                if (!still_current) {
+                    // Only remove our own stale reference on
+                    // an unsaved record. Never touch a newer audit.
+                    if (frm.is_new() &&
+                        frm.doc.ai_classification_audit === audit_id) {
+                        await frm.set_value(
+                            "ai_classification_audit",
+                            ""
+                        );
+                    }
+                    return;
+                }
+
                 await frm.set_value(
                     "failure_classification",
                     classification
@@ -501,6 +547,22 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
 
             if (frm.doc.downtime_type === "Breakdown") {
                 reason_changed(frm);
+                return;
+            }
+
+            // Only discard pending AI suggestions on new records.
+            // Existing saved audit references must be preserved.
+            if (!frm.is_new()) return;
+
+            if (frm.doc.ai_classification_audit) {
+                frm.set_value("ai_classification_audit", "")
+                    .catch(error => console.warn(
+                        "Could not clear pending AI audit:", error
+                    ));
+            }
+
+            if (frm._pbom_ai_auto_value) {
+                clear_previous_suggestion(frm);
             }
         }
     });

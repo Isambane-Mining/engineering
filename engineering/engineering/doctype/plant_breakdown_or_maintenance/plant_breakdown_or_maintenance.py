@@ -19,6 +19,9 @@ class PlantBreakdownorMaintenance(Document):
         )
         reconcile_signoffs_after_breakdown_change(self, previous)
 
+        from .ai_classification_audit import finalise_audit
+        finalise_audit(self)
+
 
     # --- PBOM SIGNATURE ROLE PERMISSION START ---
     SIGNATURE_FIELD_ROLES = {
@@ -63,6 +66,9 @@ class PlantBreakdownorMaintenance(Document):
 
     def validate(self):
         self.enforce_signature_role_permissions()
+
+        from .ai_classification_audit import validate_audit_reference
+        validate_audit_reference(self)
 
 
     def before_insert(self):

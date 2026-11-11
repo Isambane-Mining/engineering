@@ -8,9 +8,9 @@ import frappe
 CLASSIFICATION_DOCTYPE = "Breakdown Failure Classification"
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def classify_breakdown(reason):
-    """Suggest an existing failure classification without modifying records."""
+    """Suggest a failure classification and record its AI audit."""
 
     reason = (reason or "").strip()
 
@@ -47,10 +47,12 @@ def classify_breakdown(reason):
         "additionalProperties": False,
     }
 
+    model = frappe.conf.get(
+        "pbom_classification_model", "qwen3:8b"
+    )
+
     payload = {
-        "model": frappe.conf.get(
-            "pbom_classification_model", "qwen3:8b"
-        ),
+        "model": model,
         "stream": False,
         "think": False,
         "keep_alive": "10m",
@@ -103,7 +105,37 @@ def classify_breakdown(reason):
         if classification not in names:
             return {"classification": None}
 
-        return {"classification": classification}
+        # Create the suggestion audit on the server.
+        # The operator has not yet accepted or verified it.
+        audit = frappe.get_doc({
+            "doctype": "PBM AI Classification Audit",
+            "breakdown_description": reason,
+            "ai_suggested_classification": classification,
+            "ai_model": model,
+            "suggested_by": frappe.session.user,
+            "suggested_at": frappe.utils.now_datetime(),
+            "audit_status": "Suggested",
+        })
+
+        # A suggestion must have a persisted audit record.
+        # Never return an unaudited automatic classification.
+        frappe.db.savepoint("pbm_ai_suggestion_audit")
+
+        try:
+            audit.insert(ignore_permissions=True)
+        except Exception:
+            frappe.db.rollback(
+                save_point="pbm_ai_suggestion_audit"
+            )
+            frappe.logger("engineering").exception(
+                "PBM AI suggestion audit insertion failed"
+            )
+            return {"classification": None}
+
+        return {
+            "classification": classification,
+            "audit_id": audit.name,
+        }
 
     except (
         urllib.error.URLError,
