@@ -35,6 +35,33 @@ Engineering Legals adds only three hidden server-managed provenance fields:
 `site_configuration`, `expiry_rule_source`, `expiry_rule_snapshot`. The existing
 supplier draft gains `brake_wear_type`. No historical data is backfilled.
 
+## Why site policy is separate from the SharePoint singleton
+
+The existing **Engineering Legals SharePoint Config** is a singleton (`issingle = 1`)
+for the application's global Microsoft Graph credentials, SharePoint connection
+settings and sync status. It owns the tenant/client IDs, encrypted client secret
+and secret expiry, hostname, site path, document library and last success/error
+details. Existing upload, monthly folder/frequency and copy integrations read it
+through `get_sharepoint_config()` and `get_graph_access_token()`.
+
+**Engineering Legals Site Configuration** is a regular parent DocType, with one
+document per existing **Location**. Its required unique `site` Link and
+`autoname = field:site` enforce that identity. `enabled` defaults to off,
+`effective_from` is required when enabled, and `section_rules` owns the site's
+policy rows. **Engineering Legals Site Section Rule** is the child table
+(`istable = 1`): each row links the existing Sections master and defines equipment
+conditions, active/no-expiry status, expiry value/unit and reporting/routing rules.
+
+These configurations have different ownership and lifecycles: credential renewal
+and connection status are global integration concerns; section applicability and
+expiry policy vary independently by Location and effective date. Extending the
+singleton with policy rows would mix credential administration with site policy
+and require separate grouping/validation to recover the one-parent-per-Location
+constraint already enforced by the current design. The optional site code and
+rule subfolder are routing metadata, not connection credentials. Keep credentials
+in the singleton and expiry policies in the parent/child configuration; resolving
+an expiry rule does not require a Graph connection or token request.
+
 ## Behavior
 
 The global site-config key `engineering_legals_site_rules_enabled` defaults to off.
@@ -110,22 +137,16 @@ Before any separately approved migration:
    records with missing attachments (1,079 URLs) are accepted historical conditions,
    not files to recover or references to delete. The standalone private V2 baseline
    remains the authoritative sealed comparison for this LAB investigation.
-5. The repository LAB-only audit helper can also capture an explicitly accepted
-   missing-file baseline using `allow_missing_files=True`; default capture rejects
-   missing files until accepted. It stores an explicit `missing:ENOENT` availability
-   marker with unchanged File rows/URLs. Verification rejects new loss, changed
-   bytes/references or even newly recovered files until reviewed. Permission/path
-   errors still fail. Manifests are private 0600 artifacts and must never enter Git.
-6. Restore into a separate DB, files, copied code/environment and site config. Do
+5. Restore into a separate DB, files, copied code/environment and site config. Do
    not expose original configuration credentials to the clone. Enforce network
    isolation, private DB/Redis sockets, no workers/web/scheduler, disabled events,
    mail/webhooks/notifications/server scripts/SharePoint secrets, and tested enqueue
    and outbound-call guards before app initialization. A mute flag alone is not enough.
-7. Compare real fixed-date report outputs, recorded routes and permissions before
+6. Compare real fixed-date report outputs, recorded routes and permissions before
    and after the isolated cross-app migration; do not invoke Graph, HSEC or mail.
    Verify unique Location metadata/index, the two additive tables, zero parent/child
    records, and rollout off. Never regenerate a baseline merely to make a mismatch pass.
-8. Obtain separate approval for LAB migration after restore/rehearsal evidence is
+7. Obtain separate approval for LAB migration after restore/rehearsal evidence is
    reviewed. Configuration creation and rule activation are later approval gates.
 
 No seeding patch, data backfill or automatic activation is registered. Existing
@@ -170,7 +191,6 @@ Paths are relative to `apps/engineering`. The pre-existing permission fixture is
 ```text
 docs/engineering-legals-site-configuration.md
 docs/superpowers/plans/2026-10-28-engineering-legals-site-configuration.md
-engineering/controllers/engineering_legals_lab_validation.py
 engineering/controllers/engineering_legals_rules.py
 engineering/engineering/doctype/engineering_legals/engineering_legals.js
 engineering/engineering/doctype/engineering_legals/engineering_legals.json
@@ -199,7 +219,6 @@ engineering/templates/pages/engineering_legals_supplier_report.py
 tests/run_engineering_legals_tests.py
 tests/test_engineering_legals_desk.cjs
 tests/test_engineering_legals_integrations.py
-tests/test_engineering_legals_lab_validation.py
 tests/test_engineering_legals_portal.cjs
 tests/test_engineering_legals_reports.py
 tests/test_engineering_legals_site_rules.py
