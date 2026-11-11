@@ -62,6 +62,11 @@ class PlantBreakdownorMaintenance(Document):
     # --- PBOM SIGNATURE ROLE PERMISSION END ---
 
     def validate(self):
+        if self.downtime_type == "Breakdown" and not self.failure_classification:
+            frappe.throw(
+                "Failure Classification is required when Downtime Type is Breakdown."
+            )
+
         self.enforce_signature_role_permissions()
 
 

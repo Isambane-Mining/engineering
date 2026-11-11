@@ -255,7 +255,8 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Failure Classification",
-   "options": "Breakdown Failure Classification"
+   "options": "Breakdown Failure Classification",
+   "mandatory_depends_on": "eval:doc.downtime_type == 'Breakdown'"
   },
   {
    "fieldname": "column_break_zygn",
@@ -321,7 +322,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-28 08:45:57.634301",
+ "modified": "2026-11-11 14:20:29.505341",
  "modified_by": "Administrator",
  "module": "Engineering",
  "name": "Plant Breakdown or Maintenance",
