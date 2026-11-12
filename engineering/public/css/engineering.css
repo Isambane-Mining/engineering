@@ -2311,3 +2311,19 @@ body[data-route="query-report/Availability and Utilisation Engine"]
 .monthly-tmm-assurance .tmm-category-list {font-size:12px}
 .monthly-tmm-assurance .tmm-state {min-height:20px}
 .monthly-tmm-assurance .tmm-subcategories {margin:12px 0}
+
+
+/* HOURS_PERFORMANCE_KPI_LAYOUT_V1 */
+.daily-damage-kpi-row.daily-hours-performance-kpi-row {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+}
+@media(max-width:900px) {
+    .daily-damage-kpi-row.daily-hours-performance-kpi-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+@media(max-width:480px) {
+    .daily-damage-kpi-row.daily-hours-performance-kpi-row {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+}
