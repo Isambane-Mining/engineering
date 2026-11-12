@@ -193,6 +193,7 @@ def get_report_assets(site=None):
     conditions = [
         "a.docstatus = 1",
         "ifnull(a.location, '') != ''",
+        "a.name != 'UIT Main Tank'",
     ]
     values = {}
 

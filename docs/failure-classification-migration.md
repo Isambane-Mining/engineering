@@ -76,3 +76,24 @@ Final installed-app source scan: old field-name references remain only in migrat
 - https://juan.isambane.co.za/app/machine-reliability-settings
 
 The only remaining feature blocker is the inaccessible classification PDF for keyword seeding. Production remains untouched.
+
+## Administrator-owned matching configuration
+
+Classification names, display order, tyre-report selection, legacy aliases,
+spelling corrections and description rules belong to Breakdown Failure
+Classification records and their child rows.
+
+DocTypes are deployed through normal Frappe schema synchronization.
+No configuration patch creates DocTypes or imports default master records.
+
+Configure and review the master records in LAB, then export them using
+Frappe's standard data export workflow. Review the exported records against
+the destination before importing; preserve destination-specific configuration.
+Transfer files remain outside the application repository.
+
+The report-settings migration reads existing classification records and
+configured aliases. It does not seed a fixed list of classification names.
+
+Validation tests and their fixtures remain in LAB and are ignored by Git.
+TMM styles use engineering/public/css/engineering.css.
+SharePoint monthly helpers use engineering/controllers.

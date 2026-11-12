@@ -969,6 +969,15 @@ function render_downtime_cards(report) {
                         ${frappe.utils.escape_html(row.breakdown_reason || "")}
                     </div>
 
+                    <div class="mobile-downtime-row full-width">
+                        <span class="mobile-downtime-label">Failure Classification:</span><br>
+                        ${frappe.utils.escape_html(
+                            row.downtime_type === "Breakdown"
+                                ? (row.failure_classification || "Not recorded")
+                                : "Not applicable"
+                        )}
+                    </div>
+
                     <div class="mobile-downtime-row">
                         <span class="mobile-downtime-label">Resolution:</span><br>
                         ${frappe.utils.escape_html(row.resolution_summary || "")}

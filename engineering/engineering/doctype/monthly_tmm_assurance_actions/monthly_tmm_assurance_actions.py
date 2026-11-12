@@ -4,7 +4,7 @@ import json
 import frappe
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
-from engineering.engineering.page.monthly_tmm_assurance.monthly_tmm_assurance import GROUPS, reporting_period, equipment_group
+from engineering.engineering.page.monthly_tmm_assurance.monthly_tmm_assurance import ACTION_GROUPS, reporting_period, equipment_group
 from engineering.controllers.failure_classification import MASTER_DOCTYPE
 
 
@@ -23,7 +23,7 @@ class MonthlyTMMAssuranceActions(Document):
         except (ValueError, TypeError) as exc:
             frappe.throw(str(exc))
         self.reporting_month = period['reporting_month']
-        if self.equipment_group not in GROUPS:
+        if self.equipment_group not in ACTION_GROUPS:
             frappe.throw('Invalid Equipment Group.')
         if self.name and self.name != scope_name(self.site, self.reporting_month, self.equipment_group):
             frappe.throw('Site, Reporting Month and Equipment Group cannot be changed. Open the correct monthly scope.')
@@ -46,7 +46,7 @@ class MonthlyTMMAssuranceActions(Document):
                     asset = frappe.get_doc('Asset', breakdown.asset_name)
                     asset.check_permission('read')
                     category = asset.asset_category
-                if breakdown.location != self.site or equipment_group(category) != self.equipment_group:
+                if breakdown.location != self.site or not (equipment_group(category) == self.equipment_group or (self.equipment_group == 'Ancillary' and equipment_group(category) in ('Diesel bowsers','Water bowsers','TLBs','Service trucks'))):
                     frappe.throw(f'Row {row.idx}: Breakdown Reference must belong to this Site and Equipment Group.')
             for field in ('cause', 'action', 'owner_name', 'due_date', 'status'):
                 if not str(row.get(field) or '').strip():

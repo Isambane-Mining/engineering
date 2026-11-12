@@ -105,7 +105,7 @@ scheduler_events = {
     ],
     "daily": [
         # Engineering Legals monthly SharePoint folders
-        "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_folders.create_current_month_sharepoint_folders",
+        "engineering.controllers.sharepoint_monthly_folders.create_current_month_sharepoint_folders",
         "engineering.controllers.fleet_notifications.send_terminated_driver_alert_gate",
         "engineering.controllers.fleet_notifications.send_temporary_loan_digest_gate",
         "engineering.engineering.doctype.fleet_card.fleet_card.refresh_all_statuses",
@@ -154,7 +154,7 @@ scheduler_events = {
             "engineering.engineering.doctype.service_schedule.service_schedule.queue_service_schedule_update"
         ],
         "15 3 * * *": [
-            "engineering.engineering.doctype.engineering_legals.sharepoint_monthly_frequency.run_current_month_frequency_sync"
+            "engineering.controllers.sharepoint_monthly_frequency.run_current_month_frequency_sync"
         ],
     },
 }

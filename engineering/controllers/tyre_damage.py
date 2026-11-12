@@ -2,16 +2,16 @@
 
 from datetime import timedelta
 
-from engineering.controllers.failure_classification import TYRES_WHEELS_CLASSIFICATION
+from engineering.controllers.failure_classification import get_tyre_classifications
 
 CATEGORIES = ("ADT", "Dozer")
 TYRE_CARD_CATEGORIES = ("ADT",)
 MAX_RECORDS = 20000
 
 
-def is_classified_tyre_damage(record):
+def is_classified_tyre_damage(record, classifications=None):
     """An explicit classification; complaint and resolution text are not estimates."""
-    return record.get("failure_classification") == TYRES_WHEELS_CLASSIFICATION
+    return record.get("failure_classification") in (get_tyre_classifications() if classifications is None else classifications)
 
 
 def damage_counts(records, machine=None):
@@ -25,7 +25,7 @@ def damage_counts(records, machine=None):
 
 
 def fetch_tyre_damage_records(
-    source_rows, location, start_date, end_date, selected_asset=None
+    source_rows, location, start_date, end_date, selected_asset=None, tyre_classifications=None
 ):
     import frappe
     from frappe.utils import getdate
@@ -62,10 +62,13 @@ def fetch_tyre_damage_records(
     if not names:
         return []
     start, finish = getdate(start_date), getdate(end_date) + timedelta(days=1)
+    tyre_classifications = get_tyre_classifications() if tyre_classifications is None else tyre_classifications
+    if not tyre_classifications:
+        return []
     rows = frappe.get_list(
         "Plant Breakdown or Maintenance",
         filters=[
-            ["failure_classification", "=", TYRES_WHEELS_CLASSIFICATION],
+            ["failure_classification", "in", list(tyre_classifications)],
             ["docstatus", "<", 2],
             ["downtime_type", "=", "Breakdown"],
             ["location", "=", location],
@@ -102,6 +105,6 @@ def fetch_tyre_damage_records(
             continue
         category = row.asset_category or scope[(machine, day)]
         category = {"ADT's": "ADT", "Dozer's": "Dozer"}.get(category, category)
-        if category in CATEGORIES and is_classified_tyre_damage(row):
+        if category in CATEGORIES and is_classified_tyre_damage(row, tyre_classifications):
             result.append({"name": row.name, "machine": machine, "category": category})
     return result

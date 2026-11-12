@@ -2282,3 +2282,32 @@ body[data-route="query-report/Availability and Utilisation Engine"]
 .au-engine-button-empty { opacity:.55; }
 
 .au-engine-formula-clickable { cursor:pointer; }
+
+/* Monthly TMM Assurance */
+.monthly-tmm-assurance {width:100%;min-width:0;padding: 12px 0; color:var(--text-color)}
+.monthly-tmm-assurance .tmm-section {background:var(--card-bg);border:1px solid var(--border-color);border-radius:var(--border-radius, 6px);padding:14px 16px;margin:12px 0}
+.monthly-tmm-assurance .table-responsive {display:block;width:100%;overflow-x:auto}
+.monthly-tmm-assurance h3 {font-size:18px;margin:0 0 10px;font-weight:600}
+.monthly-tmm-assurance .tmm-subtitle {font-size:16px;margin-bottom:12px}
+.monthly-tmm-assurance table {width:100%;margin:0 0 8px;border-collapse:collapse}
+.monthly-tmm-assurance th,.monthly-tmm-assurance td {border:1px solid var(--border-color);padding:6px 12px;vertical-align:middle}
+.monthly-tmm-assurance th {background:var(--subtle-fg);font-weight:600}
+.monthly-tmm-assurance .tmm-availability td:not(:first-child),.monthly-tmm-assurance .tmm-availability th:not(:first-child) {text-align:center;width:23%}
+.monthly-tmm-assurance tr[data-group] {cursor:pointer}
+.monthly-tmm-assurance tr.is-selected {background:var(--blue-50, #e6f1ff)}
+.monthly-tmm-assurance tr[data-group]:focus {outline:2px solid var(--primary)}
+.monthly-tmm-assurance .tmm-actions-heading {display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.monthly-tmm-assurance .tmm-actions-heading h3 {margin:0}
+.monthly-tmm-assurance .tmm-actions-table {min-width:780px}
+.monthly-tmm-assurance .tmm-actions-table textarea {min-width:170px;resize:vertical;height:50px;min-height:50px}
+.monthly-tmm-assurance .tmm-actions-table input,.monthly-tmm-assurance .tmm-actions-table select,.monthly-tmm-assurance .tmm-actions-table textarea {width:100%;margin:0}
+.monthly-tmm-assurance .tmm-actions-table td {padding:5px}
+.monthly-tmm-assurance .tmm-chart {overflow-x:auto}
+.monthly-tmm-assurance .tmm-chart img {min-width:750px}
+.monthly-tmm-assurance details {margin:10px 0}
+.monthly-tmm-assurance summary {cursor:pointer;font-weight:600}
+.monthly-tmm-assurance .tmm-breakdowns {font-size:12px;min-width:820px}
+.monthly-tmm-assurance .tmm-breakdowns td {vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}
+.monthly-tmm-assurance .tmm-category-list {font-size:12px}
+.monthly-tmm-assurance .tmm-state {min-height:20px}
+.monthly-tmm-assurance .tmm-subcategories {margin:12px 0}
