@@ -1,0 +1,149 @@
+{
+  "doctype": "DocType",
+  "name": "PBM AI Classification Audit",
+  "module": "Engineering",
+  "autoname": "hash",
+  "engine": "InnoDB",
+  "track_changes": 1,
+  "field_order": [
+    "breakdown_reference",
+    "breakdown_description",
+    "ai_suggested_classification",
+    "ai_model",
+    "final_classification",
+    "decision",
+    "suggested_by",
+    "verified_by",
+    "suggested_at",
+    "verified_at",
+    "audit_status",
+    "event_type",
+    "previous_classification",
+    "previous_breakdown_description",
+    "correction_reason"
+  ],
+  "fields": [
+    {
+      "fieldname": "breakdown_reference",
+      "fieldtype": "Link",
+      "label": "Breakdown Reference",
+      "read_only": 1,
+      "options": "Plant Breakdown or Maintenance",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "breakdown_description",
+      "fieldtype": "Small Text",
+      "label": "Breakdown Description",
+      "read_only": 1
+    },
+    {
+      "fieldname": "ai_suggested_classification",
+      "fieldtype": "Link",
+      "label": "Ai Suggested Classification",
+      "read_only": 1,
+      "options": "Breakdown Failure Classification",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "ai_model",
+      "fieldtype": "Data",
+      "label": "Ai Model",
+      "read_only": 1
+    },
+    {
+      "fieldname": "final_classification",
+      "fieldtype": "Link",
+      "label": "Final Classification",
+      "read_only": 1,
+      "options": "Breakdown Failure Classification",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "decision",
+      "fieldtype": "Select",
+      "label": "Decision",
+      "read_only": 1,
+      "options": "\nAccepted\nOverridden\nNo Suggestion\nCorrected"
+    },
+    {
+      "fieldname": "suggested_by",
+      "fieldtype": "Link",
+      "label": "Suggested By",
+      "read_only": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "verified_by",
+      "fieldtype": "Link",
+      "label": "Verified By",
+      "read_only": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "suggested_at",
+      "fieldtype": "Datetime",
+      "label": "Suggested At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "verified_at",
+      "fieldtype": "Datetime",
+      "label": "Verified At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "audit_status",
+      "fieldtype": "Select",
+      "label": "Audit Status",
+      "read_only": 1,
+      "options": "Suggested\nFinalised",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "event_type",
+      "fieldtype": "Select",
+      "label": "Event Type",
+      "options": "\nAI Decision\nCorrection",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "previous_classification",
+      "fieldtype": "Link",
+      "label": "Previous Classification",
+      "options": "Breakdown Failure Classification",
+      "read_only": 1
+    },
+    {
+      "fieldname": "previous_breakdown_description",
+      "fieldtype": "Small Text",
+      "label": "Previous Breakdown Description",
+      "read_only": 1
+    },
+    {
+      "fieldname": "correction_reason",
+      "fieldtype": "Small Text",
+      "label": "Correction Reason",
+      "read_only": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1
+    },
+    {
+      "role": "Engineering Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "actions": [],
+  "links": [],
+  "states": []
+}

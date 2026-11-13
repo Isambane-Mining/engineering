@@ -22,6 +22,7 @@
   "breakdown_start_datetime",
   "breakdown_reason",
   "failure_classification",
+  "ai_classification_audit",
   "mechanic_breakdown_maintenance_start_time",
   "location1",
   "column_break_zygn",
@@ -46,7 +47,8 @@
   "engineering_manager_date_and_time",
   "engineering_manager_shift",
   "engineering_manager_user",
-  "engineering_manager_signature"
+  "engineering_manager_signature",
+  "ai_classification_correction_reason"
  ],
  "fields": [
   {
@@ -299,6 +301,21 @@
    "fieldname": "location1",
    "fieldtype": "Data",
    "label": "Location"
+  },
+  {
+   "fieldname": "ai_classification_audit",
+   "fieldtype": "Link",
+   "label": "AI Classification Audit",
+   "options": "PBM AI Classification Audit",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "ai_classification_correction_reason",
+   "fieldtype": "Small Text",
+   "label": "Classification Correction Reason",
+   "description": "Explain changes to an audited breakdown classification or description."
   }
  ],
  "grid_page_length": 50,
