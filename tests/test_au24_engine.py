@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock
 
-MODULE = 'engineering.engineering.report.availability_and_utilisation_engine_(24).calculations'
+MODULE = 'engineering.engineering.report.availability_and_utilisation_engine_(24).availability_and_utilisation_engine_(24)'
 ROOT = Path(__file__).resolve().parents[1]
 
 
