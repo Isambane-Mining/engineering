@@ -1,7 +1,7 @@
 /* Independent report controls; no summary cards or permanent configuration table. */
 (() => {
     const name = 'Availability and Utilisation Engine (24)';
-    const endpoint = 'engineering.engineering.report.availability_and_utilisation_engine_24.availability_and_utilisation_engine_24';
+    const endpoint = 'engineering.engineering.report.availability_and_utilisation_engine_(24).availability_and_utilisation_engine_(24)';
     const escape = value => frappe.utils.escape_html(String(value ?? ''));
     const run_button = report => report.page.set_primary_action(__('Run Report'), () => report.refresh());
     const link_filter = (fieldname, label, options) => ({

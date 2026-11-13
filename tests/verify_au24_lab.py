@@ -2,6 +2,7 @@
 
 Run from bench sites with bench Python. Optional AU24_FORMULA selects Industry.
 """
+import importlib
 import json
 import os
 from unittest.mock import patch
@@ -16,7 +17,7 @@ def main():
     frappe.db.rollback()
     frappe.db.sql('START TRANSACTION READ ONLY')
     try:
-        from engineering.engineering.report.availability_and_utilisation_engine_24 import availability_and_utilisation_engine_24 as report
+        report = importlib.import_module('engineering.engineering.report.availability_and_utilisation_engine_(24).availability_and_utilisation_engine_(24)')
         formula = os.environ.get('AU24_FORMULA', 'Isambane Formula')
         filters = dict(from_date='2026-08-01', to_date='2026-08-07', sites=['Uitgevallen'],
                        formula=formula, asset_ownership='Isambane & Excavo Assets')
