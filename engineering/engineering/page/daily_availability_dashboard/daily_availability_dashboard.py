@@ -1392,6 +1392,91 @@ def get_monthly_production_shift_hours(
 
     return planned_hours
 
+
+def build_required_hours_working_average_groups(
+    machine_days,
+    all_dates,
+    planned_shift_hours,
+):
+    """Average actual machine-day records grouped by identical daily required hours."""
+
+    day_order = ("Weekdays", "Saturday", "Sunday")
+    grouped = {}
+
+    for date_value in all_dates or []:
+        date_key = str(date_value)
+        planning = (planned_shift_hours or {}).get(date_key) or {}
+
+        required_hours = round(
+            flt(planning.get("day")) + flt(planning.get("night")),
+            2,
+        )
+
+        if required_hours <= 0:
+            continue
+
+        weekday = getdate(date_key).weekday()
+        day_type = (
+            "Weekdays" if weekday < 5
+            else "Saturday" if weekday == 5
+            else "Sunday"
+        )
+
+        bucket = grouped.setdefault(
+            required_hours,
+            {
+                "day_types": set(),
+                "work_total": 0.0,
+                "record_count": 0,
+            },
+        )
+
+        bucket["day_types"].add(day_type)
+
+        # Average actual machine-day records, not daily averages.
+        for machine_dates in (machine_days or {}).values():
+            record = (machine_dates or {}).get(date_key)
+
+            if not isinstance(record, dict):
+                continue
+
+            if flt(record.get("required")) <= 0:
+                continue
+
+            bucket["work_total"] += flt(record.get("work"))
+            bucket["record_count"] += 1
+
+    results = []
+
+    for required_hours, bucket in grouped.items():
+        count = bucket["record_count"]
+
+        if not count:
+            continue
+
+        labels = [
+            day_type
+            for day_type in day_order
+            if day_type in bucket["day_types"]
+        ]
+
+        results.append({
+            "label": " + ".join(labels),
+            "required_hours": required_hours,
+            "average_work": bucket["work_total"] / count,
+            "record_count": count,
+        })
+
+    results.sort(
+        key=lambda item: (
+            min(day_order.index(day) for day in item["label"].split(" + ")),
+            -item["required_hours"],
+        )
+    )
+
+    return results
+
+
 def build_hours_based_performance_html(
     source_rows,
     start_date,
@@ -1400,6 +1485,7 @@ def build_hours_based_performance_html(
     planned_shift_hours=None,
     tyre_damage_counts=None,
     summary_only=False,
+    group_working_average_by_required_hours=False,
 ):
     machine_days = {}
 
@@ -1718,12 +1804,40 @@ def build_hours_based_performance_html(
         from engineering.engineering.page.daily_availability_and_utilization_dashboard.tyre_damage import tyre_damage_card
         tyre_card = tyre_damage_card(category, tyre_damage_counts.get(category)) if tyre_damage_counts is not None else ''
         kpi_class = 'daily-damage-kpi-row' if tyre_card else ('daily-damage-kpi-row daily-average-only-row' if tyre_damage_counts is not None else '')
-        kpi_html = f'''
-    <div class="{kpi_class}" style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
+        if group_working_average_by_required_hours:
+            kpi_class += ' daily-hours-performance-kpi-row'
+        working_average_groups = (
+            build_required_hours_working_average_groups(
+                machine_days.get(category) or {},
+                all_dates,
+                planned_shift_hours,
+            )
+            if group_working_average_by_required_hours
+            else []
+        )
+
+        if working_average_groups:
+            working_kpis_html = "".join(
+                f'''
+        <div class="frappe-card" style="padding:14px;border-left:5px solid #2563eb;">
+            <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Working Hours — {group["label"]}</div>
+            <div style="font-size:26px;font-weight:900;color:#2563eb;">{group["average_work"]:.2f}h</div>
+            <div class="text-muted" style="font-size:10px;margin-top:2px;">{group["required_hours"]:g}h required per day</div>
+        </div>
+                '''
+                for group in working_average_groups
+            )
+        else:
+            working_kpis_html = f'''
         <div class="frappe-card" style="padding:14px;border-left:5px solid #2563eb;">
             <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Working Hours — Selected Period</div>
             <div style="font-size:26px;font-weight:900;color:#2563eb;">{period_avg_work:.2f}h</div>
         </div>
+            '''
+
+        kpi_html = f'''
+    <div class="{kpi_class}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
+        {working_kpis_html}
         <div class="frappe-card" style="padding:14px;border-left:5px solid #dc2626;">
             <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;">{category_title} Average Breakdown Hours — Selected Period</div>
             <div style="font-size:26px;font-weight:900;color:#dc2626;">{period_avg_breakdown:.2f}h</div>

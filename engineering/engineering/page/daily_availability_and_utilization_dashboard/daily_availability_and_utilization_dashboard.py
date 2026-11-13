@@ -2008,6 +2008,7 @@ def build_dashboard_html(
                     f"{UI_TITLES.get(category, category)}"
                 ),
                 planned_shift_hours=planned_shift_hours,
+                group_working_average_by_required_hours=True,
                 tyre_damage_counts=damage_counts(tyre_damage_records, machine=machine),
             )
         elif hours_source_rows:
@@ -2047,12 +2048,14 @@ def build_dashboard_html(
                             end_date,
                             heading_override=machine,
                             planned_shift_hours=planned_shift_hours,
+                            group_working_average_by_required_hours=True,
                         )
                     )
 
                 category_kpis = build_hours_based_performance_html(
                     category_rows, start_date, end_date,
                     planned_shift_hours=planned_shift_hours,
+                    group_working_average_by_required_hours=True,
                     tyre_damage_counts=tyre_counts, summary_only=True,
                 ) if category in tyre_counts else ''
                 grouped_sections.append(f"""
@@ -2074,6 +2077,7 @@ def build_dashboard_html(
             start_date,
             end_date,
             planned_shift_hours=planned_shift_hours,
+            group_working_average_by_required_hours=True,
             tyre_damage_counts=tyre_counts,
         )
 
