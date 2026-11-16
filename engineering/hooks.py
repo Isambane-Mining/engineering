@@ -54,6 +54,9 @@ fixtures = [
             "Asset Category-custom_include_in_mos_report",
             "Asset Category-custom_mos_report_label",
             "Asset Category-custom_mos_report_order",
+            "Pre Use Deviation-recurring_deviation",
+            "Pre Use Deviation-action",
+            "Pre Use Deviation-date_service_report_received",
         ]]
     ]},
     {"dt": "Service Interval", "filters": [["name", "in", ["250 Hours", "500 Hours", "750 Hours", "1000 Hours", "2000 Hours"]]]},

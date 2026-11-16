@@ -1,5 +1,51 @@
 frappe.query_reports["Pre Use Deviation Dashboard"] = {
     onload: function(report) {
+        // PRE USE DASHBOARD HEADER WRAP START
+        report.page.wrapper.addClass(
+            "pre-use-deviation-header-wrap"
+        );
+
+        if (!document.getElementById(
+            "pre-use-deviation-header-wrap-style"
+        )) {
+            const headerStyle = document.createElement("style");
+            headerStyle.id =
+                "pre-use-deviation-header-wrap-style";
+
+            headerStyle.textContent = `
+                .pre-use-deviation-header-wrap .dt-header {
+                    height: 64px !important;
+                    min-height: 64px !important;
+                }
+
+                .pre-use-deviation-header-wrap .dt-header .dt-row {
+                    height: 64px !important;
+                    min-height: 64px !important;
+                }
+
+                .pre-use-deviation-header-wrap .dt-header .dt-cell {
+                    height: 64px !important;
+                    min-height: 64px !important;
+                    box-sizing: border-box !important;
+                }
+
+                .pre-use-deviation-header-wrap .dt-header .dt-cell__content {
+                    white-space: normal !important;
+                    overflow-wrap: break-word !important;
+                    text-overflow: clip !important;
+                    line-height: 18px !important;
+                    height: auto !important;
+                    max-height: none !important;
+                    text-align: center !important;
+                    padding: 8px 4px !important;
+                    box-sizing: border-box !important;
+                }
+            `;
+
+            document.head.appendChild(headerStyle);
+        }
+        // PRE USE DASHBOARD HEADER WRAP END
+
         if (!document.getElementById("pre-use-deviation-dashboard-style")) {
             const style = document.createElement("style");
             style.id = "pre-use-deviation-dashboard-style";
@@ -14,15 +60,26 @@ frappe.query_reports["Pre Use Deviation Dashboard"] = {
             document.head.appendChild(style);
         }
 
+
+
         frappe.call({
             method: "engineering.engineering.report.pre_use_deviation_dashboard.pre_use_deviation_dashboard.get_site_options",
             callback: function(r) {
                 const site_filter = report.get_filter("site");
                 if (site_filter) {
-                    site_filter.df.options = r.message || "All Sites";
-                    site_filter.df.default = "All Sites";
+                    const options = (
+                        r.message || "All Sites"
+                    ).split("\n").filter(Boolean);
+
+                    const default_site = (
+                        options.length === 2 &&
+                        options[0] === "All Sites"
+                    ) ? options[1] : "All Sites";
+
+                    site_filter.df.options = options.join("\n");
+                    site_filter.df.default = default_site;
                     site_filter.refresh();
-                    site_filter.set_input("All Sites");
+                    site_filter.set_input(default_site);
                 }
             }
         });
@@ -87,6 +144,10 @@ frappe.query_reports["Pre Use Deviation Dashboard"] = {
 
         if (column.fieldname === "actioned_by_name_and_surname") {
             return gray_chip(data.actioned_by_name_and_surname || "", 170);
+        }
+
+        if (column.fieldname === "action") {
+            return gray_chip(data.action || "", 140);
         }
 
         if (column.fieldname === "action_date_and_time_display") {
