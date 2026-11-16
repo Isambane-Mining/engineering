@@ -6,6 +6,10 @@
 
     <div class="mb-3">
         <a class="btn btn-primary" href="/pre_use_deviation_supplier">New Pre Use Deviation</a>
+        <a class="btn btn-success ml-2"
+           href="/api/method/engineering.templates.pages.pre_use_file.pre_use_deviation_list.export_supplier_pre_use_excel">
+            Export to Excel
+        </a>
     </div>
 
     {% if records %}
@@ -13,26 +17,40 @@
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Report Date</th>
-                    <th>Site</th>
-                    <th>Fleet Number</th>
-                    <th>Machine Type</th>
+                    <th>Date</th>
                     <th>Machine Model</th>
+                    <th>Fleet Number</th>
+                    <th>Pre-Use No.</th>
+                    <th>Recurring Deviation</th>
+                    <th>Deviation Details</th>
+                    <th>Reported By</th>
+                    <th>Action</th>
+                    <th>Action Date and Time</th>
+                    <th>Date Service Report Received</th>
+                    <th>Job Card Number</th>
+                    <th>Resolution Summary</th>
+                    <th>Actioned By Name and Surname</th>
                     <th>Action Status</th>
-                    <th>Completion</th>
-                    <th></th>
+                    <th>Completion Percentage</th>
+                    <th>Edit</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in records %}
                 <tr>
-                    <td>{{ row.name }}</td>
                     <td>{{ row.report_datetime or "" }}</td>
-                    <td>{{ row.site or "" }}</td>
-                    <td>{{ row.fleet_number or "" }}</td>
-                    <td>{{ row.machine_type or "" }}</td>
                     <td>{{ row.machine_model or "" }}</td>
+                    <td>{{ row.fleet_number or "" }}</td>
+                    <td>{{ row.pre_use_no if row.pre_use_no is not none else "" }}</td>
+                    <td>{{ row.recurring_deviation or "" }}</td>
+                    <td>{{ row.deviation_details or "" }}</td>
+                    <td>{{ row.reported_by_name_and_surname or "" }}</td>
+                    <td>{{ row.action or "" }}</td>
+                    <td>{{ row.action_date_and_time or "" }}</td>
+                    <td>{{ row.date_service_report_received or "" }}</td>
+                    <td>{{ row.job_card_number or "" }}</td>
+                    <td>{{ row.resolution_summary or "" }}</td>
+                    <td>{{ row.actioned_by_name_and_surname or "" }}</td>
                     <td>{{ row.action_status or "" }}</td>
                     <td>{{ row.completion_percentage or 0 }}%</td>
                     <td>

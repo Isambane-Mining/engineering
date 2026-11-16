@@ -2,7 +2,10 @@ import frappe
 from frappe import _
 from erpnext.controllers.website_list_for_contact import get_customers_suppliers
 
-ALLOWED_SUPPLIER_SITES = ["GWAB", "Klipfontein"]
+from engineering.templates.pages.pre_use_file.pre_use_deviation_supplier import (
+    ALLOWED_SUPPLIER_SITES,
+    _get_asset_options as _get_supplier_asset_options,
+)
 
 
 def get_context(context):
@@ -17,13 +20,16 @@ def get_context(context):
     if "Supplier" not in frappe.get_roles(frappe.session.user):
         frappe.throw(_("Not permitted."), frappe.PermissionError)
 
-    assets = _get_asset_options()
+    context.records = _get_portal_records()
+
+
+def _get_portal_records():
+    assets = _get_supplier_asset_options()
 
     if not assets:
-        context.records = []
-        return
+        return []
 
-    context.records = frappe.get_all(
+    return frappe.get_all(
         "Pre Use Deviation",
         filters={
             "fleet_number": ["in", assets],
@@ -32,18 +38,141 @@ def get_context(context):
         fields=[
             "name",
             "report_datetime",
-            "site",
+            "machine_model",
             "fleet_number",
             "pre_use_no",
-            "machine_type",
-            "machine_model",
+            "recurring_deviation",
+            "deviation_details",
+            "reported_by_name_and_surname",
+            "action",
+            "action_date_and_time",
+            "date_service_report_received",
+            "job_card_number",
+            "resolution_summary",
+            "actioned_by_name_and_surname",
             "action_status",
             "completion_percentage",
-            "modified",
         ],
         order_by="modified desc",
         limit_page_length=100,
     )
+
+
+@frappe.whitelist()
+def export_supplier_pre_use_excel():
+    """Export only records available to this supplier portal user."""
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Login required."), frappe.PermissionError)
+
+    if "Supplier" not in frappe.get_roles(frappe.session.user):
+        frappe.throw(_("Not permitted."), frappe.PermissionError)
+
+    import io
+    import xlsxwriter
+
+    records = _get_portal_records()
+
+    columns = [
+        ("Date", "report_datetime"),
+        ("Machine Model", "machine_model"),
+        ("Fleet Number", "fleet_number"),
+        ("Pre-Use No.", "pre_use_no"),
+        ("Recurring Deviation", "recurring_deviation"),
+        ("Deviation Details", "deviation_details"),
+        ("Reported By", "reported_by_name_and_surname"),
+        ("Action", "action"),
+        ("Action Date and Time", "action_date_and_time"),
+        ("Date Service Report Received", "date_service_report_received"),
+        ("Job Card Number", "job_card_number"),
+        ("Resolution Summary", "resolution_summary"),
+        ("Actioned By Name and Surname", "actioned_by_name_and_surname"),
+        ("Action Status", "action_status"),
+        ("Completion Percentage", "completion_percentage"),
+    ]
+
+    output = io.BytesIO()
+
+    workbook = xlsxwriter.Workbook(output, {
+        "in_memory": True,
+        "strings_to_formulas": False,
+        "strings_to_urls": False,
+    })
+
+    sheet = workbook.add_worksheet("Pre Use Deviations")
+
+    green = workbook.add_format({
+        "bold": True,
+        "bg_color": "#00AD50",
+        "font_color": "#000000",
+        "border": 1,
+        "border_color": "#000000",
+        "text_wrap": True,
+        "valign": "vcenter",
+    })
+
+    yellow = workbook.add_format({
+        "bold": True,
+        "bg_color": "#FFFF00",
+        "font_color": "#000000",
+        "border": 1,
+        "border_color": "#000000",
+        "text_wrap": True,
+        "valign": "vcenter",
+    })
+
+    data_format = workbook.add_format({
+        "border": 1,
+        "border_color": "#000000",
+        "valign": "top",
+        "text_wrap": True,
+    })
+
+    sheet.set_row(0, 42)
+    sheet.freeze_panes(1, 0)
+    sheet.autofilter(0, 0, max(len(records), 1), 14)
+
+    for col_idx, (heading, fieldname) in enumerate(columns):
+        header_format = yellow if (
+            fieldname == "recurring_deviation"
+        ) else green
+
+        sheet.write_string(0, col_idx, heading, header_format)
+
+        width = 35 if fieldname in (
+            "deviation_details",
+            "resolution_summary",
+            "actioned_by_name_and_surname",
+        ) else 24
+
+        sheet.set_column(col_idx, col_idx, width)
+
+    for row_idx, record in enumerate(records, start=1):
+        for col_idx, (_, fieldname) in enumerate(columns):
+            value = record.get(fieldname)
+
+            if fieldname == "completion_percentage":
+                value = str(value if value is not None else 0) + "%"
+
+            if value is None:
+                value = ""
+
+            # Writing explicitly as a string prevents spreadsheet
+            # formulas supplied through text fields from executing.
+            sheet.write_string(
+                row_idx,
+                col_idx,
+                str(value),
+                data_format,
+            )
+
+    workbook.close()
+
+    frappe.local.response["filename"] = (
+        "Pre_Use_Supplier_Report.xlsx"
+    )
+    frappe.local.response["filecontent"] = output.getvalue()
+    frappe.local.response["type"] = "download"
+
 
 
 def _get_user_suppliers():

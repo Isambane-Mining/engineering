@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import get_datetime, now_datetime
+from frappe.utils import get_datetime, getdate, now_datetime
 
 
 ALLOWED_SUPPLIER_SITES = ["Gwab", "Klipfontein"]
@@ -59,6 +59,7 @@ def get_context(context):
         "site": doc.site if doc else "",
         "fleet_number": doc.fleet_number if doc else "",
         "pre_use_no": doc.pre_use_no if doc else "",
+        "recurring_deviation": doc.get("recurring_deviation") if doc else "",
         "machine_type": doc.machine_type if doc else "",
         "machine_model": doc.machine_model if doc else "",
         "operating_status": doc.operating_status if doc else "",
@@ -66,7 +67,9 @@ def get_context(context):
         "reported_by_coy_number": doc.reported_by_coy_number if doc else "",
         "reported_by_name_and_surname": doc.reported_by_name_and_surname if doc else frappe.session.user,
         "resolution_summary": doc.resolution_summary if doc else "",
+        "action": doc.get("action") if doc else "",
         "action_date_and_time": _format_datetime_for_input(doc.action_date_and_time) if doc and doc.action_date_and_time else "",
+        "date_service_report_received": str(doc.get("date_service_report_received") or "") if doc else "",
         "actioned_by_coy_number": doc.actioned_by_coy_number if doc else "",
         "actioned_by_name_and_surname": doc.actioned_by_name_and_surname if doc else "",
         "job_card_number": doc.job_card_number if doc else "",
@@ -86,6 +89,24 @@ def _handle_post():
 
     _validate_asset(fleet_number)
 
+    # Use the location of an authorised supplier asset.
+    asset_details = _get_asset_details(_get_asset_options())
+    asset_site = (asset_details.get(fleet_number) or {}).get("site")
+
+    if not asset_site:
+        frappe.throw(
+            _("Unable to determine the authorised machine site."),
+            frappe.PermissionError,
+        )
+
+    submitted_site = frappe.form_dict.get("site") or ""
+
+    if submitted_site and submitted_site != asset_site:
+        frappe.throw(
+            _("Selected Site does not match the machine location."),
+            frappe.PermissionError,
+        )
+
     if name:
         doc = frappe.get_doc("Pre Use Deviation", name)
         _validate_asset(doc.fleet_number)
@@ -96,7 +117,7 @@ def _handle_post():
     action_date_and_time = _parse_datetime(frappe.form_dict.get("action_date_and_time"))
 
     doc.report_datetime = report_datetime or now_datetime()
-    doc.site = frappe.form_dict.get("site") or None
+    doc.site = asset_site
     doc.fleet_number = fleet_number
 
     try:
@@ -104,6 +125,7 @@ def _handle_post():
     except Exception:
         doc.pre_use_no = 0
 
+    doc.recurring_deviation = frappe.form_dict.get("recurring_deviation") or None
     doc.machine_type = frappe.form_dict.get("machine_type") or None
     doc.machine_model = frappe.form_dict.get("machine_model") or None
     doc.operating_status = frappe.form_dict.get("operating_status") or None
@@ -115,8 +137,21 @@ def _handle_post():
 
     doc.reported_by_coy_number = reported_by_coy_number
     doc.reported_by_name_and_surname = frappe.form_dict.get("reported_by_name_and_surname") or frappe.session.user
+    doc.action = frappe.form_dict.get("action") or None
     doc.resolution_summary = frappe.form_dict.get("resolution_summary") or None
     doc.action_date_and_time = action_date_and_time
+
+    service_date = (
+        frappe.form_dict.get("date_service_report_received") or ""
+    ).strip()
+
+    if service_date:
+        try:
+            doc.date_service_report_received = getdate(service_date)
+        except Exception:
+            frappe.throw(_("Invalid Date Service Report Received."))
+    else:
+        doc.date_service_report_received = None
 
     actioned_by_coy_number = frappe.form_dict.get("actioned_by_coy_number") or None
     if actioned_by_coy_number and not _link_value_exists("Employee", actioned_by_coy_number):
