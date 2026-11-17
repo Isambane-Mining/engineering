@@ -1,0 +1,79 @@
+{
+  "doctype": "DocType",
+  "name": "AI Failure Classification Settings",
+  "module": "Engineering",
+  "engine": "InnoDB",
+  "field_order": [
+    "enabled",
+    "ollama_endpoint",
+    "preferred_model",
+    "available_models",
+    "request_timeout",
+    "allowed_classifications"
+  ],
+  "fields": [
+    {
+      "fieldname": "enabled",
+      "fieldtype": "Check",
+      "label": "Enable AI Classification",
+      "default": "1",
+      "reqd": 0
+    },
+    {
+      "fieldname": "ollama_endpoint",
+      "fieldtype": "Data",
+      "label": "Ollama Endpoint",
+      "default": "http://127.0.0.1:11434",
+      "reqd": 1
+    },
+    {
+      "fieldname": "preferred_model",
+      "fieldtype": "Select",
+      "label": "Preferred Model",
+      "default": "qwen3:8b",
+      "reqd": 1,
+      "options": "qwen3:8b"
+    },
+    {
+      "fieldname": "request_timeout",
+      "fieldtype": "Int",
+      "label": "Request Timeout (Seconds)",
+      "default": "45",
+      "reqd": 1
+    },
+    {
+      "fieldname": "allowed_classifications",
+      "fieldtype": "Table",
+      "label": "Allowed Failure Classifications",
+      "options": "AI Allowed Failure Classification"
+    },
+    {
+      "fieldname": "available_models",
+      "fieldtype": "Button",
+      "label": "Refresh Available Models"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "Engineering Manager",
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "Engineering Area Manager",
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "Engineering User",
+      "read": 1,
+      "write": 0
+    }
+  ],
+  "issingle": 1
+}

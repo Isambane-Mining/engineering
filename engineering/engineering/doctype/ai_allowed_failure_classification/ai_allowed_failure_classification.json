@@ -1,0 +1,23 @@
+{
+  "doctype": "DocType",
+  "name": "AI Allowed Failure Classification",
+  "module": "Engineering",
+  "istable": 1,
+  "editable_grid": 1,
+  "field_order": [
+    "failure_classification"
+  ],
+  "fields": [
+    {
+      "fieldname": "failure_classification",
+      "fieldtype": "Link",
+      "label": "Failure Classification",
+      "options": "Breakdown Failure Classification",
+      "reqd": 1,
+      "in_list_view": 1
+    }
+  ],
+  "permissions": [],
+  "sort_field": "idx",
+  "sort_order": "ASC"
+}

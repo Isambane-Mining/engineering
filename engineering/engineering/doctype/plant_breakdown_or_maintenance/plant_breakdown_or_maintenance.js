@@ -356,3 +356,269 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
     });
 })();
 // --- PBOM SIGNATURE ROLE PERMISSION END ---
+
+// --- PBOM AUTO FAILURE CLASSIFICATION START ---
+(function () {
+    const METHOD =
+        "engineering.controllers." +
+        "auto_failure_classification.classify_breakdown";
+
+    function cancel_pending(frm) {
+        frm._pbom_ai_request = (frm._pbom_ai_request || 0) + 1;
+        clearTimeout(frm._pbom_ai_timer);
+    }
+
+    async function clear_previous_suggestion(frm) {
+        const previous = frm._pbom_ai_auto_value;
+
+        if (!previous) return;
+        frm._pbom_ai_auto_value = null;
+
+        if (frm.doc.failure_classification !== previous) return;
+
+        frm._pbom_ai_writing = true;
+        try {
+            await frm.set_value("failure_classification", "");
+        } finally {
+            frm._pbom_ai_writing = false;
+        }
+    }
+
+    function reason_changed(frm) {
+        cancel_pending(frm);
+
+        // An old suggestion must not apply to a new description.
+        if (frm.doc.ai_classification_audit && !frm.is_new()) {
+            // Existing audit references must remain intact.
+            // The server validates historical descriptions.
+            return;
+        }
+
+        if (frm.doc.ai_classification_audit) {
+            frm.set_value("ai_classification_audit", "")
+                .catch(error => console.warn(
+                    "Could not clear AI audit reference:", error
+                ));
+        }
+
+        // Discard any request belonging to the old description.
+        if (frm.is_new() &&
+            frm.doc.ai_classification_request_id) {
+            frm.set_value("ai_classification_request_id", "");
+        }
+
+        // Never overwrite an existing manual selection.
+        if (frm._pbom_ai_manual) return;
+
+        const previous = frm._pbom_ai_auto_value;
+
+        if (previous &&
+            frm.doc.failure_classification === previous) {
+            clear_previous_suggestion(frm);
+        }
+
+        if (frm.doc.failure_classification &&
+            frm.doc.failure_classification !== previous) {
+            return;
+        }
+
+        frm._pbom_ai_timer = setTimeout(function () {
+            suggest_classification(frm);
+        }, 700);
+    }
+
+    async function suggest_classification(frm) {
+        // Only new PBMs may start an AI suggestion request.
+        if (!frm.is_new()) return;
+        if (frm.doc.downtime_type !== "Breakdown") return;
+        if (frm._pbom_ai_manual || frm._pbom_ai_writing) return;
+        if (frm.doc.failure_classification) return;
+
+        const reason = (frm.doc.breakdown_reason || "").trim();
+        if (!reason || reason.length > 1000) return;
+
+        const token = ++frm._pbom_ai_request;
+        const document_name = frm.doc.name;
+
+        const is_current = () =>
+            token === frm._pbom_ai_request &&
+            frm.doc.name === document_name &&
+            frm.doc.downtime_type === "Breakdown" &&
+            (frm.doc.breakdown_reason || "").trim() === reason &&
+            !frm._pbom_ai_manual &&
+            !frm.doc.failure_classification;
+
+        const base =
+            "engineering.controllers.";
+
+        try {
+            const queued = await frappe.call({
+                method:
+                    base +
+                    "auto_failure_classification.queue_classification",
+                args: { reason },
+                freeze: false
+            });
+
+            if (!is_current()) return;
+
+            const request_id = queued.message?.request_id;
+            if (queued.message?.status !== "Queued" || !request_id) {
+                return;
+            }
+
+            let classification = null;
+
+            for (let attempt = 0; attempt < 75; attempt++) {
+                if (!is_current()) return;
+
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                if (!is_current()) return;
+
+                const response = await frappe.call({
+                    method:
+                        base +
+                        "ai_classification_requests.get_classification_status",
+                    args: { request_id },
+                    freeze: false
+                });
+
+                if (!is_current()) return;
+
+                const result = response.message || {};
+
+                if (result.status === "Completed") {
+                    classification = result.classification;
+                    break;
+                }
+
+                if (result.status === "Failed" ||
+                    result.status === "Expired" ||
+                    result.status === "No Suggestion") {
+                    return;
+                }
+            }
+
+            if (!classification || !is_current()) return;
+
+            frm._pbom_ai_writing = true;
+
+            try {
+                frm._pbom_ai_auto_value = classification;
+
+                await frm.set_value(
+                    "failure_classification",
+                    classification
+                );
+
+                // The selected classification is now populated,
+                // so do not use is_current(), which requires it
+                // to be empty.
+                const still_current =
+                    frm.is_new() &&
+                    token === frm._pbom_ai_request &&
+                    frm.doc.name === document_name &&
+                    frm.doc.downtime_type === "Breakdown" &&
+                    (frm.doc.breakdown_reason || "").trim() === reason &&
+                    !frm._pbom_ai_manual &&
+                    frm.doc.failure_classification === classification;
+
+                if (!still_current) {
+                    // Do not remove a manual operator selection.
+                    // Only clear the AI value when it is still ours.
+                    if (
+                        frm.is_new() &&
+                        !frm._pbom_ai_manual &&
+                        frm.doc.failure_classification === classification &&
+                        frm._pbom_ai_auto_value === classification
+                    ) {
+                        await frm.set_value(
+                            "failure_classification",
+                            ""
+                        );
+                    }
+                    return;
+                }
+
+                await frm.set_value(
+                    "ai_classification_request_id",
+                    request_id
+                );
+            } finally {
+                frm._pbom_ai_writing = false;
+            }
+
+        } catch (error) {
+            console.warn(
+                "Background AI classification unavailable:",
+                error
+            );
+        }
+    }
+
+    function attach_reason_listener(frm) {
+        const field = frm.fields_dict.breakdown_reason;
+        if (!field || !field.$input) return;
+
+        field.$input.off("input.pbom_ai");
+
+        field.$input.on("input.pbom_ai", function () {
+            reason_changed(frm);
+        });
+    }
+
+    frappe.ui.form.on("Plant Breakdown or Maintenance", {
+        onload(frm) {
+            frm._pbom_ai_request = 0;
+            frm._pbom_ai_manual = false;
+            frm._pbom_ai_auto_value = null;
+            frm._pbom_ai_writing = false;
+        },
+
+        refresh(frm) {
+            attach_reason_listener(frm);
+        },
+
+        breakdown_reason(frm) {
+            reason_changed(frm);
+        },
+
+        failure_classification(frm) {
+            if (frm._pbom_ai_writing) return;
+
+            frm._pbom_ai_manual = true;
+            frm._pbom_ai_auto_value = null;
+            cancel_pending(frm);
+        },
+
+        downtime_type(frm) {
+            cancel_pending(frm);
+
+            if (frm.doc.downtime_type === "Breakdown") {
+                reason_changed(frm);
+                return;
+            }
+
+            // Only discard pending AI suggestions on new records.
+            // Existing saved audit references must be preserved.
+            if (!frm.is_new()) return;
+
+            if (frm.doc.ai_classification_request_id) {
+                frm.set_value("ai_classification_request_id", "");
+            }
+
+            if (frm.doc.ai_classification_audit) {
+                frm.set_value("ai_classification_audit", "")
+                    .catch(error => console.warn(
+                        "Could not clear pending AI audit:", error
+                    ));
+            }
+
+            if (frm._pbom_ai_auto_value) {
+                clear_previous_suggestion(frm);
+            }
+        }
+    });
+})();
+// --- PBOM AUTO FAILURE CLASSIFICATION END ---
