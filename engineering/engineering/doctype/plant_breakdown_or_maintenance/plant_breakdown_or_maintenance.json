@@ -48,7 +48,8 @@
   "engineering_manager_shift",
   "engineering_manager_user",
   "engineering_manager_signature",
-  "ai_classification_correction_reason"
+  "ai_classification_correction_reason",
+  "ai_classification_request_id"
  ],
  "fields": [
   {
@@ -315,6 +316,14 @@
    "fieldtype": "Small Text",
    "label": "Classification Correction Reason",
    "description": "Explain changes to an audited breakdown classification or description."
+  },
+  {
+   "fieldname": "ai_classification_request_id",
+   "fieldtype": "Data",
+   "label": "AI Classification Request ID",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "grid_page_length": 50,

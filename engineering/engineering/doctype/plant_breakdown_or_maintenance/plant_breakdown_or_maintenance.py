@@ -74,6 +74,11 @@ class PlantBreakdownorMaintenance(Document):
     def before_insert(self):
         self._enforce_previous_closed()
 
+        from .ai_classification_audit import (
+            create_initial_audit_for_save,
+        )
+        create_initial_audit_for_save(self)
+
     def _enforce_previous_closed(self):
         if not self.asset_name:
             return

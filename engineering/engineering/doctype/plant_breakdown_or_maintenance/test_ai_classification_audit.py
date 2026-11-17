@@ -16,6 +16,7 @@ class DummyDocument:
     def __init__(self, previous=None, **fields):
         self.__dict__.update(fields)
         self._previous = previous
+        self.flags = SimpleNamespace()
 
     def get(self, key, default=None):
         return getattr(self, key, default)
@@ -247,104 +248,290 @@ class TestAIClassificationAudit(unittest.TestCase):
                 service.validate_audit_reference(current)
 
 
-    def test_failed_audit_insert_returns_no_classification(self):
-        db = MagicMock()
-        audit = MagicMock()
-        audit.insert.side_effect = RuntimeError(
-            "Simulated database insertion failure"
-        )
-
-        logger = MagicMock()
-
-        response = MagicMock()
-        response.__enter__.return_value = response
-
-        ai_result = {
-            "message": {
-                "content": '{"classification": "Braking System"}'
-            }
+    def test_mcp_classification_uses_background_queue(self):
+        """MCP entry point must delegate without creating an audit."""
+        reason = "PARK BRAKE IS NOT WORKING"
+        expected = {
+            "status": "Queued",
+            "request_id": "TEST-REQUEST-001",
         }
-
-        records = [
-            SimpleNamespace(
-                name="Braking System",
-                description="Braking failure",
-            )
-        ]
 
         with (
             patch.object(
-                classifier.frappe,
-                "has_permission",
-                return_value=True,
-            ),
-            patch.object(
-                classifier.frappe,
-                "get_list",
-                return_value=records,
-            ),
-            patch.object(
-                classifier.frappe,
-                "conf",
-                SimpleNamespace(
-                    get=lambda key, default=None: default
-                ),
-            ),
-            patch.object(
-                classifier.frappe,
-                "session",
-                SimpleNamespace(user="operator@example.test"),
-            ),
-            patch.object(
-                classifier.frappe.utils,
-                "now_datetime",
-                return_value="2026-11-11 12:00:00",
-            ),
-            patch.object(
-                classifier.frappe,
-                "db",
-                db,
-            ),
+                classifier,
+                "queue_classification",
+                return_value=expected,
+            ) as queue,
             patch.object(
                 classifier.frappe,
                 "get_doc",
-                return_value=audit,
-            ),
-            patch.object(
-                classifier.frappe,
-                "logger",
-                return_value=logger,
-            ),
-            patch.object(
-                classifier.urllib.request,
-                "urlopen",
-                return_value=response,
-            ),
-            patch.object(
-                classifier.json,
-                "load",
-                return_value=ai_result,
-            ),
+            ) as get_doc,
         ):
-            result = classifier.classify_breakdown(
-                "PARK BRAKE IS NOT WORKING"
-            )
+            result = classifier.classify_breakdown(reason)
 
-        self.assertEqual(result, {"classification": None})
+        self.assertEqual(result, expected)
+        queue.assert_called_once_with(reason)
+        get_doc.assert_not_called()
+
+
+
+    def test_save_creates_initial_audit(self):
+        doc = DummyDocument(
+            breakdown_reason="PARK BRAKE IS NOT WORKING",
+            failure_classification="Mechanical",
+            ai_classification_request_id="REQUEST-001",
+        )
+
+        result = {
+            "classification": "Braking System",
+            "model": "qwen3:8b",
+        }
+
+        audit = MagicMock()
+        audit.name = "AUDIT-NEW-001"
+
+        with (
+            patch.object(
+                service.frappe,
+                "session",
+                SimpleNamespace(user="operator@example.test"),
+            ),
+            patch(
+                "engineering.engineering.doctype."
+                "plant_breakdown_or_maintenance."
+                "ai_classification_requests.verify_request_for_save",
+                return_value=result,
+            ) as verify,
+            patch.object(
+                service.frappe,
+                "get_doc",
+                return_value=audit,
+            ) as get_doc,
+        ):
+            service.create_initial_audit_for_save(doc)
+
+        verify.assert_called_once_with(
+            "REQUEST-001",
+            "operator@example.test",
+            "PARK BRAKE IS NOT WORKING",
+        )
 
         audit.insert.assert_called_once_with(
             ignore_permissions=True
         )
 
-        db.savepoint.assert_called_once_with(
-            "pbm_ai_suggestion_audit"
+        data = get_doc.call_args.args[0]
+
+        self.assertEqual(
+            data["ai_request_id"], "REQUEST-001"
+        )
+        self.assertEqual(
+            data["ai_suggested_classification"],
+            "Braking System",
+        )
+        self.assertEqual(data["audit_status"], "Suggested")
+
+        self.assertEqual(
+            doc.ai_classification_audit,
+            "AUDIT-NEW-001",
+        )
+        self.assertIsNone(
+            doc.ai_classification_request_id
         )
 
-        db.rollback.assert_called_once_with(
-            save_point="pbm_ai_suggestion_audit"
+    def test_no_request_creates_no_audit(self):
+        doc = DummyDocument(
+            ai_classification_request_id=None,
         )
 
-        logger.exception.assert_called_once()
+        with patch.object(
+            service.frappe,
+            "get_doc",
+        ) as get_doc:
+            service.create_initial_audit_for_save(doc)
+
+        get_doc.assert_not_called()
+
+    def test_failed_initial_audit_insert_raises(self):
+        doc = DummyDocument(
+            breakdown_reason="PARK BRAKE IS NOT WORKING",
+            failure_classification="Braking System",
+            ai_classification_request_id="REQUEST-002",
+        )
+
+        audit = MagicMock()
+        audit.insert.side_effect = RuntimeError(
+            "Simulated database insert failure"
+        )
+
+        with (
+            patch.object(
+                service.frappe,
+                "session",
+                SimpleNamespace(user="operator@example.test"),
+            ),
+            patch(
+                "engineering.engineering.doctype."
+                "plant_breakdown_or_maintenance."
+                "ai_classification_requests.verify_request_for_save",
+                return_value={
+                    "classification": "Braking System",
+                    "model": "qwen3:8b",
+                },
+            ),
+            patch.object(
+                service.frappe,
+                "get_doc",
+                return_value=audit,
+            ),
+        ):
+            with self.assertRaises(RuntimeError):
+                service.create_initial_audit_for_save(doc)
+
+        self.assertEqual(
+            doc.ai_classification_request_id,
+            "REQUEST-002",
+        )
+        self.assertIsNone(
+            doc.get("ai_classification_audit")
+        )
+
+
+
+    def test_temporary_request_rejects_other_user(self):
+        from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+            ai_classification_requests as requests,
+        )
+
+        cache = MagicMock()
+        cache.get_value.return_value = {
+            "user": "operator-a@example.test",
+            "status": "Completed",
+        }
+
+        with (
+            patch.object(requests.frappe, "cache", return_value=cache),
+            patch.object(
+                requests.frappe,
+                "throw",
+                side_effect=frappe.PermissionError,
+            ),
+        ):
+            with self.assertRaises(frappe.PermissionError):
+                requests.get_request(
+                    "REQUEST-001",
+                    "operator-b@example.test",
+                )
+
+    def test_temporary_request_rejects_expiry(self):
+        from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+            ai_classification_requests as requests,
+        )
+
+        with (
+            patch.object(requests, "get_request", return_value=None),
+            patch.object(
+                requests.frappe,
+                "throw",
+                side_effect=frappe.ValidationError,
+            ),
+        ):
+            with self.assertRaises(frappe.ValidationError):
+                requests.verify_request_for_save(
+                    "EXPIRED-001",
+                    "operator@example.test",
+                    "PARK BRAKE IS NOT WORKING",
+                )
+
+    def test_temporary_request_rejects_changed_reason(self):
+        from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+            ai_classification_requests as requests,
+        )
+
+        result = {
+            "status": "Completed",
+            "reason": "PARK BRAKE IS NOT WORKING",
+            "classification": "Braking System",
+            "model": "qwen3:8b",
+        }
+
+        with (
+            patch.object(requests, "get_request", return_value=result),
+            patch.object(
+                requests.frappe,
+                "throw",
+                side_effect=frappe.ValidationError,
+            ),
+        ):
+            with self.assertRaises(frappe.ValidationError):
+                requests.verify_request_for_save(
+                    "REQUEST-001",
+                    "operator@example.test",
+                    "HYDRAULIC LEAK",
+                )
+
+    def test_temporary_request_rejects_incomplete_result(self):
+        from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+            ai_classification_requests as requests,
+        )
+
+        result = {
+            "status": "Processing",
+            "reason": "PARK BRAKE IS NOT WORKING",
+            "classification": None,
+            "model": None,
+        }
+
+        with (
+            patch.object(requests, "get_request", return_value=result),
+            patch.object(
+                requests.frappe,
+                "throw",
+                side_effect=frappe.ValidationError,
+            ),
+        ):
+            with self.assertRaises(frappe.ValidationError):
+                requests.verify_request_for_save(
+                    "REQUEST-001",
+                    "operator@example.test",
+                    "PARK BRAKE IS NOT WORKING",
+                )
+
+
+
+    def test_new_pbm_rejects_unverified_pending_audit(self):
+        doc = DummyDocument(
+            name="PBM-NEW-001",
+            ai_classification_audit="AUDIT-UNVERIFIED",
+            ai_classification_request_id=None,
+            downtime_type="Breakdown",
+            breakdown_reason="PARK BRAKE IS NOT WORKING",
+            failure_classification="Braking System",
+        )
+
+        audit = DummyDocument(
+            name="AUDIT-UNVERIFIED",
+            audit_status="Suggested",
+            ai_request_id="REQUEST-UNVERIFIED",
+            suggested_by="operator@example.test",
+            breakdown_description="PARK BRAKE IS NOT WORKING",
+            breakdown_reference=None,
+        )
+
+        with (
+            patch.object(
+                service.frappe,
+                "session",
+                SimpleNamespace(user="operator@example.test"),
+            ),
+            patch.object(
+                service.frappe,
+                "get_doc",
+                return_value=audit,
+            ),
+        ):
+            with self.assertRaises(frappe.ValidationError):
+                service.validate_audit_reference(doc)
 
 
 if __name__ == "__main__":

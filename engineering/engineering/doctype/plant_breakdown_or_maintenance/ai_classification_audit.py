@@ -59,6 +59,35 @@ def validate_audit_reference(doc):
             "or replaced."
         )
 
+    request_id = doc.get("ai_classification_request_id")
+
+    if request_id:
+        from .ai_classification_requests import verify_request_for_save
+
+        if previous:
+            frappe.throw(
+                "AI request references are only allowed on new breakdowns."
+            )
+
+        if audit_id:
+            frappe.throw(
+                "Cannot submit both an AI request and an audit reference."
+            )
+
+        if doc.downtime_type != "Breakdown":
+            frappe.throw("AI classification requires a Breakdown.")
+
+        verify_request_for_save(
+            request_id,
+            frappe.session.user,
+            doc.breakdown_reason,
+        )
+
+        if not doc.failure_classification:
+            frappe.throw("Final classification is required.")
+
+        return
+
     if not audit_id:
         return
 
@@ -108,6 +137,23 @@ def validate_audit_reference(doc):
     if audit.audit_status != "Suggested":
         frappe.throw("Invalid AI audit status.")
 
+    # Only an audit created internally during this PBM insert
+    # may be finalised as the initial AI decision.
+    internal_audit_id = getattr(
+        getattr(doc, "flags", None),
+        "pbm_ai_initial_audit_id",
+        None,
+    )
+
+    if (
+        internal_audit_id != audit_id
+        or not audit.get("ai_request_id")
+    ):
+        frappe.throw(
+            "A new AI audit must originate from a verified "
+            "AI request during PBM save."
+        )
+
     if previous_id:
         frappe.throw(
             "Cannot replace an existing audit with a pending suggestion."
@@ -133,6 +179,46 @@ def validate_audit_reference(doc):
         frappe.throw(
             "A final classification is required."
         )
+
+
+
+def create_initial_audit_for_save(doc):
+    """Create the AI audit within the PBM save transaction."""
+    request_id = doc.get("ai_classification_request_id")
+
+    if not request_id:
+        return
+
+    if not doc.is_new():
+        frappe.throw("AI request can only be used on a new PBM.")
+
+    from .ai_classification_requests import verify_request_for_save
+
+    result = verify_request_for_save(
+        request_id,
+        frappe.session.user,
+        doc.breakdown_reason,
+    )
+
+    audit = frappe.get_doc({
+        "doctype": AUDIT_DOCTYPE,
+        "ai_request_id": request_id,
+        "breakdown_description": doc.breakdown_reason,
+        "ai_suggested_classification": result["classification"],
+        "ai_model": result["model"],
+        "suggested_by": frappe.session.user,
+        "suggested_at": now_datetime(),
+        "audit_status": "Suggested",
+    })
+
+    audit.insert(ignore_permissions=True)
+
+    doc.flags.pbm_ai_initial_audit_id = audit.name
+    doc.ai_classification_audit = audit.name
+
+    # The permanent audit now owns the request reference.
+    # Do not retain the temporary request on the saved PBM.
+    doc.ai_classification_request_id = None
 
 
 def finalise_audit(doc):

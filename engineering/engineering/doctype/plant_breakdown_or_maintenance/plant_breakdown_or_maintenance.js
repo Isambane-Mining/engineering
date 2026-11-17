@@ -402,6 +402,12 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
                 ));
         }
 
+        // Discard any request belonging to the old description.
+        if (frm.is_new() &&
+            frm.doc.ai_classification_request_id) {
+            frm.set_value("ai_classification_request_id", "");
+        }
+
         // Never overwrite an existing manual selection.
         if (frm._pbom_ai_manual) return;
 
@@ -423,6 +429,8 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
     }
 
     async function suggest_classification(frm) {
+        // Only new PBMs may start an AI suggestion request.
+        if (!frm.is_new()) return;
         if (frm.doc.downtime_type !== "Breakdown") return;
         if (frm._pbom_ai_manual || frm._pbom_ai_writing) return;
         if (frm.doc.failure_classification) return;
@@ -430,61 +438,105 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
         const reason = (frm.doc.breakdown_reason || "").trim();
         if (!reason || reason.length > 1000) return;
 
-        const request_id = ++frm._pbom_ai_request;
+        const token = ++frm._pbom_ai_request;
         const document_name = frm.doc.name;
 
+        const is_current = () =>
+            token === frm._pbom_ai_request &&
+            frm.doc.name === document_name &&
+            frm.doc.downtime_type === "Breakdown" &&
+            (frm.doc.breakdown_reason || "").trim() === reason &&
+            !frm._pbom_ai_manual &&
+            !frm.doc.failure_classification;
+
+        const base =
+            "engineering.engineering.doctype." +
+            "plant_breakdown_or_maintenance.";
+
         try {
-            const response = await frappe.call({
-                method: METHOD,
+            const queued = await frappe.call({
+                method:
+                    base +
+                    "auto_failure_classification.queue_classification",
                 args: { reason },
                 freeze: false
             });
 
-            if (request_id !== frm._pbom_ai_request) return;
-            if (frm.doc.name !== document_name) return;
-            if (frm._pbom_ai_manual || frm._pbom_ai_writing) return;
-            if (frm.doc.downtime_type !== "Breakdown") return;
-            if (frm.doc.failure_classification) return;
+            if (!is_current()) return;
 
-            if ((frm.doc.breakdown_reason || "").trim() !== reason) {
+            const request_id = queued.message?.request_id;
+            if (queued.message?.status !== "Queued" || !request_id) {
                 return;
             }
 
-            const classification =
-                (response.message || {}).classification;
-            const audit_id =
-                (response.message || {}).audit_id;
+            let classification = null;
 
-            // Never apply an unaudited AI suggestion.
-            if (!classification || !audit_id) return;
+            for (let attempt = 0; attempt < 75; attempt++) {
+                if (!is_current()) return;
 
-            frm._pbom_ai_auto_value = classification;
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                if (!is_current()) return;
+
+                const response = await frappe.call({
+                    method:
+                        base +
+                        "ai_classification_requests.get_classification_status",
+                    args: { request_id },
+                    freeze: false
+                });
+
+                if (!is_current()) return;
+
+                const result = response.message || {};
+
+                if (result.status === "Completed") {
+                    classification = result.classification;
+                    break;
+                }
+
+                if (result.status === "Failed" ||
+                    result.status === "Expired" ||
+                    result.status === "No Suggestion") {
+                    return;
+                }
+            }
+
+            if (!classification || !is_current()) return;
+
             frm._pbom_ai_writing = true;
 
             try {
+                frm._pbom_ai_auto_value = classification;
+
                 await frm.set_value(
-                    "ai_classification_audit",
-                    audit_id
+                    "failure_classification",
+                    classification
                 );
 
-                // The operator may have changed the form while
-                // the audit reference was being applied.
+                // The selected classification is now populated,
+                // so do not use is_current(), which requires it
+                // to be empty.
                 const still_current =
-                    request_id === frm._pbom_ai_request &&
+                    frm.is_new() &&
+                    token === frm._pbom_ai_request &&
                     frm.doc.name === document_name &&
                     frm.doc.downtime_type === "Breakdown" &&
                     (frm.doc.breakdown_reason || "").trim() === reason &&
                     !frm._pbom_ai_manual &&
-                    !frm.doc.failure_classification &&
-                    frm.doc.ai_classification_audit === audit_id;
+                    frm.doc.failure_classification === classification;
 
                 if (!still_current) {
-                    // Only remove our own stale reference on
-                    // an unsaved record. Never touch a newer audit.
-                    if (frm.is_new() &&
-                        frm.doc.ai_classification_audit === audit_id) {
+                    // Do not remove a manual operator selection.
+                    // Only clear the AI value when it is still ours.
+                    if (
+                        frm.is_new() &&
+                        !frm._pbom_ai_manual &&
+                        frm.doc.failure_classification === classification &&
+                        frm._pbom_ai_auto_value === classification
+                    ) {
                         await frm.set_value(
-                            "ai_classification_audit",
+                            "failure_classification",
                             ""
                         );
                     }
@@ -492,8 +544,8 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
                 }
 
                 await frm.set_value(
-                    "failure_classification",
-                    classification
+                    "ai_classification_request_id",
+                    request_id
                 );
             } finally {
                 frm._pbom_ai_writing = false;
@@ -501,7 +553,7 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
 
         } catch (error) {
             console.warn(
-                "AI classification unavailable:",
+                "Background AI classification unavailable:",
                 error
             );
         }
@@ -553,6 +605,10 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
             // Only discard pending AI suggestions on new records.
             // Existing saved audit references must be preserved.
             if (!frm.is_new()) return;
+
+            if (frm.doc.ai_classification_request_id) {
+                frm.set_value("ai_classification_request_id", "");
+            }
 
             if (frm.doc.ai_classification_audit) {
                 frm.set_value("ai_classification_audit", "")
