@@ -4,7 +4,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+from engineering.controllers import (
     auto_failure_classification as classifier,
     ai_classification_requests as requests,
 )

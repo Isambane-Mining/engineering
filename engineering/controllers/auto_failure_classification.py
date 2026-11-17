@@ -20,7 +20,7 @@ def _run_classification_job(request_id, user):
     from engineering.engineering.doctype.ai_failure_classification_settings.ai_failure_classification_settings import (
         validate_ollama_endpoint,
     )
-    from .ai_classification_requests import get_request, update_request
+    from engineering.controllers.ai_classification_requests import get_request, update_request
 
     try:
         pending = get_request(request_id, user)
@@ -151,7 +151,7 @@ def _run_classification_job(request_id, user):
 @frappe.whitelist(methods=["POST"])
 def queue_classification(reason):
     """Queue an AI suggestion without creating an audit."""
-    from .ai_classification_requests import create_request
+    from engineering.controllers.ai_classification_requests import create_request
 
     reason = (reason or "").strip()
 
@@ -180,8 +180,7 @@ def queue_classification(reason):
 
     try:
         frappe.enqueue(
-            "engineering.engineering.doctype."
-            "plant_breakdown_or_maintenance."
+            "engineering.controllers."
             "auto_failure_classification._run_classification_job",
             queue="long",
             timeout=max(120, int(settings.request_timeout) + 30),

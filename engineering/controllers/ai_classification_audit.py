@@ -62,7 +62,7 @@ def validate_audit_reference(doc):
     request_id = doc.get("ai_classification_request_id")
 
     if request_id:
-        from .ai_classification_requests import verify_request_for_save
+        from engineering.controllers.ai_classification_requests import verify_request_for_save
 
         if previous:
             frappe.throw(
@@ -192,7 +192,7 @@ def create_initial_audit_for_save(doc):
     if not doc.is_new():
         frappe.throw("AI request can only be used on a new PBM.")
 
-    from .ai_classification_requests import verify_request_for_save
+    from engineering.controllers.ai_classification_requests import verify_request_for_save
 
     result = verify_request_for_save(
         request_id,

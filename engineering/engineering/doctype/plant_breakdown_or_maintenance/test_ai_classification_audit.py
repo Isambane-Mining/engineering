@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import frappe
 
-from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+from engineering.controllers import (
     ai_classification_audit as service,
     auto_failure_classification as classifier,
 )
@@ -297,8 +297,7 @@ class TestAIClassificationAudit(unittest.TestCase):
                 SimpleNamespace(user="operator@example.test"),
             ),
             patch(
-                "engineering.engineering.doctype."
-                "plant_breakdown_or_maintenance."
+                "engineering.controllers."
                 "ai_classification_requests.verify_request_for_save",
                 return_value=result,
             ) as verify,
@@ -371,8 +370,7 @@ class TestAIClassificationAudit(unittest.TestCase):
                 SimpleNamespace(user="operator@example.test"),
             ),
             patch(
-                "engineering.engineering.doctype."
-                "plant_breakdown_or_maintenance."
+                "engineering.controllers."
                 "ai_classification_requests.verify_request_for_save",
                 return_value={
                     "classification": "Braking System",
@@ -399,7 +397,7 @@ class TestAIClassificationAudit(unittest.TestCase):
 
 
     def test_temporary_request_rejects_other_user(self):
-        from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+        from engineering.controllers import (
             ai_classification_requests as requests,
         )
 
@@ -424,7 +422,7 @@ class TestAIClassificationAudit(unittest.TestCase):
                 )
 
     def test_temporary_request_rejects_expiry(self):
-        from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+        from engineering.controllers import (
             ai_classification_requests as requests,
         )
 
@@ -444,7 +442,7 @@ class TestAIClassificationAudit(unittest.TestCase):
                 )
 
     def test_temporary_request_rejects_changed_reason(self):
-        from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+        from engineering.controllers import (
             ai_classification_requests as requests,
         )
 
@@ -471,7 +469,7 @@ class TestAIClassificationAudit(unittest.TestCase):
                 )
 
     def test_temporary_request_rejects_incomplete_result(self):
-        from engineering.engineering.doctype.plant_breakdown_or_maintenance import (
+        from engineering.controllers import (
             ai_classification_requests as requests,
         )
 

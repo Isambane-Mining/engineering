@@ -360,8 +360,7 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
 // --- PBOM AUTO FAILURE CLASSIFICATION START ---
 (function () {
     const METHOD =
-        "engineering.engineering.doctype." +
-        "plant_breakdown_or_maintenance." +
+        "engineering.controllers." +
         "auto_failure_classification.classify_breakdown";
 
     function cancel_pending(frm) {
@@ -450,8 +449,7 @@ frappe.ui.form.on("Plant Breakdown or Maintenance", {
             !frm.doc.failure_classification;
 
         const base =
-            "engineering.engineering.doctype." +
-            "plant_breakdown_or_maintenance.";
+            "engineering.controllers.";
 
         try {
             const queued = await frappe.call({

@@ -19,7 +19,7 @@ class PlantBreakdownorMaintenance(Document):
         )
         reconcile_signoffs_after_breakdown_change(self, previous)
 
-        from .ai_classification_audit import finalise_audit
+        from engineering.controllers.ai_classification_audit import finalise_audit
         finalise_audit(self)
 
 
@@ -67,14 +67,14 @@ class PlantBreakdownorMaintenance(Document):
     def validate(self):
         self.enforce_signature_role_permissions()
 
-        from .ai_classification_audit import validate_audit_reference
+        from engineering.controllers.ai_classification_audit import validate_audit_reference
         validate_audit_reference(self)
 
 
     def before_insert(self):
         self._enforce_previous_closed()
 
-        from .ai_classification_audit import (
+        from engineering.controllers.ai_classification_audit import (
             create_initial_audit_for_save,
         )
         create_initial_audit_for_save(self)
