@@ -14,21 +14,109 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Engine24Tests(unittest.TestCase):
-    def test_industry_fixed_24_raw_downtime_and_ratios(self):
+    def test_machine_scope_classification(self):
+        from types import SimpleNamespace
+        module = importlib.import_module(MODULE)
+        filter_assets_by_scope = module.filter_assets_by_scope
+
+        assets = [
+            SimpleNamespace(name="ASSET-001", asset_name="ADT001"),
+            SimpleNamespace(name="ASSET-002", asset_name="ADT002"),
+            SimpleNamespace(name="ASSET-003", asset_name="ADT003"),
+        ]
+        spares = {"ASSET-002", "ADT003"}
+
+        self.assertEqual(
+            len(filter_assets_by_scope(assets, spares, "All Machines")), 3
+        )
+        self.assertEqual(
+            [a.asset_name for a in filter_assets_by_scope(assets, spares, "Production Machines")],
+            ["ADT001"],
+        )
+        self.assertEqual(
+            [a.asset_name for a in filter_assets_by_scope(assets, spares, "Spare Machines")],
+            ["ADT002", "ADT003"],
+        )
+
+    def test_industry_shift_level_calculations_and_weighted_totals(self):
         c = importlib.import_module(MODULE)
-        forbidden = Mock(side_effect=AssertionError('Industry accessed configuration'))
-        result = c.calculate_day(date(2026, 3, 2), working=12, configuration=forbidden,
-            downtime=[('Breakdown', datetime(2026, 3, 2, 6), datetime(2026, 3, 2, 9)),
-                      ('Planned Maintenance', datetime(2026, 3, 2, 8), datetime(2026, 3, 2, 9))])
-        self.assertEqual(result['breakdown_hours'], 3)
-        self.assertEqual(result['planned_maintenance_hours'], 1)
-        self.assertEqual(result['availability_available'], 20)
-        self.assertEqual(result['utilisation_available'], 24)
-        self.assertAlmostEqual(result['availability_percent'], 20 / 24)
-        self.assertEqual(result['utilisation_percent'], .5)
-        self.assertEqual(c.TARGETS['Industry Formula'], (.85, .75))
-        forbidden.assert_not_called()
-        print('Industry example: A hours=20; U hours=24; A ratio=0.8333333333; U ratio=0.5')
+
+        day = c.calculate_shift(
+            working=9,
+            breakdown=2,
+            planned_maintenance=1,
+        )
+        night = c.calculate_shift(
+            working=7,
+            breakdown=1,
+            planned_maintenance=0,
+        )
+
+        self.assertEqual(day["total_hours"], 12)
+        self.assertEqual(day["availability_available"], 9)
+        self.assertEqual(day["use_of_availability_available"], 9)
+        self.assertEqual(day["utilisation_available"], 12)
+        self.assertAlmostEqual(day["availability_percent"], .75)
+        self.assertAlmostEqual(day["use_of_availability_percent"], 1)
+        self.assertAlmostEqual(day["utilisation_percent"], .75)
+
+        self.assertEqual(night["total_hours"], 12)
+        self.assertEqual(night["availability_available"], 11)
+        self.assertEqual(night["use_of_availability_available"], 11)
+        self.assertEqual(night["utilisation_available"], 12)
+        self.assertAlmostEqual(night["availability_percent"], 11 / 12)
+        self.assertAlmostEqual(night["use_of_availability_percent"], 7 / 11)
+        self.assertAlmostEqual(night["utilisation_percent"], 7 / 12)
+
+        total = c.total_row([day, night])
+        self.assertEqual(total["total_hours"], 24)
+        self.assertEqual(total["working_hours"], 16)
+        self.assertEqual(total["availability_available"], 20)
+        self.assertEqual(total["use_of_availability_available"], 20)
+        self.assertEqual(total["utilisation_available"], 24)
+        self.assertAlmostEqual(total["availability_percent"], 20 / 24)
+        self.assertAlmostEqual(total["use_of_availability_percent"], 16 / 20)
+        self.assertAlmostEqual(total["utilisation_percent"], 16 / 24)
+
+    def test_industry_shift_overrun_and_negative_availability(self):
+        c = importlib.import_module(MODULE)
+
+        overrun = c.calculate_shift(
+            working=13,
+            breakdown=0,
+            planned_maintenance=0,
+        )
+        self.assertGreater(overrun["utilisation_percent"], 1)
+        self.assertTrue(overrun["utilisation_inconsistent"])
+        self.assertTrue(overrun["use_of_availability_inconsistent"])
+
+        overdrawn = c.calculate_shift(
+            working=0,
+            breakdown=13,
+            planned_maintenance=0,
+        )
+        self.assertEqual(overdrawn["availability_available"], -1)
+        self.assertAlmostEqual(overdrawn["availability_percent"], -1 / 12)
+        self.assertIsNone(overdrawn["use_of_availability_percent"])
+
+    def test_industry_use_availability_hours_equal_availability_hours(self):
+        c = importlib.import_module(MODULE)
+
+        result = c.calculate_shift(
+            working=11,
+            breakdown=2,
+            planned_maintenance=1,
+        )
+
+        self.assertEqual(result["availability_available"], 9)
+        self.assertEqual(result["use_of_availability_available"], 9)
+        self.assertAlmostEqual(result["use_of_availability_percent"], 11 / 9)
+        self.assertTrue(result["use_of_availability_inconsistent"])
+
+        total = c.total_row([result])
+        self.assertEqual(total["availability_available"], 9)
+        self.assertEqual(total["use_of_availability_available"], 9)
+        self.assertAlmostEqual(total["use_of_availability_percent"], 11 / 9)
 
     def test_isambane_original_engine_formula_and_ratios(self):
         c = importlib.import_module(MODULE)
