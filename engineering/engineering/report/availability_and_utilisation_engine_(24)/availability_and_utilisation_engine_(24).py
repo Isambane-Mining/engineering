@@ -28,7 +28,7 @@ def validate_filters(filters):
         frappe.throw(_('From Date must be on or before To Date.'))
     f.formula = f.formula or 'Isambane Formula'
     if f.formula not in FORMULAS:
-        frappe.throw(_('Choose Industry Formula or Isambane Formula.'))
+        frappe.throw(_('Choose Industry Formula, Isambane Formula or Use of Availability.'))
     f.asset_ownership = f.asset_ownership or 'Isambane & Excavo Assets'
     if f.asset_ownership not in ('Isambane & Excavo Assets', 'Supplier Assets', 'All Assets'):
         frappe.throw(_('Invalid asset ownership.'))
@@ -110,7 +110,7 @@ def read_preuse(f, sites, assets):
 
 
 def build_rows(f, assets, days, preuse, pbm):
-    """Industry path only: raw PBM, no startup/fatigue/configuration access."""
+    """Fixed-24h paths: raw PBM, no startup/fatigue/configuration access."""
     warnings = set()
     downtime = defaultdict(list)
     clock = now_datetime()
@@ -139,6 +139,11 @@ def build_rows(f, assets, days, preuse, pbm):
             row = total_row(daily)
             row.update(index=len(rows) + 1, site=asset.location, asset=asset.asset_name,
                        asset_type=asset.asset_category, is_total_row=False)
+            if row.get('utilisation_inconsistent'):
+                warning = _('{0} / {1}: recorded Working Hours exceed Available Hours on one or more days. Ratios are not capped; a zero denominator displays a dash.').format(
+                    asset.location, asset.asset_name)
+                row['utilisation_warning'] = warning
+                warnings.add(warning)
             rows.append(row)
     rows.append(total_row(rows))
     return rows, sorted(warnings)
@@ -206,18 +211,30 @@ def get_columns(formula='Industry Formula'):
 def execute(filters=None):
     check_access()
     f = validate_filters(filters)
-    if f.formula == 'Industry Formula':
+    if f.formula in ('Industry Formula', 'Use of Availability'):
         rows, warnings = build_rows(f, *read_sources(f))
-        notes = [_('Industry: fixed 24-hour daily base; availability deducts raw breakdown and raw maintenance, including startup/fatigue overlaps. Utilisation is Working Hours / 24. No startup, fatigue, safety or tramming deduction.')]
+        if f.formula == 'Use of Availability':
+            notes = [_('Use of Availability: Available Hours = MAX(24 - raw breakdown - raw maintenance, 0). Availability = Available Hours / 24. Utilisation = Working Hours / Available Hours. No startup, fatigue, safety or tramming deduction. Ratios above 1 are preserved and flagged; zero denominators display a dash.')]
+        else:
+            notes = [_('Industry: fixed 24-hour daily base; availability deducts raw breakdown and raw maintenance, including startup/fatigue overlaps. Utilisation is Working Hours / 24. No startup, fatigue, safety or tramming deduction.')]
     else:
         rows, warnings = build_isambane_rows(f)
         notes = [_('Isambane: original Engine Required Hours, PBM startup/fatigue exclusions, Pre-Use status/integrity rules and Sunday handling. MAX/MIN formulas run per shift before summing. Safety, Fatigue and Tramming columns are not separate deductions.')]
-    availability_target, utilisation_target = TARGETS[f.formula]
-    notes.append(_('Reference targets only: Availability {0}; Utilisation {1}. Targets do not scale results.').format(
-        format(availability_target, '.0%'), format(utilisation_target, '.0%')))
+    if f.formula in TARGETS:
+        availability_target, utilisation_target = TARGETS[f.formula]
+        notes.append(_('Reference targets only: Availability {0}; Utilisation {1}. Targets do not scale results.').format(
+            format(availability_target, '.0%'), format(utilisation_target, '.0%')))
     notes.append(_('Decimal ratios are formatted as percentages; totals divide summed underlying hours. A dash means unavailable or a zero denominator. The separate configuration dialog does not affect either formula.'))
     message = '<br>'.join(escape(s) for s in warnings + notes)
     return get_columns(f.formula), rows, message, None, None, True
+
+
+@frappe.whitelist()
+def get_formula_targets():
+    """Expose existing reference targets to the report UI without changing results."""
+    check_access()
+    return {formula: dict(availability=values[0], utilisation=values[1])
+            for formula, values in TARGETS.items()}
 
 
 @frappe.whitelist()
@@ -248,7 +265,7 @@ def get_site_configurations(sites=None):
 
 
 # AU24 CALCULATION LOGIC - kept in the report controller.
-FORMULAS = ('Industry Formula', 'Isambane Formula')
+FORMULAS = ('Industry Formula', 'Isambane Formula', 'Use of Availability')
 TARGETS = {'Industry Formula': (0.85, 0.75), 'Isambane Formula': (0.85, 0.85)}
 DAY_TYPES = ('Weekday', 'Saturday', 'Sunday', 'Holiday')
 WINDOWS = ('safety_meeting', 'fatigue', 'tramming_out')
@@ -302,8 +319,8 @@ def ratio(numerator, denominator):
 
 
 def calculate_day(day, formula='Industry Formula', working=0, downtime=(), configuration=None):
-    """Raw Industry day; the configuration callback is deliberately never used."""
-    if formula != 'Industry Formula':
+    """Raw fixed-24h day; the configuration callback is deliberately never used."""
+    if formula not in ('Industry Formula', 'Use of Availability'):
         raise ValueError('Isambane must use the original Engine shift calculation')
     origin = datetime.combine(day, time(6))
     raw = {'Breakdown': 0.0, 'Planned Maintenance': 0.0}
@@ -321,6 +338,11 @@ def calculate_day(day, formula='Industry Formula', working=0, downtime=(), confi
              utilisation_available=24.0, working_hours=working)
     r['availability_percent'] = ratio(r['availability_available'], 24)
     r['utilisation_percent'] = ratio(working, 24)
+    if formula == 'Use of Availability':
+        r['utilisation_available'] = r['availability_available']
+        r['utilisation_percent'] = ratio(working, r['utilisation_available'])
+        r['use_of_availability'] = True
+        r['utilisation_inconsistent'] = working > r['utilisation_available']
     return r
 
 
@@ -331,4 +353,9 @@ def total_row(rows):
         result[field] = None if any(v is None for v in values) else sum(values)
     result['availability_percent'] = ratio(result['availability_available'], result['total_hours'])
     result['utilisation_percent'] = ratio(result['working_hours'], result['utilisation_available'])
+    if any(row.get('use_of_availability') for row in rows):
+        result['use_of_availability'] = True
+        result['utilisation_inconsistent'] = any(row.get('utilisation_inconsistent') for row in rows)
+        if result['utilisation_inconsistent']:
+            result['utilisation_warning'] = 'Contains daily Working Hours exceeding Available Hours; actual ratios are not capped.'
     return result
