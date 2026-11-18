@@ -1,64 +1,8 @@
 frappe.query_reports["Pre Use Deviation Dashboard"] = {
     onload: function(report) {
-        // PRE USE DASHBOARD HEADER WRAP START
-        report.page.wrapper.addClass(
-            "pre-use-deviation-header-wrap"
-        );
+        report.page.wrapper.addClass("pre-use-deviation-header-wrap");
 
-        if (!document.getElementById(
-            "pre-use-deviation-header-wrap-style"
-        )) {
-            const headerStyle = document.createElement("style");
-            headerStyle.id =
-                "pre-use-deviation-header-wrap-style";
 
-            headerStyle.textContent = `
-                .pre-use-deviation-header-wrap .dt-header {
-                    height: 64px !important;
-                    min-height: 64px !important;
-                }
-
-                .pre-use-deviation-header-wrap .dt-header .dt-row {
-                    height: 64px !important;
-                    min-height: 64px !important;
-                }
-
-                .pre-use-deviation-header-wrap .dt-header .dt-cell {
-                    height: 64px !important;
-                    min-height: 64px !important;
-                    box-sizing: border-box !important;
-                }
-
-                .pre-use-deviation-header-wrap .dt-header .dt-cell__content {
-                    white-space: normal !important;
-                    overflow-wrap: break-word !important;
-                    text-overflow: clip !important;
-                    line-height: 18px !important;
-                    height: auto !important;
-                    max-height: none !important;
-                    text-align: center !important;
-                    padding: 8px 4px !important;
-                    box-sizing: border-box !important;
-                }
-            `;
-
-            document.head.appendChild(headerStyle);
-        }
-        // PRE USE DASHBOARD HEADER WRAP END
-
-        if (!document.getElementById("pre-use-deviation-dashboard-style")) {
-            const style = document.createElement("style");
-            style.id = "pre-use-deviation-dashboard-style";
-            style.innerHTML = `
-                .query-report .dt-header .dt-cell__content,
-                .query-report .dt-cell__content--header,
-                .query-report .dt-header .dt-cell {
-                    font-weight: 700 !important;
-                    color: #000000 !important;
-                }
-            `;
-            document.head.appendChild(style);
-        }
 
 
 
@@ -104,18 +48,7 @@ frappe.query_reports["Pre Use Deviation Dashboard"] = {
         }
 
         const gray_chip = function(text, min_width = 70) {
-            return `<span style="
-                display:inline-block;
-                min-width:${min_width}px;
-                text-align:center;
-                padding:4px 10px;
-                border-radius:14px;
-                background:#f3f4f6;
-                color:#111827;
-                font-weight:700;
-                border:1px solid #d1d5db;
-                white-space:nowrap;
-            ">${frappe.utils.escape_html(text || "")}</span>`;
+            return `<span class="pud-chip pud-chip--neutral pud-chip--w-${min_width}">${frappe.utils.escape_html(text || "")}</span>`;
         };
 
         if (column.fieldname === "report_datetime_display") {
@@ -158,33 +91,11 @@ frappe.query_reports["Pre Use Deviation Dashboard"] = {
             const status = (data.action_status || "").trim();
 
             if (status === "Open") {
-                return `<span style="
-                    display:inline-block;
-                    min-width:72px;
-                    text-align:center;
-                    padding:4px 10px;
-                    border-radius:14px;
-                    background:#fff7ed;
-                    color:#c2410c;
-                    font-weight:700;
-                    border:1px solid #fdba74;
-                    white-space:nowrap;
-                ">Open</span>`;
+                return `<span class="pud-chip pud-chip--warning pud-chip--w-72">Open</span>`;
             }
 
             if (status === "Closed") {
-                return `<span style="
-                    display:inline-block;
-                    min-width:72px;
-                    text-align:center;
-                    padding:4px 10px;
-                    border-radius:14px;
-                    background:#ecfdf5;
-                    color:#15803d;
-                    font-weight:700;
-                    border:1px solid #86efac;
-                    white-space:nowrap;
-                ">Closed</span>`;
+                return `<span class="pud-chip pud-chip--success pud-chip--w-72">Closed</span>`;
             }
 
             return gray_chip(status, 72);
@@ -198,33 +109,11 @@ frappe.query_reports["Pre Use Deviation Dashboard"] = {
             }
 
             if (status.toLowerCase() === "working") {
-                return `<span style="
-                    display:inline-block;
-                    min-width:88px;
-                    text-align:center;
-                    padding:4px 10px;
-                    border-radius:14px;
-                    background:#eff6ff;
-                    color:#1d4ed8;
-                    font-weight:700;
-                    border:1px solid #93c5fd;
-                    white-space:nowrap;
-                ">Working</span>`;
+                return `<span class="pud-chip pud-chip--info pud-chip--w-88">Working</span>`;
             }
 
             if (status.toLowerCase() === "pending incident report") {
-                return `<span style="
-                    display:inline-block;
-                    min-width:182px;
-                    text-align:center;
-                    padding:4px 10px;
-                    border-radius:14px;
-                    background:#fff7ed;
-                    color:#c2410c;
-                    font-weight:700;
-                    border:1px solid #fdba74;
-                    white-space:nowrap;
-                ">Pending Incident report</span>`;
+                return `<span class="pud-chip pud-chip--warning pud-chip--w-182">Pending Incident report</span>`;
             }
 
             return gray_chip(status, 120);
@@ -233,32 +122,13 @@ frappe.query_reports["Pre Use Deviation Dashboard"] = {
         if (column.fieldname === "completion_percentage_badge") {
             const pct = Math.round(Number(data.completion_percentage || 0));
 
-            let bg = "#eff6ff";
-            let color = "#1d4ed8";
-            let border = "#93c5fd";
+            const variant = pct >= 100
+                ? "success"
+                : pct <= 0
+                    ? "warning"
+                    : "info";
 
-            if (pct >= 100) {
-                bg = "#ecfdf5";
-                color = "#15803d";
-                border = "#86efac";
-            } else if (pct <= 0) {
-                bg = "#fff7ed";
-                color = "#c2410c";
-                border = "#fdba74";
-            }
-
-            return `<span style="
-                display:inline-block;
-                min-width:64px;
-                text-align:center;
-                padding:4px 10px;
-                border-radius:14px;
-                background:${bg};
-                color:${color};
-                font-weight:700;
-                border:1px solid ${border};
-                white-space:nowrap;
-            ">${pct}%</span>`;
+            return `<span class="pud-chip pud-chip--${variant} pud-chip--w-64">${pct}%</span>`;
         }
 
         return default_formatter(value, row, column, data);
