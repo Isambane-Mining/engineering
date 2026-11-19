@@ -184,19 +184,19 @@ def percent(value):
 
 def availability_svg(data):
     """Three independently calculated monthly values per group; no averaging."""
-    width, height, left, right, top, bottom = 1200, 290, 65, 1180, 30, 220
-    groups = [g for g in data['groups'] if g['group'] in GROUPS]
+    width, height, left, right, top, bottom = 1400, 290, 65, 1380, 30, 220
+    groups = [g for g in data['groups'] if g['group'] in GROUPS and g['group'] != 'FELs']
     values = [v for g in groups for v in g['availability'] if v is not None]
     maximum = max(100, math.ceil(max(values, default=100)/20)*20)
     colors = ('#234f87', '#3293ff', '#9ad0ff')
-    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="Availability by equipment group for three individual months" style="width:100%;height:auto;min-width:850px">',
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="Availability by equipment group for three individual months" class="tmm-availability-svg">',
            '<rect width="100%" height="100%" fill="white"/>',
            '<g font-family="Arial, sans-serif" font-size="12" fill="#192c48">']
     for tick in range(6):
         y = bottom - (bottom-top)*tick/5
         svg.extend([f'<path d="M{left} {y}H{right}" stroke="#e5eaf0"/>',
                     f'<text x="{left-10}" y="{y+4}" text-anchor="end">{maximum*tick/5:g}</text>'])
-    step = (right-left)/len(groups)
+    step = (right-left)/max(len(groups), 1)
     for i, group in enumerate(groups):
         x = left + step*(i+.5)
         label = escape(group['group'], quote=True)
@@ -206,15 +206,17 @@ def availability_svg(data):
             bar_x = x + (j-1)*step*.25 - step*.11
             bar_h = 0 if value is None else (bottom-top)*max(value,0)/maximum
             text = percent(value)
+            display_text = 'N/A' if value is None else f'{value:.1f}%'
             month = escape(data['months'][j]['label'])
             svg.append(f'<rect data-month="{month}" x="{bar_x}" y="{bottom-bar_h}" width="{step*.22}" height="{bar_h}" fill="{colors[j]}"><title>{label} · {month}: {text}</title></rect>')
-            svg.append(f'<text x="{bar_x+step*.11}" y="{bottom-bar_h-8}" text-anchor="middle" font-size="10">{text}</text>')
+            svg.append(f'<text x="{bar_x+step*.11}" y="{bottom-bar_h-8}" text-anchor="middle" font-size="10">{display_text}</text>')
         svg.append(f'<text x="{x}" y="{bottom+22}" text-anchor="middle" font-size="11">{label}</text></g>')
     for j, month in enumerate(data['months']):
         x = 400 + j*180
         svg.append(f'<rect x="{x}" y="265" width="14" height="14" fill="{colors[j]}"/><text x="{x+22}" y="277">{escape(month["label"])}</text>')
     svg.append('<text transform="translate(16 130) rotate(-90)" text-anchor="middle">Availability (%)</text></g></svg>')
     return ''.join(svg)
+
 
 
 def availability_image(data):

@@ -2440,3 +2440,465 @@ body[data-route="query-report/Availability and Utilisation Engine"]
 .pre-use-deviation-header-wrap .pud-chip--w-182 {
     min-width: 182px;
 }
+
+/* Monthly TMM Assurance filter and label spacing */
+.monthly-tmm-assurance-page .tmm-month-navigation {
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+.monthly-tmm-assurance-page .tmm-month-navigation input[type="month"] {
+    flex:1;
+    min-width:180px;
+    height:34px;
+    padding:6px 10px;
+    font-size:14px;
+    font-weight:500;
+}
+.monthly-tmm-assurance-page .tmm-month-navigation > button {
+    flex:0 0 32px;
+    height:34px;
+    padding:0;
+    font-size:22px;
+    line-height:1;
+}
+.monthly-tmm-assurance .tmm-availability-svg {
+    display:block;
+    width:100%;
+    height:auto;
+    min-width:1400px;
+}
+
+/* Monthly TMM Assurance: breakdown assurance below the availability chart. */
+.monthly-tmm-assurance .tmm-assurance-heading {margin:18px 0 12px}
+.monthly-tmm-assurance .tmm-assurance-heading h2 {font-size:24px;font-weight:700;margin:0 0 2px;letter-spacing:-.4px}
+.monthly-tmm-assurance .tmm-assurance-heading p {margin:0;color:var(--text-muted)}
+.monthly-tmm-assurance .tmm-selection-row {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.monthly-tmm-assurance .tmm-tabs {display:flex;gap:8px}
+.monthly-tmm-assurance .tmm-tab {border:1px solid var(--border-color);border-radius:7px;background:var(--card-bg);color:var(--text-color);padding:6px 20px;font-weight:500;cursor:pointer}
+.monthly-tmm-assurance .tmm-tab.is-selected {background:#005be8;border-color:#005be8;color:white;box-shadow:0 2px 5px #005be820}
+.monthly-tmm-assurance .tmm-tab:focus-visible {outline:2px solid var(--primary);outline-offset:3px}
+.monthly-tmm-assurance .tmm-period {margin:0;color:var(--text-muted);font-size:13px}
+.monthly-tmm-assurance .tmm-summary-cards {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.monthly-tmm-assurance .tmm-summary-card {border:1px solid var(--border-color);border-radius:8px;padding:10px 18px;background:var(--card-bg)}
+.monthly-tmm-assurance .tmm-summary-card span,.monthly-tmm-assurance .tmm-summary-card strong,.monthly-tmm-assurance .tmm-summary-card small {display:block}
+.monthly-tmm-assurance .tmm-summary-card span {font-size:13px}
+.monthly-tmm-assurance .tmm-summary-card strong {font-size:25px;font-weight:700;line-height:1.3}
+.monthly-tmm-assurance .tmm-summary-card small {font-size:11px;color:var(--text-muted);margin-top:3px}
+.monthly-tmm-assurance .tmm-analysis-row {display:grid;grid-template-columns:minmax(0,1.9fr) minmax(280px,1fr);gap:16px;align-items:start}
+.monthly-tmm-assurance .tmm-analysis-row > .tmm-section {min-width:0;margin-bottom:0}
+.monthly-tmm-assurance .tmm-details .tmm-section {border-radius:8px}
+.monthly-tmm-assurance .tmm-details h3 {font-size:18px;font-weight:700}
+.monthly-tmm-assurance .tmm-chart-legend {display:flex;flex-wrap:wrap;justify-content:center;gap:10px 20px;font-size:11px;margin:10px 0 2px}
+.monthly-tmm-assurance .tmm-chart-legend span {display:inline-flex;align-items:center;gap:6px}
+.monthly-tmm-assurance .tmm-legend-bar {display:inline-block;background:#3293ff;border-radius:2px;width:22px;height:10px}
+.monthly-tmm-assurance .tmm-legend-line {display:inline-block;width:24px;border-top:2px solid #ef8700}
+.monthly-tmm-assurance .tmm-legend-reference {display:inline-block;width:24px;border-top:2px dashed #ef8700}
+.monthly-tmm-assurance .tmm-pareto-svg {display:block;width:auto;height:auto;min-width:100%;color:var(--text-color);font-size:12px;font-family:inherit}
+.monthly-tmm-assurance .tmm-pareto-svg text {fill:currentColor}
+.monthly-tmm-assurance .tmm-grid-line {stroke:var(--border-color);stroke-width:1}
+.monthly-tmm-assurance .tmm-pareto-bar {fill:#9ab7d8}
+.monthly-tmm-assurance .tmm-pareto-bar.is-priority {fill:#3293ff}
+.monthly-tmm-assurance .tmm-bar-value {font-weight:700}
+.monthly-tmm-assurance .tmm-reference-line {stroke:#ef8700;stroke-width:1.5;stroke-dasharray:6 5}
+.monthly-tmm-assurance .tmm-cumulative-line {fill:none;stroke:#ef8700;stroke-width:2}
+.monthly-tmm-assurance .tmm-pareto-point {fill:#ef8700}
+.monthly-tmm-assurance .tmm-axis-title {font-size:11px}
+.monthly-tmm-assurance .tmm-chart-note {font-size:11px;line-height:1.5;margin:6px 0 0}
+.monthly-tmm-assurance .tmm-focus-summary {font-size:23px;line-height:1.3;font-weight:700;margin:14px 0}
+.monthly-tmm-assurance .tmm-focus-summary strong {color:#005be8}
+.monthly-tmm-assurance .tmm-focus-list {list-style:none;margin:0;padding:0}
+.monthly-tmm-assurance .tmm-focus-list li {display:flex;align-items:baseline;gap:10px;border-top:1px solid var(--border-color);padding:7px 0;font-size:13px;font-weight:600}
+.monthly-tmm-assurance .tmm-focus-list li > span:nth-child(2) {overflow-wrap:anywhere;min-width:0}
+.monthly-tmm-assurance .tmm-focus-rank {background:var(--blue-50, #e6f1ff);color:var(--blue-700, #145b96);border-radius:5px;min-width:28px;text-align:center;padding:2px 4px}
+.monthly-tmm-assurance .tmm-focus-hours {margin-left:auto;white-space:nowrap;font-weight:400}
+.monthly-tmm-assurance .tmm-completeness {font-size:11px;margin:8px 0}
+.monthly-tmm-assurance .tmm-review {background:var(--yellow-50, #fff8e5);border:1px solid var(--yellow-300, #ffd071);border-radius:7px;margin:12px 0;color:var(--yellow-900, #754b00)}
+.monthly-tmm-assurance .tmm-review > summary {padding:8px 16px;font-size:13px}
+.monthly-tmm-assurance .tmm-review-body {padding:4px 16px 12px;color:var(--text-color);font-size:12px}
+.monthly-tmm-assurance .tmm-details table {font-size:13px;margin-bottom:0}
+.monthly-tmm-assurance .tmm-details th,.monthly-tmm-assurance .tmm-details td {border:0;border-bottom:1px solid var(--border-color);padding:6px 10px;text-align:left}
+.monthly-tmm-assurance .tmm-details thead th {background:var(--subtle-fg);white-space:nowrap}
+.monthly-tmm-assurance .tmm-details tbody th {background:transparent}
+.monthly-tmm-assurance .tmm-details tbody tr:last-child > td,.monthly-tmm-assurance .tmm-details tbody tr:last-child > th {border-bottom:0}
+.monthly-tmm-assurance .tmm-problems {min-width:650px}
+.monthly-tmm-assurance .tmm-problems > tbody > tr > th {width:23%;white-space:normal;overflow-wrap:anywhere}
+.monthly-tmm-assurance .tmm-problems > tbody > tr > td:nth-child(2) {width:51%}
+.monthly-tmm-assurance .tmm-top-three {float:right;white-space:nowrap;margin-left:10px;color:var(--primary)}
+.monthly-tmm-assurance .tmm-subcategory-detail {clear:both;padding-top:8px}
+.monthly-tmm-assurance .tmm-description-review {clear:both;font-size:11px;margin:5px 0}
+.monthly-tmm-assurance .tmm-description-review .tmm-breakdowns {font-size:11px}
+.monthly-tmm-assurance .tmm-actions-table {table-layout:fixed;min-width:800px}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(1) {width:21%}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(2) {width:35%}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(3) {width:16%}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(4) {width:15%}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(5) {width:13%}
+.monthly-tmm-assurance .tmm-actions-table td {vertical-align:top;padding:6px 5px}
+.monthly-tmm-assurance .tmm-actions-table textarea {height:34px;min-height:34px}
+.monthly-tmm-assurance .tmm-action-secondary {font-size:11px;margin:5px 0 0}
+.monthly-tmm-assurance .tmm-action-secondary summary {font-weight:400;overflow-wrap:anywhere}
+.monthly-tmm-assurance .tmm-action-secondary label {display:block;font-weight:400;margin:6px 0}
+.monthly-tmm-assurance .tmm-state {font-size:12px;min-height:0;margin-top:6px}
+.monthly-tmm-assurance .tmm-state:empty {display:none}
+.monthly-tmm-assurance .tmm-empty {padding:35px 10px;text-align:center}
+.monthly-tmm-assurance .tmm-records > summary {font-size:14px}
+.monthly-tmm-assurance .tmm-records > p {margin-top:12px;font-size:12px}
+@media(max-width:1100px) {
+    .monthly-tmm-assurance .tmm-analysis-row {grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:650px) {
+    .monthly-tmm-assurance .tmm-summary-cards {grid-template-columns:minmax(0,1fr);gap:8px}
+    .monthly-tmm-assurance .tmm-tab {padding:6px 14px}
+    .monthly-tmm-assurance .tmm-assurance-heading h2 {font-size:22px}
+    .monthly-tmm-assurance .tmm-focus-summary {font-size:20px}
+    .monthly-tmm-assurance .tmm-selection-row {align-items:flex-start}
+    .monthly-tmm-assurance .tmm-period {font-size:12px}
+}
+
+/* Availability and Utilisation Engine (24) - extracted report styling */
+body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-heading, body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-actions { display: none; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-heading { display: block; margin: 0; padding: 24px 18px 26px;
+                    font-size: 25px; font-weight: 700; color: var(--text-color); background: var(--fg-color);
+                    border: 1px solid var(--border-color); border-bottom: 0; border-radius: 12px 12px 0 0; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr));
+                    gap: 12px; align-items: start; margin: 0 0 18px; padding: 16px 18px;
+                    border: 1px solid var(--border-color); border-top: 0; border-radius: 0 0 12px 12px; background: var(--fg-color); }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form > .frappe-control { width: auto !important; max-width: none !important; min-width: 0; padding: 0; margin: 0 !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-filter-label { display: block; margin: 0 0 8px; font-size: 13px; font-weight: 650; color: var(--text-color); }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form .form-control { height: 38px; min-height: 38px; font-size: 13px; border-radius: 7px; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form .multiselect-list { width: 100%; height: 38px; min-height: 38px; padding: 0; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form .select-icon { top: auto; bottom: 11px; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-run-filter { margin-top: 26px; height: 40px; font-size: 14px; background: #0866ff; border-color: #0866ff; color: white; border-radius: 7px; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-formula-filter .form-control { border: 1px solid #8ab4f8; background: #f0f6ff; color: #173e78; font-weight: 650; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-formula-filter .au24-filter-label { color: #173e78; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-target-card {
+                    flex: 0 0 230px;
+                    min-width: 220px;
+                    max-width: 230px;
+                    margin-left: auto;
+                    padding: 7px 8px;
+                    border: 1px solid var(--border-color);
+                    border-radius: 10px;
+                    background: var(--fg-color);
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 5px;
+                    align-self: stretch;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-target-title {
+                    grid-column: 1 / -1;
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: #DC2626;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-target-metric {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 3px;
+                    min-width: 0;
+                    padding: 6px 4px;
+                    border-radius: 8px;
+                    text-align: center;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-target-metric span {
+                    font-size: 11px;
+                    font-weight: 650;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-target-metric strong {
+                    font-size: 18px;
+                    line-height: 1.2;
+                    font-weight: 800;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-target-availability-box {
+                    background: #e1f9e4;
+                    color: #174f2b;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-target-utilisation-box {
+                    background: #eee2fb;
+                    color: #61328c;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .page-head .primary-action { display: none !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin: 0 0 22px; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-actions .btn { white-space: normal; padding: 10px 14px; border: 1px solid var(--border-color); font-weight: 600; background: var(--fg-color); }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .datatable { font-size: 13px; border-radius: 8px; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-header { position: sticky; top: 0; z-index: 3; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-scrollable .dt-row:nth-child(even) .dt-cell { background: var(--subtle-fg); }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-header .dt-cell { height: 64px !important; background: var(--subtle-fg); }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-header, body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-header .dt-row { height: 64px !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-header { height: 104px !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-header .dt-row-filter, body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-filter .dt-cell { height: 40px !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-filter .dt-cell__content { min-height: 36px !important; height: 36px !important; padding: 3px 5px; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-filter { width: 100%; min-width: 0; height: 30px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 12px; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-header .dt-cell__content { height: auto !important; min-height: 60px; white-space: normal; line-height: 1.4;
+                    display: flex; align-items: center; font-size: 12px; font-weight: 700; text-overflow: clip; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-industry-columns .dt-header { height: 124px !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-industry-columns .dt-row-header, body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-industry-columns .dt-row-header .dt-cell { height: 84px !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-industry-columns .dt-row-header .dt-cell__content { min-height: 80px; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row:has(.au24-shift-day) .dt-cell { background: #eaf4ff !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row:has(.au24-shift-night) .dt-cell { background: #BFE5DC !important; }
+                /* Result section grouping */
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-header {
+                    position: relative;
+                    padding-top: 18px;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-header .dt-cell__content {
+                    min-height: 72px;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-label::before {
+                    content: attr(data-group-label);
+                    position: absolute;
+                    top: 4px;
+                    left: 6px;
+                    right: 6px;
+                    text-align: center;
+                    font-size: 10px;
+                    line-height: 1.2;
+                    font-weight: 800;
+                    letter-spacing: .05em;
+                    text-transform: uppercase;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-col.au24-group-availability {
+                    background: rgba(34, 197, 94, 0.035);
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-col.au24-group-use {
+                    background: rgba(14, 165, 233, 0.04);
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-col.au24-group-utilisation {
+                    background: rgba(168, 85, 247, 0.04);
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-header.au24-group-availability {
+                    background: #EFFAF1 !important;
+                    border-top: 3px solid #22C55E !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-header.au24-group-use {
+                    background: #EFF8FC !important;
+                    border-top: 3px solid #0EA5E9 !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-header.au24-group-utilisation {
+                    background: #F6F0FC !important;
+                    border-top: 3px solid #A855F7 !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-label.au24-group-availability::before {
+                    color: #15803D;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-label.au24-group-use::before {
+                    color: #0369A1;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-header .dt-cell.au24-group-label.au24-group-utilisation::before {
+                    color: #7E22CE;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-start.au24-group-availability {
+                    border-left: 3px solid #22C55E !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-end.au24-group-availability {
+                    border-right: 3px solid #22C55E !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-start.au24-group-use {
+                    border-left: 3px solid #0EA5E9 !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-end.au24-group-use {
+                    border-right: 3px solid #0EA5E9 !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-start.au24-group-utilisation {
+                    border-left: 3px solid #A855F7 !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell.au24-group-end.au24-group-utilisation {
+                    border-right: 3px solid #A855F7 !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-filter .dt-cell.au24-group-availability {
+                    background: #F7FCF8 !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-filter .dt-cell.au24-group-use {
+                    background: #F7FBFE !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-row-filter .dt-cell.au24-group-utilisation {
+                    background: #FBF8FE !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-header .dt-cell__content {
+                    justify-content: center !important;
+                    text-align: center !important;
+                }
+                /* Force centre alignment over Frappe numeric alignment. */
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .datatable .dt-scrollable .dt-cell:not(.dt-cell--col-0) .dt-cell__content,
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .datatable .dt-scrollable .dt-cell--align-right .dt-cell__content {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    text-align: center !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .datatable .dt-scrollable .dt-cell:not(.dt-cell--col-0) .dt-cell__content > *,
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .datatable .dt-scrollable .dt-cell--align-right .dt-cell__content > * {
+                    text-align: center !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .datatable .dt-scrollable .au24-percent,
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .datatable .dt-scrollable .au24-calculated-hours {
+                    width: 100%;
+                    text-align: center !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell--col-0 .dt-cell__content {
+                    text-align: left !important;
+                    justify-content: flex-start !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-percent { display: block; padding: 2px 5px; border-radius: 5px; font-weight: 700; text-align: right; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-track { display: block; height: 3px; margin-top: 3px; background: rgba(0,0,0,.06); border-radius: 3px; overflow: hidden; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-fill { display: block; height: 100%; background: currentColor; opacity: .4; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-availability { background: #e1f9e4; color: #174f2b; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-utilisation { background: #eee2fb; color: #61328c; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-use { background: #e4f2f6; color: #23586a; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-calculated-hours { display: block; padding: 4px 5px; border-radius: 5px; font-weight: 700; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-tree-summary { font-weight: 650; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell--col-0 .dt-cell__content { white-space: nowrap; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-excluded { text-decoration: underline dotted; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-inconsistent { background: #fff0ca; color: #805300; box-shadow: inset 0 0 0 1px #c18413; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .dt-cell:has(.au24-total-cell) { background: #edf2fa !important; border-top: 2px solid #8196b3; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-total-cell { display: block; font-weight: 750; }
+                .au24-formula-help { color: var(--text-color); }
+                .au24-formula-help h3 { font-size: 20px; margin: 0 0 16px; }
+                .au24-isambane-formula { display: grid; gap: 10px; }
+                .au24-isambane-formula h3 { font-size: 22px; font-weight: 750; margin: 0 0 8px; }
+                .au24-isambane-card, .au24-isambane-example, .au24-isambane-targets {
+                    padding: 12px 14px; border: 1px solid; border-radius: 10px;
+                    border-left-width: 4px;
+                }
+                .au24-isambane-card h4, .au24-isambane-example h4,
+                .au24-isambane-targets h4 { font-size: 15px; font-weight: 750; margin: 0 0 8px; }
+                .au24-isambane-expression { background: rgba(255,255,255,.85);
+                    border-radius: 7px; padding: 9px 11px; font-size: 14px;
+                    line-height: 1.5; overflow-wrap: anywhere; }
+                .au24-isambane-card.availability { background: #edf9ef;
+                    border-color: #b9e8c2; border-left-color: #16a34a; }
+                .au24-isambane-card.utilisation { background: #f5edff;
+                    border-color: #ddc5fb; border-left-color: #7c3aed; }
+                .au24-isambane-example, .au24-isambane-targets {
+                    background: var(--subtle-fg); border-color: var(--border-color);
+                    border-left-color: #87909d; display: flex; flex-direction: column; gap: 4px;
+                }
+                .au24-isambane-note { font-size: 12px; color: var(--text-muted);
+                    line-height: 1.5; margin: 0; }
+                .au24-formula-section { padding: 12px 14px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 7px; }
+                .au24-formula-section h5 { font-size: 13px; font-weight: 700; margin: 0 0 7px; }
+                .au24-formula-section p { white-space: pre-line; line-height: 1.6; margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+                .au24-formula-availability { border-left: 3px solid #319754; }
+                .au24-formula-utilisation { border-left: 3px solid #8551b5; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .report-summary, body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .chart-wrapper { display: none !important; }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .form-message { font-size: 12px; }
+                /* Match the original A&U Engine's compact native report layout. */
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form {
+                    display: flex !important;
+                    flex-flow: row wrap;
+                    align-items: flex-end;
+                    gap: 8px 10px;
+                    margin: 0 0 10px;
+                    padding: 0;
+                    border: 0;
+                    border-radius: 0;
+                    background: transparent;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form > .frappe-control {
+                    flex: 1 1 175px;
+                    width: auto !important;
+                    max-width: 220px !important;
+                    min-width: 155px;
+                    padding: 0;
+                    margin: 0 !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form .form-control {
+                    height: 32px;
+                    min-height: 32px;
+                    font-size: 12px;
+                    border-radius: 4px;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form .multiselect-list {
+                    width: 100%;
+                    height: 32px;
+                    min-height: 32px;
+                    padding: 0;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form .select-icon {
+                    top: auto;
+                    bottom: 8px;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-filter-label {
+                    display: none !important;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-targets {
+                    font-size: 10px;
+                    line-height: 1.2;
+                    margin-top: 2px;
+                    white-space: nowrap;
+                }
+                body[data-route="query-report/Availability and Utilisation Engine (24)"] .page-head .primary-action {
+                    display: inline-flex !important;
+                }
+                @media (max-width: 1599px) {
+                    body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+                }
+                @media (max-width: 767px) {
+                    body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form { gap: 8px; }
+                    body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form > .frappe-control {
+                        flex: 1 1 145px;
+                        max-width: none !important;
+                    }
+                }
+                @media (max-width: 767px) {
+                    body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .au24-target-card {
+                        flex: 1 1 100%;
+                        max-width: none;
+                        margin-left: 0;
+                    }
+                }
+                @media (max-width: 479px) {
+                    body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-report .page-form > .frappe-control {
+                        flex: 1 1 100%;
+                    }
+                }
+
+/* AU24 formula hover tooltip */
+body[data-route="query-report/Availability and Utilisation Engine (24)"] > .au24-formula-tooltip {
+    position: fixed;
+    z-index: 10000;
+    display: none;
+    width: max-content;
+    min-width: 220px;
+    max-width: min(330px, calc(100vw - 24px));
+    background: #fff;
+    color: #1f2937;
+    border: 1px solid #d8dee8;
+    border-radius: 9px;
+    box-shadow: 0 8px 25px rgba(15,23,42,.20);
+    overflow: hidden;
+    pointer-events: none;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+body[data-route="query-report/Availability and Utilisation Engine (24)"] > .au24-formula-tooltip .au24-tooltip-title {
+    padding: 9px 12px;
+    color: white;
+    font-weight: 750;
+}
+
+body[data-route="query-report/Availability and Utilisation Engine (24)"] > .au24-formula-tooltip .au24-tooltip-formula {
+    padding: 11px 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+body[data-route="query-report/Availability and Utilisation Engine (24)"] > .au24-formula-tooltip.au24-formula-tooltip-availability .au24-tooltip-title {
+    background: #15803d;
+}
+
+body[data-route="query-report/Availability and Utilisation Engine (24)"] > .au24-formula-tooltip.au24-formula-tooltip-use .au24-tooltip-title {
+    background: #0369a1;
+}
+
+body[data-route="query-report/Availability and Utilisation Engine (24)"] > .au24-formula-tooltip.au24-formula-tooltip-utilisation .au24-tooltip-title {
+    background: #7e22ce;
+}
+
+body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-formula-hover {
+    cursor: help;
+}
