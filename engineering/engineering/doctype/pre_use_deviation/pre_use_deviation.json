@@ -15,7 +15,9 @@
   "machine_type",
   "machine_model",
   "pre_use_no",
+  "recurring_deviation",
   "operating_status",
+  "action",
   "section_break_deviation",
   "deviation_details",
   "pre_use_attachment",
@@ -26,6 +28,7 @@
   "resolution_summary",
   "job_card_attachment",
   "action_date_and_time",
+  "date_service_report_received",
   "job_card_number",
   "section_break_actioned_by",
   "actioned_by_coy_number",
@@ -193,6 +196,21 @@
   {
    "fieldname": "section_break_psiv",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "recurring_deviation",
+   "fieldtype": "Data",
+   "label": "Recurring Deviation"
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Data",
+   "label": "Action"
+  },
+  {
+   "fieldname": "date_service_report_received",
+   "fieldtype": "Date",
+   "label": "Date Service Report Received"
   }
  ],
  "grid_page_length": 50,
