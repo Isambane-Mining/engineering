@@ -227,6 +227,11 @@
                 <label>Pre Use No</label>
                 <input type="number" name="pre_use_no" value="{{ form_values.pre_use_no or 0 }}">
             </div>
+            <div class="field">
+                <label>Recurring Deviation</label>
+                <input type="text" name="recurring_deviation"
+                    value="{{ form_values.recurring_deviation or '' }}">
+            </div>
 
             <div class="field">
                 <label>Machine Type</label>
@@ -284,6 +289,11 @@
 
             <div class="grid">
                 <div class="field full">
+                    <label>Action</label>
+                    <input type="text" name="action"
+                        value="{{ form_values.action or '' }}">
+                </div>
+                <div class="field full">
                     <label>Resolution Summary</label>
                     <textarea name="resolution_summary">{{ form_values.resolution_summary or '' }}</textarea>
                 </div>
@@ -292,6 +302,11 @@
                     <label>Action Date and Time</label>
                     <input type="text" name="action_date_and_time" value="{{ form_values.action_date_and_time or '' }}">
                     <div class="hint">Format: DD-MM-YYYY HH:MM:SS</div>
+                </div>
+                <div class="field">
+                    <label>Date Service Report Received</label>
+                    <input type="date" name="date_service_report_received"
+                        value="{{ form_values.date_service_report_received or '' }}">
                 </div>
 
                 <div class="field">
