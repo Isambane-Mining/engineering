@@ -2440,3 +2440,118 @@ body[data-route="query-report/Availability and Utilisation Engine"]
 .pre-use-deviation-header-wrap .pud-chip--w-182 {
     min-width: 182px;
 }
+
+/* Monthly TMM Assurance filter and label spacing */
+.monthly-tmm-assurance-page .tmm-month-navigation {
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+.monthly-tmm-assurance-page .tmm-month-navigation input[type="month"] {
+    flex:1;
+    min-width:180px;
+    height:34px;
+    padding:6px 10px;
+    font-size:14px;
+    font-weight:500;
+}
+.monthly-tmm-assurance-page .tmm-month-navigation > button {
+    flex:0 0 32px;
+    height:34px;
+    padding:0;
+    font-size:22px;
+    line-height:1;
+}
+.monthly-tmm-assurance .tmm-availability-svg {
+    display:block;
+    width:100%;
+    height:auto;
+    min-width:1400px;
+}
+
+/* Monthly TMM Assurance: breakdown assurance below the availability chart. */
+.monthly-tmm-assurance .tmm-assurance-heading {margin:18px 0 12px}
+.monthly-tmm-assurance .tmm-assurance-heading h2 {font-size:24px;font-weight:700;margin:0 0 2px;letter-spacing:-.4px}
+.monthly-tmm-assurance .tmm-assurance-heading p {margin:0;color:var(--text-muted)}
+.monthly-tmm-assurance .tmm-selection-row {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.monthly-tmm-assurance .tmm-tabs {display:flex;gap:8px}
+.monthly-tmm-assurance .tmm-tab {border:1px solid var(--border-color);border-radius:7px;background:var(--card-bg);color:var(--text-color);padding:6px 20px;font-weight:500;cursor:pointer}
+.monthly-tmm-assurance .tmm-tab.is-selected {background:#005be8;border-color:#005be8;color:white;box-shadow:0 2px 5px #005be820}
+.monthly-tmm-assurance .tmm-tab:focus-visible {outline:2px solid var(--primary);outline-offset:3px}
+.monthly-tmm-assurance .tmm-period {margin:0;color:var(--text-muted);font-size:13px}
+.monthly-tmm-assurance .tmm-summary-cards {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.monthly-tmm-assurance .tmm-summary-card {border:1px solid var(--border-color);border-radius:8px;padding:10px 18px;background:var(--card-bg)}
+.monthly-tmm-assurance .tmm-summary-card span,.monthly-tmm-assurance .tmm-summary-card strong,.monthly-tmm-assurance .tmm-summary-card small {display:block}
+.monthly-tmm-assurance .tmm-summary-card span {font-size:13px}
+.monthly-tmm-assurance .tmm-summary-card strong {font-size:25px;font-weight:700;line-height:1.3}
+.monthly-tmm-assurance .tmm-summary-card small {font-size:11px;color:var(--text-muted);margin-top:3px}
+.monthly-tmm-assurance .tmm-analysis-row {display:grid;grid-template-columns:minmax(0,1.9fr) minmax(280px,1fr);gap:16px;align-items:start}
+.monthly-tmm-assurance .tmm-analysis-row > .tmm-section {min-width:0;margin-bottom:0}
+.monthly-tmm-assurance .tmm-details .tmm-section {border-radius:8px}
+.monthly-tmm-assurance .tmm-details h3 {font-size:18px;font-weight:700}
+.monthly-tmm-assurance .tmm-chart-legend {display:flex;flex-wrap:wrap;justify-content:center;gap:10px 20px;font-size:11px;margin:10px 0 2px}
+.monthly-tmm-assurance .tmm-chart-legend span {display:inline-flex;align-items:center;gap:6px}
+.monthly-tmm-assurance .tmm-legend-bar {display:inline-block;background:#3293ff;border-radius:2px;width:22px;height:10px}
+.monthly-tmm-assurance .tmm-legend-line {display:inline-block;width:24px;border-top:2px solid #ef8700}
+.monthly-tmm-assurance .tmm-legend-reference {display:inline-block;width:24px;border-top:2px dashed #ef8700}
+.monthly-tmm-assurance .tmm-pareto-svg {display:block;width:auto;height:auto;min-width:100%;color:var(--text-color);font-size:12px;font-family:inherit}
+.monthly-tmm-assurance .tmm-pareto-svg text {fill:currentColor}
+.monthly-tmm-assurance .tmm-grid-line {stroke:var(--border-color);stroke-width:1}
+.monthly-tmm-assurance .tmm-pareto-bar {fill:#9ab7d8}
+.monthly-tmm-assurance .tmm-pareto-bar.is-priority {fill:#3293ff}
+.monthly-tmm-assurance .tmm-bar-value {font-weight:700}
+.monthly-tmm-assurance .tmm-reference-line {stroke:#ef8700;stroke-width:1.5;stroke-dasharray:6 5}
+.monthly-tmm-assurance .tmm-cumulative-line {fill:none;stroke:#ef8700;stroke-width:2}
+.monthly-tmm-assurance .tmm-pareto-point {fill:#ef8700}
+.monthly-tmm-assurance .tmm-axis-title {font-size:11px}
+.monthly-tmm-assurance .tmm-chart-note {font-size:11px;line-height:1.5;margin:6px 0 0}
+.monthly-tmm-assurance .tmm-focus-summary {font-size:23px;line-height:1.3;font-weight:700;margin:14px 0}
+.monthly-tmm-assurance .tmm-focus-summary strong {color:#005be8}
+.monthly-tmm-assurance .tmm-focus-list {list-style:none;margin:0;padding:0}
+.monthly-tmm-assurance .tmm-focus-list li {display:flex;align-items:baseline;gap:10px;border-top:1px solid var(--border-color);padding:7px 0;font-size:13px;font-weight:600}
+.monthly-tmm-assurance .tmm-focus-list li > span:nth-child(2) {overflow-wrap:anywhere;min-width:0}
+.monthly-tmm-assurance .tmm-focus-rank {background:var(--blue-50, #e6f1ff);color:var(--blue-700, #145b96);border-radius:5px;min-width:28px;text-align:center;padding:2px 4px}
+.monthly-tmm-assurance .tmm-focus-hours {margin-left:auto;white-space:nowrap;font-weight:400}
+.monthly-tmm-assurance .tmm-completeness {font-size:11px;margin:8px 0}
+.monthly-tmm-assurance .tmm-review {background:var(--yellow-50, #fff8e5);border:1px solid var(--yellow-300, #ffd071);border-radius:7px;margin:12px 0;color:var(--yellow-900, #754b00)}
+.monthly-tmm-assurance .tmm-review > summary {padding:8px 16px;font-size:13px}
+.monthly-tmm-assurance .tmm-review-body {padding:4px 16px 12px;color:var(--text-color);font-size:12px}
+.monthly-tmm-assurance .tmm-details table {font-size:13px;margin-bottom:0}
+.monthly-tmm-assurance .tmm-details th,.monthly-tmm-assurance .tmm-details td {border:0;border-bottom:1px solid var(--border-color);padding:6px 10px;text-align:left}
+.monthly-tmm-assurance .tmm-details thead th {background:var(--subtle-fg);white-space:nowrap}
+.monthly-tmm-assurance .tmm-details tbody th {background:transparent}
+.monthly-tmm-assurance .tmm-details tbody tr:last-child > td,.monthly-tmm-assurance .tmm-details tbody tr:last-child > th {border-bottom:0}
+.monthly-tmm-assurance .tmm-problems {min-width:650px}
+.monthly-tmm-assurance .tmm-problems > tbody > tr > th {width:23%;white-space:normal;overflow-wrap:anywhere}
+.monthly-tmm-assurance .tmm-problems > tbody > tr > td:nth-child(2) {width:51%}
+.monthly-tmm-assurance .tmm-top-three {float:right;white-space:nowrap;margin-left:10px;color:var(--primary)}
+.monthly-tmm-assurance .tmm-subcategory-detail {clear:both;padding-top:8px}
+.monthly-tmm-assurance .tmm-description-review {clear:both;font-size:11px;margin:5px 0}
+.monthly-tmm-assurance .tmm-description-review .tmm-breakdowns {font-size:11px}
+.monthly-tmm-assurance .tmm-actions-table {table-layout:fixed;min-width:800px}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(1) {width:21%}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(2) {width:35%}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(3) {width:16%}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(4) {width:15%}
+.monthly-tmm-assurance .tmm-actions-table th:nth-child(5) {width:13%}
+.monthly-tmm-assurance .tmm-actions-table td {vertical-align:top;padding:6px 5px}
+.monthly-tmm-assurance .tmm-actions-table textarea {height:34px;min-height:34px}
+.monthly-tmm-assurance .tmm-action-secondary {font-size:11px;margin:5px 0 0}
+.monthly-tmm-assurance .tmm-action-secondary summary {font-weight:400;overflow-wrap:anywhere}
+.monthly-tmm-assurance .tmm-action-secondary label {display:block;font-weight:400;margin:6px 0}
+.monthly-tmm-assurance .tmm-state {font-size:12px;min-height:0;margin-top:6px}
+.monthly-tmm-assurance .tmm-state:empty {display:none}
+.monthly-tmm-assurance .tmm-empty {padding:35px 10px;text-align:center}
+.monthly-tmm-assurance .tmm-records > summary {font-size:14px}
+.monthly-tmm-assurance .tmm-records > p {margin-top:12px;font-size:12px}
+@media(max-width:1100px) {
+    .monthly-tmm-assurance .tmm-analysis-row {grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:650px) {
+    .monthly-tmm-assurance .tmm-summary-cards {grid-template-columns:minmax(0,1fr);gap:8px}
+    .monthly-tmm-assurance .tmm-tab {padding:6px 14px}
+    .monthly-tmm-assurance .tmm-assurance-heading h2 {font-size:22px}
+    .monthly-tmm-assurance .tmm-focus-summary {font-size:20px}
+    .monthly-tmm-assurance .tmm-selection-row {align-items:flex-start}
+    .monthly-tmm-assurance .tmm-period {font-size:12px}
+}
