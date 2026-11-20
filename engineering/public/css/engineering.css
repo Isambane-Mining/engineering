@@ -2902,3 +2902,211 @@ body[data-route="query-report/Availability and Utilisation Engine (24)"] > .au24
 body[data-route="query-report/Availability and Utilisation Engine (24)"] .au24-formula-hover {
     cursor: help;
 }
+
+/* Monthly TMM Assurance - priority problem cards */
+
+/* Monthly TMM Assurance - priority problem cards */
+.monthly-tmm-assurance .tmm-problem-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+}
+.monthly-tmm-assurance .tmm-problem-card {
+    display: grid;
+    grid-template-columns: minmax(190px, 1.05fr) minmax(220px, 1.45fr) auto minmax(170px, .75fr);
+    gap: 16px;
+    align-items: center;
+    min-width: 0;
+    padding: 15px 17px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 11px;
+    box-shadow: 0 2px 7px rgba(0,0,0,.045);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.monthly-tmm-assurance .tmm-problem-card:hover {
+    border-color: var(--dark-border-color, #c5ccd5);
+    box-shadow: 0 4px 12px rgba(0,0,0,.07);
+}
+.monthly-tmm-assurance .tmm-problem-classification {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+}
+.monthly-tmm-assurance .tmm-problem-icon {
+    display: flex;
+    flex: 0 0 50px;
+    width: 50px;
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+.monthly-tmm-assurance .tmm-problem-icon svg {
+    width: 27px;
+    height: 27px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.monthly-tmm-assurance .tmm-problem-icon--mechanical {
+    color: #2863b8;
+    background: #e7f0ff;
+}
+.monthly-tmm-assurance .tmm-problem-icon--hydraulic {
+    color: #27775b;
+    background: #e3f4eb;
+}
+.monthly-tmm-assurance .tmm-problem-icon--braking {
+    color: #6843a5;
+    background: #eee5ff;
+}
+.monthly-tmm-assurance .tmm-problem-classification-text {
+    min-width: 0;
+}
+.monthly-tmm-assurance .tmm-problem-label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-muted, #6b7280);
+    font-size: 11px;
+    font-weight: 600;
+}
+.monthly-tmm-assurance .tmm-problem-classification-text strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+.monthly-tmm-assurance .tmm-problem-main {
+    min-width: 0;
+    padding-left: 17px;
+    border-left: 1px solid var(--border-color);
+}
+.monthly-tmm-assurance .tmm-problem-name {
+    display: block;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+.monthly-tmm-assurance .tmm-problem-action {
+    min-width: 0;
+    text-align: center;
+}
+.monthly-tmm-assurance .tmm-top-three {
+    padding: 6px 12px;
+    color: var(--primary, #2863b8);
+    background: var(--card-bg);
+    border: 1px solid var(--primary, #2863b8);
+    border-radius: 8px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.monthly-tmm-assurance .tmm-top-three:hover {
+    color: var(--primary, #2863b8);
+    background: var(--subtle-fg, #f0f5ff);
+}
+.monthly-tmm-assurance .tmm-subcategory-detail {
+    position: relative;
+    z-index: 2;
+    min-width: 240px;
+    margin-top: 8px;
+    padding: 9px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    text-align: left;
+}
+.monthly-tmm-assurance .tmm-subcategory-detail[hidden] {
+    display: none;
+}
+.monthly-tmm-assurance .tmm-subcategory-detail table {
+    width: 100%;
+    font-size: 11px;
+}
+.monthly-tmm-assurance .tmm-subcategory-detail th,
+.monthly-tmm-assurance .tmm-subcategory-detail td {
+    padding: 5px;
+    border-bottom: 1px solid var(--border-color);
+}
+.monthly-tmm-assurance .tmm-problem-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(65px, 1fr));
+    min-width: 0;
+    border-left: 1px solid var(--border-color);
+}
+.monthly-tmm-assurance .tmm-problem-stat {
+    min-width: 0;
+    padding-left: 14px;
+}
+.monthly-tmm-assurance .tmm-problem-stat + .tmm-problem-stat {
+    border-left: 1px solid var(--border-color);
+}
+.monthly-tmm-assurance .tmm-problem-stat span {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-muted, #6b7280);
+    font-size: 11px;
+}
+.monthly-tmm-assurance .tmm-problem-stat strong {
+    display: block;
+    font-size: 17px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+.monthly-tmm-assurance .tmm-problem-card .tmm-description-review {
+    margin-top: 7px;
+}
+.monthly-tmm-assurance .tmm-problem-card .tmm-description-review summary {
+    font-size: 11px;
+    cursor: pointer;
+}
+.monthly-tmm-assurance .tmm-problem-card .tmm-description-review .table-responsive {
+    max-width: 100%;
+}
+@media(max-width: 1150px) {
+    .monthly-tmm-assurance .tmm-problem-card {
+        grid-template-columns: minmax(180px, 1fr) minmax(200px, 1.3fr) auto;
+    }
+    .monthly-tmm-assurance .tmm-problem-stats {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid var(--border-color);
+        padding-top: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .monthly-tmm-assurance .tmm-problem-stat {
+        padding-left: 0;
+    }
+    .monthly-tmm-assurance .tmm-problem-stat + .tmm-problem-stat {
+        padding-left: 14px;
+    }
+}
+@media(max-width: 650px) {
+    .monthly-tmm-assurance .tmm-problem-card {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        padding: 13px;
+    }
+    .monthly-tmm-assurance .tmm-problem-classification,
+    .monthly-tmm-assurance .tmm-problem-main {
+        grid-column: 1 / -1;
+    }
+    .monthly-tmm-assurance .tmm-problem-main {
+        padding: 10px 0 0;
+        border-left: 0;
+        border-top: 1px solid var(--border-color);
+    }
+    .monthly-tmm-assurance .tmm-problem-action {
+        text-align: left;
+    }
+    .monthly-tmm-assurance .tmm-problem-stats {
+        grid-column: 1 / -1;
+    }
+}
