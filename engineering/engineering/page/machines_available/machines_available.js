@@ -1,4 +1,4 @@
-/* Standalone view of the source Machine Available vs Utilised tab.
+/* Standalone view of the source Machine Utilised vs Available tab.
  * Calculation and Excel APIs remain owned and permission-checked by is_production.
  */
 (() => {
@@ -63,7 +63,7 @@
           ? metric(cell.utilised,'hm-used',0) : '—';
 
         const value = available === '—' && utilised === '—'
-          ? '—' : `${available} / ${utilised}`;
+          ? '—' : `${utilised} / ${available}`;
 
         const colour = machineColour(
           cell.available, cell.utilised, verified
@@ -72,7 +72,7 @@
         return `<td class="hpa-cell hm-cell hm-${colour} ${
           index === 12 ? 'hpa-night-start' : ''
         } ${highlighted ? 'hm-unavailable-match' : ''}" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false" data-machine-row="${rowIndex}" data-machine-hour="${index}" title="${verified
-          ? 'Available / Utilised ADTs'
+          ? 'Utilised / Available ADTs'
           : 'Unknown, missing or pending'}">${value}</td>`;
       }).join('');
 
@@ -85,9 +85,9 @@
     }).join('');
 
     return `<div class="hpa-scroll" tabindex="0" role="region"
-      aria-label="Machine available versus utilised hourly table; scroll horizontally and vertically">
+      aria-label="Machine utilised versus available hourly table; scroll horizontally and vertically">
       <table class="hpa-table hm-matrix">
-        <caption>Available / Utilised ADTs · ${escape(data.site)}</caption>
+        <caption>Utilised / Available ADTs · ${escape(data.site)}</caption>
         <thead>
           <tr>
             <th rowspan="2" class="hpa-sticky-date">Date</th>
@@ -113,11 +113,11 @@
     </div>
     <section class="hpa-chart hm-chart" aria-label="Machine count legend">
       <div class="hm-legend">
-        <strong>Machine Available vs Utilised</strong>
-        <div><i class="hm-available-key"></i>
-          <span>Available ADTs</span></div>
+        <strong>Machine Utilised vs Available</strong>
         <div><i class="hm-utilised-key"></i>
           <span>Utilised ADTs</span></div>
+        <div><i class="hm-available-key"></i>
+          <span>Available ADTs</span></div>
         <div><i class="hm-green-key"></i>
           <span>Green · 80–100% utilisation</span></div>
         <div><i class="hm-yellow-key"></i>
@@ -179,7 +179,7 @@
   function renderCalendar(data, month, selectedDate, unavailable) {
     const model = monthModel(data, month), k = model.kpis;
     return `<section class="hm-calendar-view"><div class="hm-section-heading"><h2>Monthly Overview</h2><span>${escape(model.title)}</span></div>
-      <div class="hm-kpis">${[['blue','Avg Available',k.available],['purple','Avg Utilised',k.utilised],
+      <div class="hm-kpis">${[['purple','Avg Utilised',k.utilised],['blue','Avg Available',k.available],
         ['red','Avg Unavailable',k.unavailable],['green',k.variableFleet?'Avg Fleet Size':'Fleet size',k.fleet]
       ].map(([colour,label,value]) => `<div class="hm-kpi ${colour}"><span>${label}</span><strong>${displayNumber(value)}</strong></div>`).join('')}</div>
       <p class="hm-view-note">Completed, recorded hours only · ${k.observed} of ${k.hours} selected hours have availability data.</p>
@@ -206,29 +206,29 @@
       <strong>${escape(row.date)}</strong><button type="button" class="hm-icon-button" data-day-step="1" ${index===data.rows.length-1?'disabled':''} aria-label="Next day">›</button></div>
       <div class="hm-day-summary"><span>Fleet <b>${displayNumber(row.fleet_total)}</b></span><span>Avg unavailable <b class="hm-down-count">${displayNumber(stats.unavailable)}</b></span><span>Tap an hour</span></div>
       ${row.cells.map((cell,hour) => {
-        const m = hourMetrics(row,cell), counts = `${displayNumber(m.available)} / ${displayNumber(m.utilised)}`;
+        const m = hourMetrics(row,cell), counts = `${displayNumber(m.utilised)} / ${displayNumber(m.available)}`;
         const match = cell.completed && cell.has_record && matchesUnavailableRange(row.fleet_total,cell.available,unavailable);
         return `${hour===0?'<h3 class="hm-shift-head">Day Shift · 06:00–18:00</h3>':hour===12?'<h3 class="hm-shift-head">Night Shift · 18:00–06:00</h3>':''}
           <button type="button" class="hm-cell hm-hour-row hm-${m.colour} ${match?'hm-unavailable-match':''}" ${cellAttributes(index,hour,counts)}>
-            <span class="hm-hour-label">${escape(data.hours[hour])}</span><span class="hm-hour-count"><b class="hm-avail">${displayNumber(m.available)}</b> / <b class="hm-used">${displayNumber(m.utilised)}</b></span>
+            <span class="hm-hour-label">${escape(data.hours[hour])}</span><span class="hm-hour-count"><b class="hm-used">${displayNumber(m.utilised)}</b> / <b class="hm-avail">${displayNumber(m.available)}</b></span>
             <span class="hm-down-count" aria-label="Unavailable ${displayNumber(m.unavailable)}">${m.unavailable==null?'—':'−'+displayNumber(m.unavailable)}</span><span aria-hidden="true">›</span></button>`;
-      }).join('')}<p class="hm-view-note">Available / Utilised · Unavailable. Unknown and unfinished hours show —. Operational day ends at 06:00 the next calendar day.</p>
+      }).join('')}<p class="hm-view-note">Utilised / Available · Unavailable. Unknown and unfinished hours show —. Operational day ends at 06:00 the next calendar day.</p>
       ${viewLegend()}</section>`;
   }
   function renderMonthlyHeatmap(data, month, unavailable) {
     const model = monthModel(data, month);
     return `<section class="hm-heatmap-view"><div class="hm-section-heading"><h2>Month × Hour</h2><span>Swipe horizontally →</span></div>
       <div class="hpa-scroll hm-heat-scroller" tabindex="0" role="region" aria-label="Monthly operational hour heatmap">
-        <table class="hm-heat-table hm-matrix"><caption>${escape(model.title)} · ${escape(data.site)} · Available / Utilised</caption><thead>
+        <table class="hm-heat-table hm-matrix"><caption>${escape(model.title)} · ${escape(data.site)} · Utilised / Available</caption><thead>
           <tr><th rowspan="2" class="hm-date-head">Date</th><th colspan="12" class="hpa-shift-day">DAY SHIFT · 06:00–18:00</th><th colspan="12" class="hpa-shift-night">NIGHT SHIFT · 18:00–06:00</th></tr>
           <tr>${data.hours.map(hour=>`<th class="hm-hour-head">${escape(hour.split(/[–-]/)[0].replace(':00',''))}</th>`).join('')}</tr></thead><tbody>
           ${model.days.map(day=>`<tr><th class="hm-date-head" scope="row">${escape(day.date.slice(5))}</th>${Array.from({length:24},(_,hour)=>{
             if (!day.row) return '<td class="hm-heat-empty" aria-label="Outside selected date range">—</td>';
             const cell = day.row.cells[hour], m = hourMetrics(day.row,cell);
-            const counts = `${displayNumber(m.available)} / ${displayNumber(m.utilised)}`;
+            const counts = `${displayNumber(m.utilised)} / ${displayNumber(m.available)}`;
             const match = cell.completed && cell.has_record && matchesUnavailableRange(day.row.fleet_total,cell.available,unavailable);
             return `<td><button type="button" class="hm-cell hm-heat hm-${m.colour} ${match?'hm-unavailable-match':''}" ${cellAttributes(day.index,hour,counts)}
-              title="${day.date} · ${escape(data.hours[hour])} · ${counts}" aria-label="${day.date} ${escape(data.hours[hour])}, available / utilised ${counts}, unavailable ${displayNumber(m.unavailable)}">
+              title="${day.date} · ${escape(data.hours[hour])} · ${counts}" aria-label="${day.date} ${escape(data.hours[hour])}, utilised / available ${counts}, unavailable ${displayNumber(m.unavailable)}">
               <span class="hm-heat-value">${counts}</span></button></td>`;
           }).join('')}</tr>`).join('')}</tbody></table></div>${viewLegend()}
       <div class="hm-heat-info">Tap a square for availability and breakdown details. <b>Red outline</b> matches your unavailable-machine filter.</div><button type="button" class="hm-view-export" title="Export the selected From Date–To Date range">↓ Export Excel</button></section>`;
@@ -331,7 +331,7 @@
         ? `${value.start} – ${value.end}` : `${row.date} · ${context.data.hours[hour]}`;
       this.card.html(`<button type="button" class="hm-breakdown-close" aria-label="Close breakdown details">×</button>
         <h3>${escape(row.date)} · ${escape(context.data.hours[hour])}</h3>
-        <p class="hm-breakdown-period">${escape(label)}</p><p class="hm-breakdown-counts">Available / Utilised: <strong>${escape(counts)}</strong></p>
+        <p class="hm-breakdown-period">${escape(label)}</p><p class="hm-breakdown-counts">Utilised / Available: <strong>${escape(counts)}</strong></p>
         <div class="hm-breakdown-body" role="status">Loading breakdowns…</div>`).prop('hidden', false);
       this.position();
       // A short hover delay avoids queries for cells crossed while moving the pointer.

@@ -1,0 +1,573 @@
+{
+ "doctype": "DocType",
+ "name": "Kobelco Results",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "actions": [],
+ "links": [],
+ "states": [],
+ "allow_rename": 0,
+ "field_order": [
+  "identity_section",
+  "mapping",
+  "serial_number",
+  "pin",
+  "oem",
+  "model",
+  "asset",
+  "mapping_status",
+  "snapshot_timestamp",
+  "fetched_at",
+  "engine_number",
+  "unit_install_timestamp",
+  "fleet_version",
+  "fleet_snapshot_timestamp",
+  "snapshot_time_basis",
+  "source_time_warning",
+  "telemetry_section",
+  "operating_hours",
+  "operating_hours_available",
+  "idle_hours",
+  "idle_hours_available",
+  "fuel_consumption",
+  "fuel_consumption_available",
+  "fuel_remaining",
+  "fuel_remaining_available",
+  "def_remaining",
+  "def_remaining_available",
+  "latitude",
+  "latitude_available",
+  "longitude",
+  "longitude_available",
+  "fuel_units",
+  "engine_status",
+  "pto_hours",
+  "pto_hours_available",
+  "load_count",
+  "load_count_available",
+  "fuel_used_last24",
+  "fuel_used_last24_available",
+  "fuel_tank_capacity",
+  "fuel_tank_capacity_available",
+  "altitude",
+  "altitude_available",
+  "fuel_used_last24_units",
+  "fuel_tank_capacity_units",
+  "altitude_units",
+  "timestamps_section",
+  "operating_hours_timestamp",
+  "idle_hours_timestamp",
+  "fuel_consumption_timestamp",
+  "fuel_remaining_timestamp",
+  "def_remaining_timestamp",
+  "location_timestamp",
+  "engine_status_timestamp",
+  "pto_hours_timestamp",
+  "load_count_timestamp",
+  "fuel_used_last24_timestamp",
+  "fuel_tank_capacity_timestamp",
+  "raw_section",
+  "raw_json",
+  "snapshot_key",
+  "raw_response",
+  "telemetry_version"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Machine",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mapping",
+   "fieldtype": "Data",
+   "label": "Mapping Row",
+   "reqd": 1,
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "serial_number",
+   "fieldtype": "Data",
+   "label": "Kobelco Serial Number",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "label": "PIN",
+   "read_only": 1
+  },
+  {
+   "fieldname": "oem",
+   "fieldtype": "Data",
+   "label": "OEM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "Asset",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "mapping_status",
+   "fieldtype": "Select",
+   "label": "Mapping Status",
+   "options": "Unmapped\nMapped",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "snapshot_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Snapshot Timestamp",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "Fetched At",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "engine_number",
+   "fieldtype": "Data",
+   "label": "Engine Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unit_install_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Telematics Unit Installed",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "fleet_version",
+   "fieldtype": "Data",
+   "label": "Fleet API Version",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fleet_snapshot_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Fleet Snapshot Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "snapshot_time_basis",
+   "fieldtype": "Data",
+   "label": "Snapshot Time Basis",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_time_warning",
+   "fieldtype": "Small Text",
+   "label": "Source Timestamp Warning",
+   "read_only": 1,
+   "depends_on": "eval:doc.source_time_warning"
+  },
+  {
+   "fieldname": "telemetry_section",
+   "fieldtype": "Section Break",
+   "label": "Telemetry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operating_hours",
+   "fieldtype": "Float",
+   "label": "Operating Hours",
+   "precision": "3",
+   "depends_on": "eval:doc.operating_hours_available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operating_hours_available",
+   "fieldtype": "Check",
+   "label": "Operating Hours Available",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "idle_hours",
+   "fieldtype": "Float",
+   "label": "Idle Hours",
+   "precision": "3",
+   "depends_on": "eval:doc.idle_hours_available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "idle_hours_available",
+   "fieldtype": "Check",
+   "label": "Idle Hours Available",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumption",
+   "fieldtype": "Float",
+   "label": "Fuel Consumption",
+   "precision": "3",
+   "depends_on": "eval:doc.fuel_consumption_available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumption_available",
+   "fieldtype": "Check",
+   "label": "Fuel Consumption Available",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_remaining",
+   "fieldtype": "Float",
+   "label": "Fuel Remaining (%)",
+   "precision": "3",
+   "depends_on": "eval:doc.fuel_remaining_available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_remaining_available",
+   "fieldtype": "Check",
+   "label": "Fuel Remaining Available",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "def_remaining",
+   "fieldtype": "Float",
+   "label": "DEF Remaining (%)",
+   "precision": "3",
+   "depends_on": "eval:doc.def_remaining_available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "def_remaining_available",
+   "fieldtype": "Check",
+   "label": "Def Remaining Available",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "GPS Latitude",
+   "precision": "6",
+   "depends_on": "eval:doc.latitude_available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "latitude_available",
+   "fieldtype": "Check",
+   "label": "Latitude Available",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "GPS Longitude",
+   "precision": "6",
+   "depends_on": "eval:doc.longitude_available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "longitude_available",
+   "fieldtype": "Check",
+   "label": "Longitude Available",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_units",
+   "fieldtype": "Data",
+   "label": "Fuel Units",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engine_status",
+   "fieldtype": "Select",
+   "label": "Engine Status",
+   "options": "\nRunning\nStopped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pto_hours",
+   "fieldtype": "Float",
+   "label": "Cumulative PTO Hours",
+   "read_only": 1,
+   "depends_on": "eval:doc.pto_hours_available",
+   "precision": "3"
+  },
+  {
+   "fieldname": "pto_hours_available",
+   "fieldtype": "Check",
+   "label": "Pto Hours Available",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "load_count",
+   "fieldtype": "Int",
+   "label": "Cumulative Load Count",
+   "read_only": 1,
+   "depends_on": "eval:doc.load_count_available"
+  },
+  {
+   "fieldname": "load_count_available",
+   "fieldtype": "Check",
+   "label": "Load Count Available",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "fuel_used_last24",
+   "fieldtype": "Float",
+   "label": "Fuel Used Last 24 Hours",
+   "read_only": 1,
+   "depends_on": "eval:doc.fuel_used_last24_available",
+   "precision": "3"
+  },
+  {
+   "fieldname": "fuel_used_last24_available",
+   "fieldtype": "Check",
+   "label": "Fuel Used Last24 Available",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "fuel_tank_capacity",
+   "fieldtype": "Float",
+   "label": "Fuel Tank Capacity",
+   "read_only": 1,
+   "depends_on": "eval:doc.fuel_tank_capacity_available",
+   "precision": "3"
+  },
+  {
+   "fieldname": "fuel_tank_capacity_available",
+   "fieldtype": "Check",
+   "label": "Fuel Tank Capacity Available",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "altitude",
+   "fieldtype": "Float",
+   "label": "Altitude",
+   "read_only": 1,
+   "depends_on": "eval:doc.altitude_available",
+   "precision": "3"
+  },
+  {
+   "fieldname": "altitude_available",
+   "fieldtype": "Check",
+   "label": "Altitude Available",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "fuel_used_last24_units",
+   "fieldtype": "Data",
+   "label": "Last 24 Hours Fuel Units",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_tank_capacity_units",
+   "fieldtype": "Data",
+   "label": "Fuel Tank Capacity Units",
+   "read_only": 1
+  },
+  {
+   "fieldname": "altitude_units",
+   "fieldtype": "Data",
+   "label": "Altitude Units",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timestamps_section",
+   "fieldtype": "Section Break",
+   "label": "Source Timestamps (Africa/Johannesburg)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operating_hours_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Operating Hours Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "idle_hours_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Idle Hours Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "fuel_consumption_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Fuel Consumption Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "fuel_remaining_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Fuel Remaining Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "def_remaining_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Def Remaining Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "location_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Location Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "engine_status_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Engine Status Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "pto_hours_timestamp",
+   "fieldtype": "Datetime",
+   "label": "PTO Hours Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "load_count_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Load Count Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "fuel_used_last24_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Last 24 Hours Fuel Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "fuel_tank_capacity_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Fuel Tank Capacity Timestamp",
+   "read_only": 1,
+   "description": "Stored in UTC. Displayed in Africa/Johannesburg."
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Source JSON",
+   "collapsible": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Code",
+   "label": "Original Machine JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "snapshot_key",
+   "fieldtype": "Data",
+   "label": "Snapshot Key",
+   "unique": 1,
+   "hidden": 1,
+   "reqd": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_response",
+   "fieldtype": "Code",
+   "label": "Complete Original Fleet JSON",
+   "read_only": 1,
+   "options": "JSON",
+   "description": "Exact response text for this snapshot\u2019s Fleet page, including envelope, all machines, timestamps and advertised links. Unavailable for legacy imports that retained only machine JSON."
+  },
+  {
+   "fieldname": "telemetry_version",
+   "fieldtype": "Int",
+   "label": "Telemetry Version",
+   "read_only": 1,
+   "hidden": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Engineering User",
+   "read": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Procurement User",
+   "read": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Production Manager",
+   "read": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Production Area Manager",
+   "read": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "snapshot_timestamp",
+ "sort_order": "DESC",
+ "autoname": "field:snapshot_key"
+}

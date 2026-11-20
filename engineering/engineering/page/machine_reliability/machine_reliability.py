@@ -196,10 +196,9 @@ from math import isfinite
 
 
 def classify(reason, resolution, keywords):
+    from engineering.controllers.failure_classification import matching_phrases
     def matches(text):
-        text = str(text or '').casefold()
-        return [word for word in keywords if re.search(
-            r'(?<!\w)' + r'[\s\-/]+'.join(re.escape(p) for p in re.split(r'[\s\-/]+', word)) + r'(?!\w)', text)]
+        return matching_phrases(text, keywords)
     direct = matches(reason)
     additional = matches(resolution)
     if not keywords:

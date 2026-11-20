@@ -1,0 +1,281 @@
+{
+ "doctype": "DocType",
+ "name": "MPI Activity History",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "field_order": [
+  "source_key",
+  "imei",
+  "asset",
+  "activity_type",
+  "source_endpoint",
+  "start_utc",
+  "end_utc",
+  "start_epoch",
+  "end_epoch",
+  "duration_seconds",
+  "distance",
+  "metrics_section",
+  "max_speed",
+  "avg_speed",
+  "trips_count",
+  "trip_seconds",
+  "driving_seconds",
+  "parking_count",
+  "parking_seconds",
+  "latitude",
+  "longitude",
+  "start_latitude",
+  "start_longitude",
+  "end_latitude",
+  "end_longitude",
+  "zone_name",
+  "zone_group",
+  "template_id",
+  "template_name",
+  "missing_fields"
+ ],
+ "fields": [
+  {
+   "fieldname": "source_key",
+   "fieldtype": "Data",
+   "label": "Source Key",
+   "reqd": 1,
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "imei",
+   "fieldtype": "Data",
+   "label": "MPI IMEI",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "Asset",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "activity_type",
+   "fieldtype": "Select",
+   "label": "Activity Type",
+   "options": "Trip\nStop\nParking\nIdle\nGeozone Visit\nDistance Summary\nActivity Report",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "source_endpoint",
+   "fieldtype": "Data",
+   "label": "Source Endpoint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "start_utc",
+   "fieldtype": "Data",
+   "label": "Start (UTC)",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "end_utc",
+   "fieldtype": "Data",
+   "label": "End (UTC)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "start_epoch",
+   "fieldtype": "Float",
+   "label": "Start Unix UTC",
+   "precision": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "end_epoch",
+   "fieldtype": "Float",
+   "label": "End Unix UTC",
+   "precision": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "duration_seconds",
+   "fieldtype": "Float",
+   "label": "Duration (seconds)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "distance",
+   "fieldtype": "Float",
+   "label": "Distance (API units)",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Original endpoint units. run/distance are documented in km; report length is retained without conversion."
+  },
+  {
+   "fieldname": "metrics_section",
+   "fieldtype": "Section Break",
+   "label": "Activity Metrics"
+  },
+  {
+   "fieldname": "max_speed",
+   "fieldtype": "Float",
+   "label": "Maximum Speed (km/h)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "avg_speed",
+   "fieldtype": "Float",
+   "label": "Average Speed (km/h)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trips_count",
+   "fieldtype": "Float",
+   "label": "Trips Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trip_seconds",
+   "fieldtype": "Float",
+   "label": "Trip Time (seconds)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "driving_seconds",
+   "fieldtype": "Float",
+   "label": "Driving Time (seconds)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "parking_count",
+   "fieldtype": "Float",
+   "label": "Parking Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "parking_seconds",
+   "fieldtype": "Float",
+   "label": "Parking Time (seconds)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "read_only": 1,
+   "precision": "7"
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "read_only": 1,
+   "precision": "7"
+  },
+  {
+   "fieldname": "start_latitude",
+   "fieldtype": "Float",
+   "label": "Trip Start Latitude",
+   "read_only": 1,
+   "precision": "7"
+  },
+  {
+   "fieldname": "start_longitude",
+   "fieldtype": "Float",
+   "label": "Trip Start Longitude",
+   "read_only": 1,
+   "precision": "7"
+  },
+  {
+   "fieldname": "end_latitude",
+   "fieldtype": "Float",
+   "label": "Trip End Latitude",
+   "read_only": 1,
+   "precision": "7"
+  },
+  {
+   "fieldname": "end_longitude",
+   "fieldtype": "Float",
+   "label": "Trip End Longitude",
+   "read_only": 1,
+   "precision": "7"
+  },
+  {
+   "fieldname": "zone_name",
+   "fieldtype": "Data",
+   "label": "Geozone Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "zone_group",
+   "fieldtype": "Data",
+   "label": "Geozone Group",
+   "read_only": 1
+  },
+  {
+   "fieldname": "template_id",
+   "fieldtype": "Data",
+   "label": "Activity Template ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "label": "Activity Template Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "missing_fields",
+   "fieldtype": "Small Text",
+   "label": "Unknown or Unavailable Fields",
+   "read_only": 1,
+   "description": "Fields without a measurement; numeric defaults must not be interpreted as measured zero. A blank end time identifies an open geozone visit."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Engineering User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Fleet Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "actions": [],
+ "links": [],
+ "states": [],
+ "allow_rename": 0,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "autoname": "field:source_key"
+}

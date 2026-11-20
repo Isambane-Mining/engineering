@@ -1,0 +1,386 @@
+{
+ "doctype": "DocType",
+ "name": "MPI Results",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "field_order": [
+  "imei",
+  "mapping",
+  "asset",
+  "plate",
+  "vehicle_name",
+  "active",
+  "latitude",
+  "longitude",
+  "speed",
+  "direction",
+  "moving",
+  "parking_duration",
+  "zone",
+  "zone_data",
+  "position_timestamp",
+  "list_coordinates_section",
+  "list_latitude",
+  "list_longitude",
+  "record_section",
+  "agentid",
+  "configuration",
+  "folder",
+  "model",
+  "type",
+  "typeid",
+  "uniqid",
+  "vehiclenumber",
+  "created_time",
+  "current_mileage",
+  "initial_mileage",
+  "status_details_section",
+  "alt",
+  "firing",
+  "satsinview",
+  "unixtimestamp",
+  "null_fields",
+  "restricted_section",
+  "driver_name",
+  "driver_phone",
+  "vin",
+  "info",
+  "sensors_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "imei",
+   "fieldtype": "Data",
+   "label": "MPI IMEI",
+   "reqd": 1,
+   "unique": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "mapping",
+   "fieldtype": "Link",
+   "label": "Vehicle Mapping",
+   "options": "MPI Vehicle Mapping",
+   "read_only": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "Asset",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "plate",
+   "fieldtype": "Data",
+   "label": "Plate",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "vehicle_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "read_only": 1
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "precision": "7",
+   "read_only": 1
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "precision": "7",
+   "read_only": 1
+  },
+  {
+   "fieldname": "speed",
+   "fieldtype": "Float",
+   "label": "Speed (API units)",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "direction",
+   "fieldtype": "Float",
+   "label": "Direction (degrees)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "moving",
+   "fieldtype": "Float",
+   "label": "Moving (seconds)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "parking_duration",
+   "fieldtype": "Float",
+   "label": "Parking Duration (seconds)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "zone",
+   "fieldtype": "Data",
+   "label": "Zone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "position_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Position Timestamp",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "list_coordinates_section",
+   "fieldtype": "Section Break",
+   "label": "Vehicle List Position",
+   "read_only": 1
+  },
+  {
+   "fieldname": "list_latitude",
+   "fieldtype": "Float",
+   "label": "Vehicle List Latitude",
+   "read_only": 1,
+   "precision": "7"
+  },
+  {
+   "fieldname": "list_longitude",
+   "fieldtype": "Float",
+   "label": "Vehicle List Longitude",
+   "read_only": 1,
+   "precision": "7"
+  },
+  {
+   "fieldname": "record_section",
+   "fieldtype": "Section Break",
+   "label": "MPI Record",
+   "read_only": 1
+  },
+  {
+   "fieldname": "agentid",
+   "fieldtype": "Data",
+   "label": "Agent ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "configuration",
+   "fieldtype": "Data",
+   "label": "Configuration",
+   "read_only": 1
+  },
+  {
+   "fieldname": "folder",
+   "fieldtype": "Data",
+   "label": "Folder",
+   "read_only": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Data",
+   "label": "Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "typeid",
+   "fieldtype": "Data",
+   "label": "Type ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "uniqid",
+   "fieldtype": "Data",
+   "label": "Unique ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "vehiclenumber",
+   "fieldtype": "Data",
+   "label": "Vehicle Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_time",
+   "fieldtype": "Float",
+   "label": "Created Time (Unix)",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "current_mileage",
+   "fieldtype": "Float",
+   "label": "Current Mileage (API units)",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "initial_mileage",
+   "fieldtype": "Float",
+   "label": "Initial Mileage (API units)",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "status_details_section",
+   "fieldtype": "Section Break",
+   "label": "Additional Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "alt",
+   "fieldtype": "Float",
+   "label": "Altitude (API units)",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "firing",
+   "fieldtype": "Float",
+   "label": "Firing (API value)",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "satsinview",
+   "fieldtype": "Float",
+   "label": "Satellites in View",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "unixtimestamp",
+   "fieldtype": "Float",
+   "label": "Position Unix Timestamp",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "null_fields",
+   "fieldtype": "JSON",
+   "label": "Fields Reported Null",
+   "read_only": 1,
+   "description": "Optional values with no measurement. Numeric fields may display zero because of Frappe defaults; use this list to distinguish missing data."
+  },
+  {
+   "fieldname": "restricted_section",
+   "fieldtype": "Section Break",
+   "label": "Restricted Driver and Device Data",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "driver_name",
+   "fieldtype": "Data",
+   "label": "Driver Name",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "driver_phone",
+   "fieldtype": "Data",
+   "label": "Driver Phone",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "vin",
+   "fieldtype": "Data",
+   "label": "VIN",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "info",
+   "fieldtype": "Text",
+   "label": "Info",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "sensors_status",
+   "fieldtype": "JSON",
+   "label": "Sensors Status",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "zone_data",
+   "fieldtype": "JSON",
+   "label": "Zone (Structured API Value)",
+   "read_only": 1
+  }
+ ],
+ "actions": [],
+ "links": [],
+ "states": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "autoname": "field:imei",
+ "allow_rename": 0,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Engineering User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Fleet Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "System Manager",
+   "permlevel": 1,
+   "read": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "permlevel": 1,
+   "read": 1
+  },
+  {
+   "role": "Fleet Manager",
+   "permlevel": 1,
+   "read": 1
+  }
+ ]
+}

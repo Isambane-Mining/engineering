@@ -298,7 +298,7 @@ class TestMachinesAvailableBrowser(unittest.TestCase):
         self.page.locator('.hm-hour-row').first.click()
         card=self.page.locator('.hm-breakdown-popup')
         expect(card).to_contain_text('ADT <01>')
-        self.assertIn('Available / Utilised: 4 / 4',card.inner_text())
+        self.assertIn('Utilised / Available: 4 / 4',card.inner_text())
         self.assertNotIn('−',card.locator('.hm-breakdown-counts').inner_text())
         anchor=self.page.locator('.hm-hour-row').first.bounding_box();box=card.bounding_box()
         self.assertTrue(box['y']+box['height']<=anchor['y'] or box['y']>=anchor['y']+anchor['height'])
