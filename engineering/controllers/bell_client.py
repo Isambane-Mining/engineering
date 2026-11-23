@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 import xml.etree.ElementTree as ET
 
 import requests
+import time
 
 
 TOKEN_HOST = "sso.bellequipment.com"
@@ -266,18 +267,30 @@ class BellClient:
         if not token:
             raise BellError("Bell did not return an access token.")
 
-        try:
-            fleet = self._post(
-                fleet_url,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Accept": "application/xml",
-                },
-                timeout=max(self.timeout, 60),
-                allow_redirects=False,
-            )
-        except requests.RequestException:
-            raise BellError("Bell fleet connection failed.") from None
+        fleet = None
+
+        for attempt in range(3):
+            try:
+                fleet = self._post(
+                    fleet_url,
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Accept": "application/xml",
+                    },
+                    timeout=max(self.timeout, 60),
+                    allow_redirects=False,
+                )
+            except requests.RequestException:
+                if attempt == 2:
+                    raise BellError("Bell fleet connection failed.") from None
+                time.sleep(attempt + 1)
+                continue
+
+            if fleet.status_code != 405 or attempt == 2:
+                break
+
+            time.sleep(attempt + 1)
+
 
         if not fleet.ok:
             raise BellError(
