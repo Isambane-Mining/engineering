@@ -164,6 +164,9 @@ scheduler_events = {
 # DocType event hooks
 # ---------------------------------------------------------------------
 doc_events = {
+    "Scheduled Job Log": {
+        "on_change": "engineering.controllers.kobelco.sanitize_scheduled_job_log",
+    },
     "Asset Movement": {
         "on_submit": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",
         "on_cancel": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",

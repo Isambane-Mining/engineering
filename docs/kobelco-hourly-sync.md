@@ -1,5 +1,7 @@
 # Kobelco hourly synchronisation — LAB, 20 November 2026
 
+**Updated diagnostics and test workflow:** see [Kobelco reliability](kobelco-reliability.md). Database tests now refuse LAB and run exclusively on the isolated test site; the earlier verification history below remains an implementation record.
+
 Implemented and activated on branch `juan`, only on `juan.isambane.co.za`.
 
 ## Behaviour

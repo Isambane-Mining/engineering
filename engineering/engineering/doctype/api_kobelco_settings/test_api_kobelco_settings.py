@@ -1,4 +1,4 @@
-"""LAB transaction tests. Run with tests/run_kobelco_tests.py or bench run-tests.
+"""Isolated-site transaction tests. Run with tests/run_kobelco_tests.py or bench run-tests.
 
 Only HTTP is mocked. Frappe passwords, mappings, uniqueness, results, permissions
 and transaction rollback use the real database. All test changes are rolled back.
@@ -19,26 +19,40 @@ def equipment(serial="TEST-KOBELCO-13", **overrides):
 
 class TestKobelcoIntegration(unittest.TestCase):
     def setUp(self):
+        from engineering.tests.kobelco_test_support import require_isolated_site
+        require_isolated_site()  # Must run before any database mutation.
         from engineering.controllers import kobelco
         self.api = kobelco
         self.user = frappe.session.user
         frappe.set_user("Administrator")
         frappe.db.savepoint("kobelco_test")
+        self._error_logs_before = set(frappe.get_all("Error Log", filters={"method": "Kobelco Sync Failure"}, pluck="name"))
+        self.addCleanup(self._cleanup_isolated_transaction)
         self.settings = frappe.get_single("API Kobelco Settings")
         self.settings.update({"enabled": 1, "base_url": "https://example.test/api/aemp",
                               "username": "test-operator", "password": "test-secret"})
         self.settings.save()
-        mapped_assets = [r.asset for r in self.settings.machine_mappings if r.asset]
-        self.assets = frappe.get_all("Asset", filters={"name": ["not in", mapped_assets]} if mapped_assets else {}, pluck="name", limit_page_length=2)
-        if len(self.assets) < 2:
-            self.skipTest("Two existing Assets are required for LAB mapping checks")
+        self.assets = []
+        for index in (1, 2):
+            # Minimal real Asset rows for Link/permission tests. No live business
+            # records or accounting setup needed; the outer transaction owns them.
+            asset = frappe.get_doc({"doctype": "Asset", "name": f"TEST-KOBELCO-ASSET-{index}",
+                                    "asset_name": f"Kobelco test asset {index}"})
+            asset.db_insert()
+            self.assets.append(asset.name)
         self.http = patch("requests.get", return_value=Mock(status_code=200, json=lambda: {
             "Equipment": [equipment(), equipment("TEST-KOBELCO-58")]}))
         self.get = self.http.start()
         self.addCleanup(self.http.stop)
 
-    def tearDown(self):
-        frappe.db.rollback(save_point="kobelco_test")
+    def _cleanup_isolated_transaction(self):
+        created_logs = set(frappe.get_all("Error Log", filters={"method": "Kobelco Sync Failure"}, pluck="name")) - self._error_logs_before
+        try:
+            frappe.db.rollback(save_point="kobelco_test")
+        finally:
+            # Frappe's Error Log uses MyISAM: rollback cannot remove test logs.
+            if created_logs:
+                frappe.db.delete("Error Log", {"name": ["in", list(created_logs)]})
         frappe.clear_document_cache("API Kobelco Settings", "API Kobelco Settings")
         frappe.set_user(self.user)
 

@@ -8,6 +8,7 @@
   "start_date",
   "end_date",
   "include_report",
+  "vehicles",
   "execution_section",
   "status",
   "started_at",
@@ -20,10 +21,9 @@
   {
    "fieldname": "imei",
    "fieldtype": "Data",
-   "label": "MPI IMEI",
-   "reqd": 1,
-   "in_list_view": 1,
-   "description": "Choose an IMEI already present in API MPI Settings Vehicle Mapping. One vehicle per request."
+   "label": "Legacy MPI IMEI",
+   "description": "Retained for previously saved single-vehicle imports.",
+   "hidden": 1
   },
   {
    "fieldname": "start_date",
@@ -45,6 +45,13 @@
    "label": "Include Audited Mileage Activity Report",
    "default": "0",
    "description": "Optional. Requires an existing MPI Results vehicle identity and the audited Mileage report template."
+  },
+  {
+   "fieldname": "vehicles",
+   "fieldtype": "Table",
+   "label": "Vehicles",
+   "options": "MPI History Vehicle",
+   "description": "Add selected vehicles from API MPI Settings. The UTC date range applies to every vehicle (maximum 500). One vehicle is also supported."
   },
   {
    "fieldname": "execution_section",

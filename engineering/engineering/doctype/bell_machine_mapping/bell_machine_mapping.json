@@ -1,0 +1,147 @@
+{
+ "doctype": "DocType",
+ "name": "Bell Machine Mapping",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "istable": 1,
+ "editable_grid": 1,
+ "allow_rename": 0,
+ "field_order": [
+  "equipment_id",
+  "pin",
+  "serial_number",
+  "oem",
+  "model",
+  "asset",
+  "mapping_status",
+  "fault_codes_status",
+  "fault_codes_last_checked",
+  "fault_codes_last_error",
+  "fuel_consumption_status",
+  "fuel_consumption_last_checked",
+  "fuel_consumption_last_error",
+  "last_seen"
+ ],
+ "fields": [
+  {
+   "fieldname": "equipment_id",
+   "fieldtype": "Data",
+   "label": "Bell Equipment ID",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "label": "OEM ISO Identifier / PIN",
+   "unique": 1,
+   "read_only": 1,
+   "in_list_view": 0,
+   "in_standard_filter": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "serial_number",
+   "fieldtype": "Data",
+   "label": "Serial Number",
+   "unique": 1,
+   "read_only": 1,
+   "in_list_view": 0,
+   "columns": 2
+  },
+  {
+   "fieldname": "oem",
+   "fieldtype": "Data",
+   "label": "OEM",
+   "read_only": 1,
+   "in_list_view": 0,
+   "columns": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1,
+   "in_list_view": 0,
+   "columns": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "ERPNext Asset",
+   "options": "Asset",
+   "unique": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "mapping_status",
+   "fieldtype": "Select",
+   "label": "Mapping Status",
+   "options": "Unmapped\nMapped",
+   "default": "Unmapped",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "last_seen",
+   "fieldtype": "Datetime",
+   "label": "Last Seen",
+   "read_only": 1,
+   "in_list_view": 0,
+   "columns": 2
+  },
+  {
+   "fieldname": "fault_codes_status",
+   "fieldtype": "Select",
+   "label": "Fault Codes",
+   "options": "\nNot Checked\nReporting\nNot Reporting",
+   "default": "Not Checked",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "fault_codes_last_checked",
+   "fieldtype": "Datetime",
+   "label": "Fault Codes Last Checked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fault_codes_last_error",
+   "fieldtype": "Small Text",
+   "label": "Fault Codes Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumption_status",
+   "fieldtype": "Select",
+   "label": "Fuel Consumption",
+   "options": "\nNot Checked\nReporting\nNot Reporting",
+   "default": "Not Checked",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "fuel_consumption_last_checked",
+   "fieldtype": "Datetime",
+   "label": "Fuel Last Checked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumption_last_error",
+   "fieldtype": "Small Text",
+   "label": "Fuel Consumption Error",
+   "read_only": 1
+  }
+ ],
+ "permissions": [],
+ "sort_field": "equipment_id",
+ "sort_order": "ASC",
+ "grid_page_length": 50,
+ "rows_threshold_for_grid_search": 20
+}

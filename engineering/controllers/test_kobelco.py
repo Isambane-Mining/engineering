@@ -234,17 +234,193 @@ class TestKobelcoTransactionFailures(unittest.TestCase):
     def test_deadlock_uses_full_rollback_and_returns_sanitized_failure(self):
         import frappe
         from engineering.controllers import kobelco
+        frappe.local.debug_log = []
         with patch.object(frappe, "db", Mock()) as db, patch.object(frappe, "cache", MagicMock()), \
                 patch.object(kobelco, "KobelcoClient") as client, \
                 patch.object(kobelco, "_settings", return_value=Mock()), \
                 patch.object(kobelco, "_discover", side_effect=frappe.QueryDeadlockError("sensitive details")), \
                 patch.object(kobelco, "_status") as status:
             client.return_value.fetch_fleet.return_value = [equipment()]
+            frappe.local.db = db
             result = kobelco._run(Mock(), store_results=True)
             self.assertFalse(result["ok"])
             self.assertNotIn("sensitive", result["message"])
-            db.rollback.assert_called_once_with()
+            db.rollback.assert_any_call()
+            self.assertNotIn("kobelco_sync", [call.kwargs.get("save_point") for call in db.rollback.call_args_list])
+            self.assertEqual(result["diagnostic"]["exception_class"], "QueryDeadlockError")
             status.assert_called_once_with(False, result["message"])
+
+
+class TestKobelcoSnapshotNaming(unittest.TestCase):
+    def setUp(self):
+        from engineering.controllers import kobelco
+        self.api = kobelco
+
+    def test_mapped_asset_uses_fleet_number_and_utc_timestamp(self):
+        from datetime import datetime
+        import hashlib
+
+        raw_json = '{"serial":"LY02510013","hours":100}'
+        machine = {"snapshot_timestamp": datetime(2026, 11, 23, 5, 34, 55)}
+        mapping = SimpleNamespace(asset="IS0330")
+
+        digest = hashlib.sha256(raw_json.encode("utf-8")).hexdigest()[:8].upper()
+
+        self.assertEqual(
+            self.api._snapshot_record_name(machine, mapping, raw_json,
+                                           datetime(2026, 11, 23, 6, 0)),
+            f"KOB-IS0330-20261123T053455Z-{digest}",
+        )
+
+    def test_second_machine_uses_its_own_fleet_number(self):
+        from datetime import datetime
+
+        name = self.api._snapshot_record_name(
+            {"snapshot_timestamp": datetime(2026, 11, 23, 5, 34, 55)},
+            SimpleNamespace(asset="EX01"),
+            '{"serial":"LY02510058"}',
+            datetime(2026, 11, 23, 6, 0),
+        )
+
+        self.assertTrue(name.startswith("KOB-EX01-20261123T053455Z-"))
+
+    def test_unmapped_machine_uses_unmapped_prefix(self):
+        from datetime import datetime
+
+        name = self.api._snapshot_record_name(
+            {"snapshot_timestamp": datetime(2026, 11, 23, 5, 34, 55)},
+            SimpleNamespace(asset=None),
+            '{"serial":"LY02510013"}',
+            datetime(2026, 11, 23, 6, 0),
+        )
+
+        self.assertTrue(name.startswith("KOB-UNMAPPED-20261123T053455Z-"))
+
+    def test_missing_source_timestamp_uses_fetch_time(self):
+        from datetime import datetime
+
+        fetched = datetime(2026, 11, 23, 5, 40, 17)
+
+        name = self.api._snapshot_record_name(
+            {"snapshot_timestamp": None},
+            SimpleNamespace(asset="IS0330"),
+            '{"serial":"LY02510013"}',
+            fetched,
+        )
+
+        self.assertTrue(name.startswith("KOB-IS0330-20261123T054017Z-"))
+
+    def test_timezone_aware_timestamp_is_converted_to_utc(self):
+        from datetime import datetime, timezone, timedelta
+
+        timestamp = datetime(
+            2026, 11, 23, 7, 34, 55,
+            tzinfo=timezone(timedelta(hours=2)),
+        )
+
+        name = self.api._snapshot_record_name(
+            {"snapshot_timestamp": timestamp},
+            SimpleNamespace(asset="IS0330"),
+            '{"serial":"LY02510013"}',
+            datetime(2026, 11, 23, 8, 0),
+        )
+
+        self.assertIn("20261123T053455Z", name)
+
+    def test_same_payload_is_deterministic_and_changed_payload_differs(self):
+        from datetime import datetime
+
+        machine = {"snapshot_timestamp": datetime(2026, 11, 23, 5, 34, 55)}
+        mapping = SimpleNamespace(asset="IS0330")
+        fetched = datetime(2026, 11, 23, 6, 0)
+
+        first = self.api._snapshot_record_name(
+            machine, mapping, '{"hours":100}', fetched
+        )
+        repeated = self.api._snapshot_record_name(
+            machine, mapping, '{"hours":100}', fetched
+        )
+        changed = self.api._snapshot_record_name(
+            machine, mapping, '{"hours":101}', fetched
+        )
+
+        self.assertEqual(first, repeated)
+        self.assertNotEqual(first, changed)
+
+    def test_legacy_snapshot_identity_remains_deduplicated(self):
+        import hashlib
+
+        raw = {"serial": "LY02510013", "hours": 100}
+        machine = {"serial_number": "LY02510013", "snapshot_timestamp": None}
+        mapping = SimpleNamespace(asset="IS0330", name="mapping", mapping_status="Mapped")
+        raw_json = json.dumps(raw, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+        legacy_key = hashlib.sha256((machine["serial_number"] + "\n" + raw_json).encode()).hexdigest()
+
+        with patch.object(self.api.frappe, "db", Mock()) as db:
+            db.exists.return_value = True
+            with patch.object(self.api.frappe, "new_doc") as new_doc:
+                result = self.api._store_snapshot(raw, machine, mapping)
+
+        self.assertFalse(result)
+        db.exists.assert_called_once_with(self.api.RESULTS, legacy_key)
+        new_doc.assert_not_called()
+
+    def test_new_record_with_missing_timestamp_is_still_deduplicated(self):
+        raw = {"serial": "LY02510013", "hours": 100}
+        machine = {"serial_number": "LY02510013", "snapshot_timestamp": None}
+        mapping = SimpleNamespace(asset="IS0330", name="mapping", mapping_status="Mapped")
+        raw_json = json.dumps(raw, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+        with patch.object(self.api.frappe, "db", Mock()) as db:
+            db.exists.side_effect = [False, True]
+            with patch.object(self.api.frappe, "new_doc") as new_doc:
+                result = self.api._store_snapshot(raw, machine, mapping)
+
+        self.assertFalse(result)
+        self.assertEqual(db.exists.call_count, 2)
+        self.assertEqual(
+            db.exists.call_args_list[1].args,
+            (self.api.RESULTS, {
+                "serial_number": machine["serial_number"],
+                "raw_json": raw_json,
+            }),
+        )
+        new_doc.assert_not_called()
+
+    def test_new_fleet_timestamp_is_not_suppressed_by_identical_machine_json(self):
+        from datetime import datetime
+
+        raw = {"serial": "LY02510013", "hours": 100}
+        machine = {
+            "serial_number": "LY02510013",
+            "snapshot_timestamp": datetime(2026, 11, 23, 5, 34, 55),
+        }
+        mapping = SimpleNamespace(
+            asset="IS0330", name="mapping", mapping_status="Mapped"
+        )
+        doc = Mock()
+
+        with patch.object(self.api.frappe, "db", Mock()) as db:
+            db.exists.side_effect = [False, False]
+            with patch.object(self.api.frappe, "new_doc", return_value=doc) as new_doc:
+                result = self.api._store_snapshot(raw, machine, mapping)
+
+        self.assertTrue(result)
+        self.assertEqual(db.exists.call_count, 2)
+        self.assertTrue(db.exists.call_args_list[1].args[1].startswith(
+            "KOB-IS0330-20261123T053455Z-"
+        ))
+        new_doc.assert_called_once_with(self.api.RESULTS)
+        doc.insert.assert_called_once_with(ignore_permissions=True)
+
+    def test_invalid_timestamp_fails_safely(self):
+        with self.assertRaises(self.api.KobelcoError):
+            self.api._snapshot_record_name(
+                {"snapshot_timestamp": "not-a-date"},
+                SimpleNamespace(asset="IS0330"),
+                '{"serial":"LY02510013"}',
+                None,
+            )
 
 
 class TestKobelcoMappingMigration(unittest.TestCase):

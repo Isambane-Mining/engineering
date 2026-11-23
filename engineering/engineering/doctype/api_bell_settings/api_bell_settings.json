@@ -1,0 +1,358 @@
+{
+ "doctype": "DocType",
+ "name": "API Bell Settings",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "allow_rename": 0,
+ "track_changes": 1,
+ "field_order": [
+  "api_configuration_tab",
+  "enabled",
+  "token_url",
+  "fleet_url",
+  "client_id",
+  "username",
+  "password",
+  "client_secret",
+  "scope",
+  "timeout",
+  "test_connection",
+  "fetch_fleet",
+  "sync_now",
+  "sync_status_section",
+  "last_sync_timestamp",
+  "last_sync_status",
+  "last_successful_sync",
+  "last_sync_message",
+  "machine_mapping_tab",
+  "machine_mappings",
+  "additional_telemetry_tab",
+  "fault_codes_section",
+  "fault_codes_enabled",
+  "fault_codes_lookback_days",
+  "pull_fault_codes",
+  "view_fault_code_records",
+  "last_fault_codes_sync",
+  "last_fault_codes_status",
+  "last_fault_codes_message",
+  "fuel_consumption_tab",
+  "fuel_consumption_section",
+  "fuel_consumption_enabled",
+  "fuel_consumption_lookback_days",
+  "pull_fuel_consumption",
+  "view_fuel_consumption_records",
+  "last_fuel_consumption_sync",
+  "last_fuel_consumption_status",
+  "last_fuel_consumption_message",
+  "active_regeneration_tab",
+  "active_regeneration_section",
+  "active_regeneration_enabled",
+  "active_regeneration_pull_time",
+  "last_active_regeneration_sync",
+  "last_active_regeneration_status",
+  "last_active_regeneration_message",
+  "view_active_regeneration_records"
+ ],
+ "fields": [
+  {
+   "fieldname": "api_configuration_tab",
+   "fieldtype": "Tab Break",
+   "label": "API Configuration"
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "token_url",
+   "fieldtype": "Data",
+   "label": "OAuth Token URL",
+   "default": "https://sso.bellequipment.com/connect/token",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fleet_url",
+   "fieldtype": "Data",
+   "label": "Fleet API URL",
+   "default": "https://b-fleet03.bellequipment.com:8080/Fleet",
+   "reqd": 1
+  },
+  {
+   "fieldname": "client_id",
+   "fieldtype": "Data",
+   "label": "OAuth Client ID",
+   "default": "ISO_Export_Service",
+   "reqd": 1
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "API Username",
+   "default": "jorriej-fleetauth@bell.co.za",
+   "reqd": 1
+  },
+  {
+   "fieldname": "password",
+   "fieldtype": "Password",
+   "label": "API Account Password",
+   "reqd": 1
+  },
+  {
+   "fieldname": "client_secret",
+   "fieldtype": "Password",
+   "label": "OAuth Client Secret",
+   "reqd": 1
+  },
+  {
+   "fieldname": "scope",
+   "fieldtype": "Data",
+   "label": "OAuth Scope",
+   "default": "ISO_Exports",
+   "reqd": 1
+  },
+  {
+   "fieldname": "timeout",
+   "fieldtype": "Int",
+   "label": "Connection Timeout (seconds)",
+   "default": "30",
+   "reqd": 1
+  },
+  {
+   "fieldname": "test_connection",
+   "fieldtype": "Button",
+   "label": "Test Connection"
+  },
+  {
+   "fieldname": "fetch_fleet",
+   "fieldtype": "Button",
+   "label": "Fetch Fleet"
+  },
+  {
+   "fieldname": "sync_now",
+   "fieldtype": "Button",
+   "label": "Sync Now"
+  },
+  {
+   "fieldname": "sync_status_section",
+   "fieldtype": "Section Break",
+   "label": "Synchronization Status"
+  },
+  {
+   "fieldname": "last_sync_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Last Sync Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_status",
+   "fieldtype": "Select",
+   "label": "Last Sync Status",
+   "options": "\nSuccess\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_successful_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Sync",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_message",
+   "fieldtype": "Small Text",
+   "label": "Last Sync Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "machine_mapping_tab",
+   "fieldtype": "Tab Break",
+   "label": "Machine Mapping"
+  },
+  {
+   "fieldname": "machine_mappings",
+   "fieldtype": "Table",
+   "label": "Bell Machines to ERPNext Assets",
+   "options": "Bell Machine Mapping",
+   "cannot_add_rows": 1,
+   "cannot_delete_rows": 1,
+   "description": "Use Fetch Fleet to discover machines. Select an existing ERPNext Asset for each machine after verifying its PIN or serial number."
+  },
+  {
+   "fieldname": "additional_telemetry_tab",
+   "fieldtype": "Tab Break",
+   "label": "Fault Codes"
+  },
+  {
+   "fieldname": "fault_codes_section",
+   "fieldtype": "Section Break",
+   "label": "Fault Codes"
+  },
+  {
+   "fieldname": "fault_codes_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Fault Code Retrieval",
+   "default": "1"
+  },
+  {
+   "fieldname": "fault_codes_lookback_days",
+   "fieldtype": "Int",
+   "label": "Initial Fault History (Days)",
+   "default": "30"
+  },
+  {
+   "fieldname": "pull_fault_codes",
+   "fieldtype": "Button",
+   "label": "Pull Fault Codes"
+  },
+  {
+   "fieldname": "last_fault_codes_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Fault Retrieval",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fault_codes_status",
+   "fieldtype": "Select",
+   "label": "Fault Retrieval Status",
+   "options": "\nNever Run\nSuccess\nFailed",
+   "default": "Never Run",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fault_codes_message",
+   "fieldtype": "Small Text",
+   "label": "Fault Retrieval Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumption_section",
+   "fieldtype": "Section Break",
+   "label": "Fuel Consumption"
+  },
+  {
+   "fieldname": "fuel_consumption_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Fuel Retrieval",
+   "default": "1"
+  },
+  {
+   "fieldname": "fuel_consumption_lookback_days",
+   "fieldtype": "Int",
+   "label": "Initial Fuel History (Days)",
+   "default": "30"
+  },
+  {
+   "fieldname": "pull_fuel_consumption",
+   "fieldtype": "Button",
+   "label": "Pull Fuel Consumption"
+  },
+  {
+   "fieldname": "last_fuel_consumption_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Fuel Retrieval",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fuel_consumption_status",
+   "fieldtype": "Select",
+   "label": "Fuel Retrieval Status",
+   "options": "\nNever Run\nSuccess\nFailed",
+   "default": "Never Run",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fuel_consumption_message",
+   "fieldtype": "Small Text",
+   "label": "Fuel Retrieval Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "active_regeneration_section",
+   "fieldtype": "Section Break",
+   "label": "Active Regeneration"
+  },
+  {
+   "fieldname": "active_regeneration_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Active Regeneration Retrieval",
+   "default": "0"
+  },
+  {
+   "fieldname": "active_regeneration_pull_time",
+   "fieldtype": "Time",
+   "label": "Daily Retrieval Time",
+   "default": "23:00:00"
+  },
+  {
+   "fieldname": "last_active_regeneration_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Retrieval",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_active_regeneration_status",
+   "fieldtype": "Select",
+   "label": "Regeneration Retrieval Status",
+   "options": "\nNever Run\nSuccess\nFailed",
+   "default": "Never Run",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_active_regeneration_message",
+   "fieldtype": "Small Text",
+   "label": "Regeneration Retrieval Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumption_tab",
+   "fieldtype": "Tab Break",
+   "label": "Fuel Consumption"
+  },
+  {
+   "fieldname": "active_regeneration_tab",
+   "fieldtype": "Tab Break",
+   "label": "Active Regeneration"
+  },
+  {
+   "fieldname": "view_fault_code_records",
+   "fieldtype": "Button",
+   "label": "View Fault Code Records"
+  },
+  {
+   "fieldname": "view_fuel_consumption_records",
+   "fieldtype": "Button",
+   "label": "View Fuel Consumption Records"
+  },
+  {
+   "fieldname": "view_active_regeneration_records",
+   "fieldtype": "Button",
+   "label": "View Bell Results"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "grid_page_length": 50,
+ "rows_threshold_for_grid_search": 20
+}

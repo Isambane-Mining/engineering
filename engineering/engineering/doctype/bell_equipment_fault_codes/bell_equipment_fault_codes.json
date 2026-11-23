@@ -1,0 +1,159 @@
+{
+ "doctype": "DocType",
+ "name": "Bell Equipment Fault Codes",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "autoname": "field:external_key",
+ "allow_rename": 0,
+ "track_changes": 1,
+ "field_order": [
+  "identity_section",
+  "external_key",
+  "asset",
+  "equipment_id",
+  "pin",
+  "serial_number",
+  "oem",
+  "model",
+  "fault_section",
+  "fault_code",
+  "description",
+  "occurred_at",
+  "retrieved_at",
+  "source_section",
+  "query_start",
+  "query_end",
+  "source_event_xml",
+  "source_checksum"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Machine Identity"
+  },
+  {
+   "fieldname": "external_key",
+   "fieldtype": "Data",
+   "label": "External Key",
+   "unique": 1,
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "ERPNext Asset",
+   "options": "Asset",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "equipment_id",
+   "fieldtype": "Data",
+   "label": "Bell Equipment ID",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "label": "OEM ISO Identifier / PIN",
+   "read_only": 1
+  },
+  {
+   "fieldname": "serial_number",
+   "fieldtype": "Data",
+   "label": "Serial Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "oem",
+   "fieldtype": "Data",
+   "label": "OEM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fault_section",
+   "fieldtype": "Section Break",
+   "label": "Fault Information"
+  },
+  {
+   "fieldname": "fault_code",
+   "fieldtype": "Data",
+   "label": "Fault Code",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Fault Description",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "occurred_at",
+   "fieldtype": "Datetime",
+   "label": "Fault Occurrence Timestamp",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "retrieved_at",
+   "fieldtype": "Datetime",
+   "label": "Retrieved At"
+  },
+  {
+   "fieldname": "source_section",
+   "fieldtype": "Section Break",
+   "label": "Source Information"
+  },
+  {
+   "fieldname": "query_start",
+   "fieldtype": "Datetime",
+   "label": "Query Start"
+  },
+  {
+   "fieldname": "query_end",
+   "fieldtype": "Datetime",
+   "label": "Query End"
+  },
+  {
+   "fieldname": "source_event_xml",
+   "fieldtype": "Long Text",
+   "label": "Original Fault XML"
+  },
+  {
+   "fieldname": "source_checksum",
+   "fieldtype": "Data",
+   "label": "Source Checksum",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1
+  },
+  {
+   "role": "Engineering User",
+   "read": 1
+  }
+ ],
+ "sort_field": "occurred_at",
+ "sort_order": "DESC",
+ "search_fields": "asset,pin,fault_code,description",
+ "grid_page_length": 50
+}

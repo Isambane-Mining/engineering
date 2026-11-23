@@ -1,4 +1,4 @@
-"""LAB scheduler integration checks; real DB/Redis, mocked vendor HTTP, rollback."""
+"""Isolated-site scheduler checks; real DB/Redis, mocked vendor HTTP, rollback."""
 import json
 import unittest
 from unittest.mock import Mock, patch
@@ -10,8 +10,15 @@ from engineering.controllers.test_kobelco import equipment
 
 # Only borrow the fixture lifecycle; unittest should collect this class's own tests.
 class TestKobelcoScheduler(unittest.TestCase):
-    setUp = _integration.TestKobelcoIntegration.setUp
-    tearDown = _integration.TestKobelcoIntegration.tearDown
+    _cleanup_isolated_transaction = _integration.TestKobelcoIntegration._cleanup_isolated_transaction
+
+    def setUp(self):
+        _integration.TestKobelcoIntegration.setUp(self)
+        # Exercise the LAB-only wrapper on the isolated connection. Do not rename
+        # frappe.local.site: that would reuse live site Redis keys and caches.
+        gate = patch.object(self.api, "LAB_SITE", frappe.local.site)
+        gate.start()
+        self.addCleanup(gate.stop)
 
     def scheduled(self):
         # Workers commit at their transaction boundary; keep tests rollback-only.
@@ -93,7 +100,10 @@ class TestKobelcoScheduler(unittest.TestCase):
         with lock:
             with self.assertRaisesRegex(self.api.KobelcoError, 'already running'):
                 self.scheduled()
-            self.assertFalse(self.api.sync_now()['ok'])
+            manual = self.api.sync_now()
+            self.assertFalse(manual['ok'])
+            self.assertEqual(manual['diagnostic']['stage'], 'acquire_sync_lock')
+            self.assertEqual(manual['diagnostic']['exception_class'], 'LockError')
         self.get.assert_not_called()
         self.assertEqual(frappe.get_single('API Kobelco Settings').last_sync_status, 'Failed')
 

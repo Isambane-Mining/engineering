@@ -3,18 +3,23 @@ import hashlib
 import json
 import re
 from datetime import date, datetime, time, timedelta, timezone
+from time import monotonic
 
 import frappe
+from frappe import _dict
 
 from engineering.controllers.mpi import MPIClient, MPIError, SETTINGS, _number
 
 IMPORT = "MPI History Import"
 HISTORY = "MPI Activity History"
+VEHICLE = "MPI History Vehicle"
 COMMANDS = ("run", "runstops", "get_idle", "ag_geozones", "distance")
 MAX_DAYS = 7
 MAX_ENDPOINT_ROWS = 2000
 MAX_IMPORT_ROWS = 20000
 JOB_TIMEOUT = 1800
+MAX_VEHICLES = 500
+VEHICLE_BATCH_SIZE = 5
 REPORT_NAME = "mileage report"
 PARAMETERS = ("imei", "start_date", "end_date", "include_report")
 STATUS_FIELDS = ("status", "started_at", "completed_at", "records_processed", "endpoint_outcomes", "last_error")
@@ -254,6 +259,38 @@ def _mapping(settings, imei):
     return matches[0]
 
 
+def import_vehicles(doc, settings=None):
+    """Validate saved child selections, with a fallback for pre-table single imports."""
+    rows = doc.get("vehicles") or []
+    if not rows and doc.imei:
+        rows = [_dict(imei=doc.imei)]
+    if not rows or len(rows) > MAX_VEHICLES:
+        raise MPIError("Select between one and 500 MPI vehicles.")
+    seen = set()
+    for row in rows:
+        if not re.fullmatch(r"[0-9]{1,32}", str(row.imei or "")):
+            raise MPIError("Choose a valid mapped MPI IMEI for every vehicle.")
+        if row.imei in seen:
+            raise MPIError("Each MPI IMEI may appear only once in an import.")
+        seen.add(row.imei)
+        if settings is not None:
+            mapping = _mapping(settings, row.imei)
+            if not row.get("name"):  # Legacy requests have no saved child display snapshot.
+                row.update({"plate": mapping.plate, "asset": mapping.asset})
+    return rows
+
+
+@frappe.whitelist()
+def get_history_vehicle_options():
+    settings = frappe.get_single(SETTINGS)
+    settings.check_permission("write")
+    counts = {}
+    for row in settings.vehicles:
+        counts[row.imei] = counts.get(row.imei, 0) + 1
+    return [{"imei": row.imei, "plate": row.plate, "asset": row.asset} for row in settings.vehicles
+            if re.fullmatch(r"[0-9]{1,32}", str(row.imei or "")) and counts[row.imei] == 1]
+
+
 @frappe.whitelist(methods=["POST"])
 def enqueue_import(request_name):
     doc = frappe.get_doc(IMPORT, request_name, for_update=True)
@@ -264,15 +301,20 @@ def enqueue_import(request_name):
         frappe.throw("Enable MPI settings before importing history.")
     try:
         utc_windows(doc.start_date, doc.end_date)
-        _mapping(settings, doc.imei)
+        vehicles = import_vehicles(doc, settings)
     except MPIError as error:
         frappe.throw(str(error))
     if doc.status in ("Queued", "Running"):
         return {"queued": True, "name": doc.name}
     frappe.db.set_value(IMPORT, doc.name, {"status": "Queued", "last_error": "", "endpoint_outcomes": "",
         "records_processed": 0, "started_at": None, "completed_at": None}, update_modified=False)
+    for row in vehicles:
+        if row.get("name"):
+            frappe.db.set_value(VEHICLE, row.name, {"status": "Queued", "last_error": "", "endpoint_outcomes": "",
+                "records_processed": 0, "started_at": None, "completed_at": None}, update_modified=False)
     frappe.enqueue("engineering.controllers.mpi_history.run_import", request_name=doc.name,
-        queue="long", timeout=JOB_TIMEOUT, job_id=f"mpi-history-{doc.name}", deduplicate=True, enqueue_after_commit=True)
+        queue="long", timeout=JOB_TIMEOUT * len(vehicles) + 60,
+        job_id=f"mpi-history-{doc.name}", deduplicate=True, enqueue_after_commit=True)
     return {"queued": True, "name": doc.name}
 
 
@@ -280,7 +322,9 @@ def enqueue_import(request_name):
 def get_import_status(request_name):
     doc = frappe.get_doc(IMPORT, request_name)
     doc.check_permission("read")
-    return {field: doc.get(field) for field in STATUS_FIELDS}
+    return {**{field: doc.get(field) for field in STATUS_FIELDS}, "vehicles": [
+        {"name": row.name, "imei": row.imei, **{field: row.get(field) for field in STATUS_FIELDS}}
+        for row in doc.get("vehicles") or []]}
 
 
 def _state(name, **values):
@@ -288,7 +332,8 @@ def _state(name, **values):
     frappe.db.commit()
 
 
-def _execute(doc, client, asset, windows):
+def _execute(doc, client, asset, windows, progress=None, deadline=None):
+    progress = progress or (lambda **values: _state(doc.name, **values))
     outcomes, errors, keys = {}, [], set()
     template, vehicle_id, report_error = None, None, None
     if doc.include_report:
@@ -303,6 +348,8 @@ def _execute(doc, client, asset, windows):
         for command in (*COMMANDS, "get_report") if doc.include_report else COMMANDS:
             label = f"{_iso(window[0])[:10]} {command}"
             try:
+                if deadline is not None and monotonic() >= deadline:
+                    raise MPIError("This vehicle exceeded its import time limit; retry a shorter date range.")
                 if command == "get_report" and report_error:
                     raise MPIError(report_error)
                 payload = client.fetch(command, doc.imei, window, template=template, vehicle_id=vehicle_id)
@@ -320,37 +367,106 @@ def _execute(doc, client, asset, windows):
                 message = str(error) if isinstance(error, MPIError) else "Could not import this MPI activity batch."
                 errors.append(f"{label}: {message}")
                 outcomes[label] = {"status": "Failed", "error": message}
-            _state(doc.name, endpoint_outcomes=json.dumps(outcomes, sort_keys=True), records_processed=len(keys))
-    _state(doc.name, status="Partial" if errors and keys else "Failed" if errors else "Completed",
+            progress(endpoint_outcomes=json.dumps(outcomes, sort_keys=True), records_processed=len(keys))
+    result = dict(status="Partial" if errors and keys else "Failed" if errors else "Completed",
         completed_at=datetime.now(timezone.utc).replace(tzinfo=None), last_error="\n".join(errors),
         endpoint_outcomes=json.dumps(outcomes, sort_keys=True), records_processed=len(keys))
+    progress(**result)
+    return result
+
+
+def _vehicle_state(row, **values):
+    row.update(values)
+    if row.get("name"):
+        frappe.db.set_value(VEHICLE, row.name, values, update_modified=False)
+        frappe.db.commit()
+
+
+def _parent_progress(doc, rows, final=False):
+    statuses = [row.get("status") for row in rows]
+    status = "Running"
+    if final:
+        status = "Completed" if all(s == "Completed" for s in statuses) else (
+            "Failed" if all(s == "Failed" for s in statuses) else "Partial")
+    errors = [f"Vehicle {idx}: {row.last_error}" for idx, row in enumerate(rows, 1) if row.get("last_error")]
+    outcomes = {row.imei: {"status": row.get("status"), "records_processed": row.get("records_processed") or 0}
+                for row in rows}
+    # Legacy single-vehicle requests retain their original parent endpoint detail.
+    if len(rows) == 1 and not rows[0].get("name"):
+        outcomes = json.loads(rows[0].get("endpoint_outcomes") or "{}")
+    values = dict(status=status, records_processed=sum(row.get("records_processed") or 0 for row in rows),
+                  endpoint_outcomes=json.dumps(outcomes, sort_keys=True), last_error="\n".join(errors))
+    if final:
+        values["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
+    _state(doc.name, **values)
+
+
+def _run_vehicles(doc, settings, client, windows):
+    rows = import_vehicles(doc)
+    for row in rows:
+        _vehicle_state(row, status="Queued", records_processed=0, endpoint_outcomes="", last_error="",
+                       started_at=None, completed_at=None)
+    for offset in range(0, len(rows), VEHICLE_BATCH_SIZE):
+        for row in rows[offset:offset + VEHICLE_BATCH_SIZE]:
+            lock = None
+            try:
+                mapping = _mapping(settings, row.imei)
+                candidate = frappe.cache.lock(f"{frappe.local.site}:mpi-history:{row.imei}",
+                    timeout=JOB_TIMEOUT + 60, blocking_timeout=1)
+                if not candidate.acquire(blocking=True):
+                    raise MPIError("Another history import is running for this vehicle; retry later.")
+                lock = candidate
+                _vehicle_state(row, status="Running", started_at=datetime.now(timezone.utc).replace(tzinfo=None))
+
+                def progress(**values):
+                    _vehicle_state(row, **values)
+                    _parent_progress(doc, rows)
+
+                result = _execute(_dict(name=doc.name, imei=row.imei, include_report=doc.include_report),
+                    client, row.get("asset") if row.get("name") else mapping.asset, windows,
+                    progress=progress, deadline=monotonic() + JOB_TIMEOUT)
+                _vehicle_state(row, **result)
+            except Exception as error:
+                frappe.db.rollback()
+                message = str(error) if isinstance(error, MPIError) else "MPI history import failed for this vehicle."
+                _vehicle_state(row, status="Failed", last_error=message,
+                               completed_at=datetime.now(timezone.utc).replace(tzinfo=None))
+            finally:
+                if lock is not None:
+                    try:
+                        lock.release()
+                    except Exception:
+                        _vehicle_state(row, status="Partial" if row.get("records_processed") else "Failed",
+                            last_error="Could not release this vehicle's import lock; retry later.",
+                            completed_at=datetime.now(timezone.utc).replace(tzinfo=None))
+            _parent_progress(doc, rows)
+    _parent_progress(doc, rows, final=True)
 
 
 def run_import(request_name):
-    lock = None
+    doc, authorized = None, False
     try:
         doc = frappe.get_doc(IMPORT, request_name)
         doc.check_permission("write")
         settings = frappe.get_single(SETTINGS)
         settings.check_permission("write")
+        authorized = True
         if not settings.enabled:
             raise MPIError("MPI settings are disabled.")
         windows = utc_windows(doc.start_date, doc.end_date)
-        mapping = _mapping(settings, doc.imei)
-        candidate = frappe.cache.lock(f"{frappe.local.site}:mpi-history:{doc.imei}", timeout=JOB_TIMEOUT + 60, blocking_timeout=1)
-        if not candidate.acquire(blocking=True):
-            raise MPIError("Another history import is running for this vehicle; retry later.")
-        lock = candidate
         password = settings.get_password("api_password", raise_exception=False)
         if not settings.username or not password:
             raise MPIError("Save the MPI credentials before importing history.")
         client = HistoryClient(settings.endpoint, settings.node, settings.username, password)
         _state(doc.name, status="Running", started_at=datetime.now(timezone.utc).replace(tzinfo=None), last_error="")
-        _execute(doc, client, mapping.asset, windows)
+        _run_vehicles(doc, settings, client, windows)
     except Exception as error:
         frappe.db.rollback()
+        if not authorized:
+            raise
         message = str(error) if isinstance(error, MPIError) else "MPI history import failed; review the request and settings."
+        for row in doc.get("vehicles") or []:
+            if row.status not in ("Completed", "Partial", "Failed"):
+                _vehicle_state(row, status="Failed", last_error=message,
+                    completed_at=datetime.now(timezone.utc).replace(tzinfo=None))
         _state(request_name, status="Failed", last_error=message, completed_at=datetime.now(timezone.utc).replace(tzinfo=None))
-    finally:
-        if lock is not None:
-            lock.release()

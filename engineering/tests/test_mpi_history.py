@@ -204,6 +204,7 @@ class TestHistoryPersistence(TestCase):
     def test_queue_is_manual_deduplicated_and_does_not_save_settings(self, framework, windows):
         doc = Mock(name="request-1", imei=IMEI, start_date="2026-11-19", end_date="2026-11-19", status="Completed")
         doc.name = "request-1"
+        doc.get.side_effect = lambda field: [] if field == "vehicles" else None
         settings = Mock(enabled=True, vehicles=[frappe._dict(imei=IMEI, asset="SELECTED-ASSET")])
         framework.get_doc.return_value = doc; framework.get_single.return_value = settings
         self.assertTrue(history.enqueue_import(doc.name)["queued"])
@@ -216,10 +217,10 @@ class TestHistoryPersistence(TestCase):
 
     @patch.object(history, "frappe")
     def test_status_refresh_is_permission_checked_and_has_no_parameters_or_secrets(self, framework):
-        doc = Mock(); doc.get.side_effect = lambda field: "safe"
+        doc = Mock(); doc.get.side_effect = lambda field: [] if field == "vehicles" else "safe"
         framework.get_doc.return_value = doc
         result = history.get_import_status("request-1")
-        self.assertEqual(set(result), set(history.STATUS_FIELDS))
+        self.assertEqual(set(result), set(history.STATUS_FIELDS) | {"vehicles"})
         doc.check_permission.assert_called_once_with("read")
         self.assertNotIn("imei", result)
         doc.check_permission.side_effect = PermissionError()
