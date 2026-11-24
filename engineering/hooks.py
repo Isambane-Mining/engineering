@@ -147,6 +147,7 @@ scheduler_events = {
         ],
         "5 0 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+            "is_production.production.doctype.monthly_production_planning.monthly_production_planning.queue_daily_mpp_machine_refresh",
         ],
         # ==========================================================
         # SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
