@@ -1,0 +1,93 @@
+{
+ "doctype": "DocType",
+ "name": "Kobelco Machine Mapping",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "actions": [],
+ "links": [],
+ "states": [],
+ "allow_rename": 0,
+ "field_order": [
+  "serial_number",
+  "pin",
+  "oem",
+  "model",
+  "asset",
+  "mapping_status",
+  "last_seen"
+ ],
+ "fields": [
+  {
+   "fieldname": "serial_number",
+   "fieldtype": "Data",
+   "label": "Serial Number",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "label": "PIN",
+   "unique": 1,
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "oem",
+   "fieldtype": "Data",
+   "label": "OEM",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "Asset",
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "Select an existing ERPNext Asset after verifying the serial number or PIN.",
+   "columns": 2,
+   "read_only": 0
+  },
+  {
+   "fieldname": "mapping_status",
+   "fieldtype": "Select",
+   "label": "Mapping Status",
+   "options": "Unmapped\nMapped",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "last_seen",
+   "fieldtype": "Datetime",
+   "label": "Last Seen",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  }
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "istable": 1,
+ "editable_grid": 1,
+ "grid_page_length": 50,
+ "rows_threshold_for_grid_search": 20
+}

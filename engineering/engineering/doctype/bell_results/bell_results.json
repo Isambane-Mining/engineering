@@ -1,0 +1,357 @@
+{
+ "doctype": "DocType",
+ "name": "Bell Results",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "autoname": "field:external_key",
+ "track_changes": 1,
+ "field_order": [
+  "identity_section",
+  "external_key",
+  "equipment_id",
+  "pin",
+  "serial_number",
+  "oem",
+  "model",
+  "asset",
+  "mapping",
+  "mapping_status",
+  "unit_install_timestamp",
+  "fleet_snapshot_timestamp",
+  "fetched_at",
+  "telemetry_tab",
+  "operating_hours",
+  "operating_hours_timestamp",
+  "idle_hours",
+  "idle_hours_timestamp",
+  "active_regeneration_hours_timestamp",
+  "active_regeneration_hours",
+  "load_count",
+  "load_count_timestamp",
+  "payload",
+  "payload_units",
+  "payload_timestamp",
+  "fuel_consumed",
+  "fuel_units",
+  "fuel_consumed_timestamp",
+  "fuel_remaining",
+  "fuel_remaining_timestamp",
+  "def_remaining",
+  "def_tank_capacity_units",
+  "def_remaining_timestamp",
+  "odometer",
+  "odometer_units",
+  "odometer_timestamp",
+  "latitude",
+  "longitude",
+  "location_timestamp",
+  "engine_number",
+  "engine_running",
+  "engine_status_timestamp",
+  "raw_section",
+  "raw_xml",
+  "source_checksum"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Machine Identity"
+  },
+  {
+   "fieldname": "external_key",
+   "fieldtype": "Data",
+   "label": "External Key",
+   "unique": 1,
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "equipment_id",
+   "fieldtype": "Data",
+   "label": "Bell Equipment ID",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "pin",
+   "fieldtype": "Data",
+   "label": "OEM ISO Identifier / PIN",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "serial_number",
+   "fieldtype": "Data",
+   "label": "Serial Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "oem",
+   "fieldtype": "Data",
+   "label": "OEM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "ERPNext Asset",
+   "options": "Asset",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "mapping",
+   "fieldtype": "Data",
+   "label": "Machine Mapping Reference",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "mapping_status",
+   "fieldtype": "Select",
+   "label": "Mapping Status",
+   "options": "Unmapped\nMapped",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "unit_install_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Unit Installation Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fleet_snapshot_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Fleet Snapshot Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "Retrieved At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "telemetry_tab",
+   "fieldtype": "Tab Break",
+   "label": "Latest Telemetry"
+  },
+  {
+   "fieldname": "operating_hours",
+   "fieldtype": "Float",
+   "label": "Cumulative Operating Hours",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "operating_hours_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Operating Hours Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "idle_hours",
+   "fieldtype": "Float",
+   "label": "Cumulative Idle Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "idle_hours_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Idle Hours Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "load_count",
+   "fieldtype": "Int",
+   "label": "Cumulative Load Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "load_count_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Load Count Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payload",
+   "fieldtype": "Float",
+   "label": "Cumulative Payload",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payload_units",
+   "fieldtype": "Data",
+   "label": "Payload Units",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payload_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Payload Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumed",
+   "fieldtype": "Float",
+   "label": "Cumulative Fuel Consumed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_units",
+   "fieldtype": "Data",
+   "label": "Fuel Units",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumed_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Fuel Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_remaining",
+   "fieldtype": "Float",
+   "label": "Fuel Remaining (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_remaining_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Fuel Remaining Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "def_remaining",
+   "fieldtype": "Float",
+   "label": "DEF Remaining (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "def_tank_capacity_units",
+   "fieldtype": "Data",
+   "label": "DEF Capacity Units",
+   "read_only": 1
+  },
+  {
+   "fieldname": "def_remaining_timestamp",
+   "fieldtype": "Datetime",
+   "label": "DEF Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "odometer",
+   "fieldtype": "Float",
+   "label": "Distance / Odometer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "odometer_units",
+   "fieldtype": "Data",
+   "label": "Odometer Units",
+   "read_only": 1
+  },
+  {
+   "fieldname": "odometer_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Odometer Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "read_only": 1
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "read_only": 1
+  },
+  {
+   "fieldname": "location_timestamp",
+   "fieldtype": "Datetime",
+   "label": "GPS Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engine_number",
+   "fieldtype": "Data",
+   "label": "Engine Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engine_running",
+   "fieldtype": "Select",
+   "label": "Engine Status",
+   "options": "\nRunning\nStopped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engine_status_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Engine Status Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Source Data"
+  },
+  {
+   "fieldname": "raw_xml",
+   "fieldtype": "Long Text",
+   "label": "Original Fleet XML Response",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_checksum",
+   "fieldtype": "Data",
+   "label": "Source Checksum",
+   "read_only": 1
+  },
+  {
+   "fieldname": "active_regeneration_hours",
+   "fieldtype": "Float",
+   "label": "Cumulative Active Regeneration Hours"
+  },
+  {
+   "fieldname": "active_regeneration_hours_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Active Regeneration Hours Timestamp"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1
+  },
+  {
+   "role": "Engineering User",
+   "read": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "search_fields": "equipment_id,pin,serial_number,asset,model",
+ "grid_page_length": 50,
+ "allow_rename": 1
+}

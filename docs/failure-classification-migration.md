@@ -17,10 +17,9 @@ Activated on `juan.isambane.co.za` in the existing running checkout `/home/juan/
 All 20 Failure Classifications have verified keywords saved on LAB.
 The Machine Reliability API returns all 20 populated classifications.
 
-The 20 classifications are already seeded in production.
-No additional keyword-seeding patch is required.
-The classification migration preserves existing custom keywords
-and inspection links.
+The additive deployment patch
+`engineering.patches.seed_failure_classification_keywords`
+preserves existing custom keywords and inspection links.
 
 Inspection mappings:
 - Wearcheck: Lubrication System

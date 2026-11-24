@@ -182,7 +182,7 @@ class MonthlyTMMAssurance {
         const height = bottom + Math.max(...labels.map(lines => lines.length)) * 15 + 35;
         const points = rows.map((row, i) => [left + step * (i + .5), y_percent(row.cumulative_percent)]);
         return `<svg class="tmm-pareto-svg" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Planning-adjusted downtime by classification and cumulative percentage">
-            <title>Classified downtime Pareto. Cumulative percentages use all ${this.hours(counts.classified_hours)}.</title>
+            <title>Classified downtime Pareto.</title>
             ${Array.from({length: 6}, (_, i) => {
                 const y = bottom - (bottom - top) * i / 5;
                 return `<path class="tmm-grid-line" d="M${left} ${y}H${right}"/><text x="${left - 10}" y="${y + 4}" text-anchor="end">${(maximum * i / 5).toFixed(1)}</text><text x="${right + 10}" y="${y + 4}">${i * 20}%</text>`;
@@ -203,26 +203,63 @@ class MonthlyTMMAssurance {
     }
 
     problems_table(priority) {
-        return `<div class="table-responsive"><table class="tmm-problems"><thead><tr><th>Classification</th><th>Most frequent problem</th><th>Events</th><th>Downtime</th></tr></thead><tbody>
+        const gear = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 13 .1-2 2-1.5-2-3.4-2.4 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.4 3.1a7.5 7.5 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7.9 7.9 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.5 7.5 0 0 0 1.7 1L11 21h4l.4-3.1a7.5 7.5 0 0 0 1.7-1l2.4 1 2-3.4-2.1-1.5Z"/></svg>`;
+        const hydraulicIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3S6.5 10 6.5 14.2a5.5 5.5 0 0 0 11 0C17.5 10 12 3 12 3Z"/><path d="M9.5 15.5a2.8 2.8 0 0 0 2.5 2"/></svg>`;
+        const brakeIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M16 5.5l2-2"/></svg>`;
+
+        return `<div class="tmm-problem-cards">
             ${priority.map((row, index) => {
-                const matches = row.subcategories || [], leading = matches[0];
+                const matches = row.subcategories || [];
+                const leading = matches[0];
                 const review = row.subcategory_review_records || [];
-                return `<tr><th scope="row">${this.esc(row.category)}</th><td>
-                    ${leading ? this.esc(leading.subcategory) : '<span class="text-muted">No approved subcategory match — review descriptions.</span>'}
-                    ${matches.length ? `<button type="button" class="btn btn-link btn-xs tmm-top-three" aria-expanded="false" aria-controls="tmm-subcategories-${index}">View top 3</button>
-                    <div id="tmm-subcategories-${index}" class="tmm-subcategory-detail" hidden><table><thead><tr><th>Matched subcategory</th><th>Events</th><th>Downtime</th></tr></thead><tbody>${matches.map(sub => `<tr><td>${this.esc(sub.subcategory)}</td><td>${sub.count}</td><td>${this.hours(sub.hours)}</td></tr>`).join('')}</tbody></table>${matches.length < 3 ? '<p class="text-muted">Fewer than three matched subcategories.</p>' : ''}</div>` : ''}
-                    ${review.length ? `<details class="tmm-description-review"><summary>Description / timestamp review: ${review.length} events · ${this.hours(row.subcategory_review_hours)} known</summary><div class="table-responsive">${this.records_table(review, false)}</div></details>` : ''}
-                    </td><td>${leading ? leading.count : '—'}</td><td>${leading ? this.hours(leading.hours) : '—'}</td></tr>`;
-            }).join('') || '<tr><td colspan="4" class="text-muted">No priority classifications with measured downtime in this MPP period.</td></tr>'}
-        </tbody></table></div>`;
+                const hydraulic = /hydraulic/i.test(row.category || '');
+                const braking = /brak/i.test(row.category || '');
+                const icon = hydraulic ? hydraulicIcon : braking ? brakeIcon : gear;
+                const iconClass = hydraulic ? 'hydraulic' : braking ? 'braking' : 'mechanical';
+
+                return `<article class="tmm-problem-card">
+                    <div class="tmm-problem-classification">
+                        <span class="tmm-problem-icon tmm-problem-icon--${iconClass}">${icon}</span>
+                        <div class="tmm-problem-classification-text">
+                            <span class="tmm-problem-label">Classification</span>
+                            <strong>${this.esc(row.category)}</strong>
+                        </div>
+                    </div>
+
+                    <div class="tmm-problem-main">
+                        <span class="tmm-problem-label">Most frequent problem</span>
+                        <strong class="tmm-problem-name">${leading ? this.esc(leading.subcategory) : '<span class="text-muted">No approved subcategory match — review descriptions.</span>'}</strong>
+                        ${review.length ? `<details class="tmm-description-review"><summary>Description / timestamp review: ${review.length} events · ${this.hours(row.subcategory_review_hours)} known</summary><div class="table-responsive">${this.records_table(review, false)}</div></details>` : ''}
+                    </div>
+
+                    <div class="tmm-problem-action">
+                        ${matches.length ? `<button type="button" class="btn btn-default btn-xs tmm-top-three" aria-expanded="false" aria-controls="tmm-subcategories-${index}">View top 3</button>
+                        <div id="tmm-subcategories-${index}" class="tmm-subcategory-detail" hidden>
+                            <table><thead><tr><th>Matched subcategory</th><th>Events</th><th>Downtime</th></tr></thead>
+                            <tbody>${matches.map(sub => `<tr><td>${this.esc(sub.subcategory)}</td><td>${sub.count}</td><td>${this.hours(sub.hours)}</td></tr>`).join('')}</tbody></table>
+                            ${matches.length < 3 ? '<p class="text-muted">Fewer than three matched subcategories.</p>' : ''}
+                        </div>` : ''}
+                    </div>
+
+                    <div class="tmm-problem-stats">
+                        <div class="tmm-problem-stat">
+                            <span>Events</span>
+                            <strong>${leading ? leading.count : '—'}</strong>
+                        </div>
+                        <div class="tmm-problem-stat">
+                            <span>Downtime</span>
+                            <strong>${leading ? this.hours(leading.hours) : '—'}</strong>
+                        </div>
+                    </div>
+                </article>`;
+            }).join('') || '<p class="tmm-empty text-muted">No priority classifications with measured downtime in this MPP period.</p>'}
+        </div>`;
     }
 
     render_details() {
         const g = this.group(), c = g.counts;
         const priority = c.all_categories.filter(row => row.priority);
         const period = this.data.selected_period;
-        const unresolved = c.unresolved_records || [], invalid = c.invalid_records || [];
-        const unassigned = this.data.unassigned_records || [];
         this.body.find('.tmm-availability [data-group]').each((_, row) => {
             const selected = row.dataset.group === this.selected;
             $(row).toggleClass('is-selected', selected).attr('aria-pressed', String(selected));
@@ -234,23 +271,17 @@ class MonthlyTMMAssurance {
             <div id="tmm-group-panel" role="tabpanel" aria-label="${this.esc(g.group)} breakdown assurance">
             ${!['ADTs', 'Excavators', 'Dozers'].includes(g.group) ? `<h3>${this.esc(g.group)}</h3>` : ''}
             <div class="tmm-summary-cards">
-                <div class="tmm-summary-card"><span>Classified breakdown downtime</span><strong>${this.hours(c.classified_hours)}</strong><small>Planning-adjusted · excludes unresolved hours</small></div>
-                <div class="tmm-summary-card"><span>Total eligible breakdown events</span><strong>${c.total_count}</strong><small>${c.categorised_count} categorised · ${c.unresolved_count} unresolved</small></div>
+                <div class="tmm-summary-card"><span>Classified breakdown downtime</span><strong>${this.hours(c.classified_hours)}</strong><small>Planning-adjusted</small></div>
+                <div class="tmm-summary-card"><span>Total eligible breakdown events</span><strong>${c.total_count}</strong></div>
                 <div class="tmm-summary-card"><span>First 80% priority set</span><strong>${c.priority_category_count} classifications</strong><small>${this.percent(c.priority_percent)} of classified downtime</small></div>
             </div>
             <div class="tmm-analysis-row"><section class="tmm-section tmm-pareto"><h3>Downtime by failure classification</h3>
                 <div class="tmm-chart-legend"><span><i class="tmm-legend-bar"></i>Downtime (hours)</span><span><i class="tmm-legend-line"></i>Cumulative %</span><span><i class="tmm-legend-reference"></i>80% reference</span></div>
                 <div class="tmm-chart">${this.pareto_chart(c)}</div>
-                <p class="tmm-chart-note text-muted">${c.omitted_categories ? `Top 10: ${c.omitted_categories} omitted classifications · ${this.hours(c.omitted_hours)} remain in the denominator. ${c.priority_category_count > 10 ? `${c.priority_category_count - 10} additional priority classifications are beyond the top 10. ` : ''}<button type="button" class="btn btn-link btn-xs tmm-toggle-categories">${this.show_all ? 'Show top 10' : 'Show all classifications'}</button> ` : ''}Percentages use all ${this.hours(c.classified_hours)} classified hours. Blue bars include the classification crossing 80%.</p>
+                ${c.omitted_categories ? `<p class="tmm-chart-note text-muted">Top 10: ${c.omitted_categories} omitted classifications · ${this.hours(c.omitted_hours)} remain in the denominator. ${c.priority_category_count > 10 ? `${c.priority_category_count - 10} additional priority classifications are beyond the top 10. ` : ''}<button type="button" class="btn btn-link btn-xs tmm-toggle-categories">${this.show_all ? 'Show top 10' : 'Show all classifications'}</button></p>` : ''}
             </section><aside class="tmm-section tmm-focus"><h3>Where to focus</h3>
                 ${priority.length ? `<p class="tmm-focus-summary">${c.priority_category_count} classifications account for <strong>${this.percent(c.priority_percent)}</strong> of classified downtime.</p><ol class="tmm-focus-list">${priority.map((row, index) => `<li><span class="tmm-focus-rank">${index + 1}</span><span>${this.esc(row.category)}</span><span class="tmm-focus-hours">${this.hours(row.hours)}</span></li>`).join('')}</ol>` : '<p class="tmm-empty text-muted">No classified downtime to prioritise.</p>'}
             </aside></div>
-            <p class="tmm-completeness text-muted">Unresolved classification: ${this.hours(c.unresolved_hours)} known hours, excluded from classified downtime. ${invalid.length} invalid timestamp records: hours unknown. Status shown on records is current.</p>
-            ${unresolved.length || invalid.length || unassigned.length ? `<details class="tmm-review"><summary>${unresolved.length} uncategorised events · ${invalid.length} invalid timestamp records${unassigned.length ? ` · ${unassigned.length} equipment-group reviews` : ''} · Review data</summary>
-                <div class="tmm-review-body"><p>Correct records through the existing authorised breakdown workflow. Known unresolved hours are excluded from the Pareto; invalid timestamp hours are unknown. A record may require both reviews.</p>
-                ${unresolved.length ? `<h4>Unresolved categorisation · ${this.hours(c.unresolved_hours)} known</h4><div class="table-responsive tmm-unresolved">${this.records_table(unresolved)}</div>` : ''}
-                ${invalid.length ? `<h4>Invalid timestamps · hours unknown</h4><div class="table-responsive tmm-invalid">${this.records_table(invalid)}</div>` : ''}
-                ${unassigned.length ? `<h4>Equipment-group review</h4><div class="table-responsive">${this.records_table(unassigned, false)}</div>` : ''}</div></details>` : ''}
             <section class="tmm-section"><h3>Most frequent problems in priority classifications</h3><p class="text-muted">Configured subcategories ranked by distinct breakdown-event frequency; downtime uses the same MPP period.</p>${this.problems_table(priority)}</section>
             <section class="tmm-section"><div class="tmm-actions-heading"><h3>Corrective actions</h3>
                 <button type="button" class="btn btn-default btn-sm tmm-add" ${g.can_write ? '' : 'disabled'}>+ Add Action</button></div>

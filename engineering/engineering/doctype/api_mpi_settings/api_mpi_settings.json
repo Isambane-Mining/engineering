@@ -1,0 +1,121 @@
+{
+ "doctype": "DocType",
+ "name": "API MPI Settings",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "field_order": [
+  "api_configuration_tab",
+  "enabled",
+  "endpoint",
+  "node",
+  "username",
+  "api_password",
+  "last_attempt",
+  "last_success",
+  "last_error",
+  "vehicle_list_outcome",
+  "status_outcome",
+  "vehicle_mapping_tab",
+  "vehicles"
+ ],
+ "fields": [
+  {
+   "fieldname": "api_configuration_tab",
+   "fieldtype": "Tab Break",
+   "label": "API Configuration"
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "endpoint",
+   "fieldtype": "Data",
+   "label": "Endpoint",
+   "default": "https://web.mpitracking.co.za",
+   "reqd": 1
+  },
+  {
+   "fieldname": "node",
+   "fieldtype": "Int",
+   "label": "Node",
+   "default": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Username"
+  },
+  {
+   "fieldname": "api_password",
+   "fieldtype": "Password",
+   "label": "API Password"
+  },
+  {
+   "fieldname": "last_attempt",
+   "fieldtype": "Datetime",
+   "label": "Last Attempt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_success",
+   "fieldtype": "Datetime",
+   "label": "Last Success",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Long Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "vehicle_mapping_tab",
+   "fieldtype": "Tab Break",
+   "label": "Vehicle Mapping"
+  },
+  {
+   "fieldname": "vehicles",
+   "fieldtype": "Table",
+   "label": "Vehicles",
+   "options": "MPI Vehicle Mapping",
+   "description": "Review suggestions and select an Asset. Only unique raw identifiers are linked automatically. Existing Asset selections are preserved."
+  },
+  {
+   "fieldname": "vehicle_list_outcome",
+   "fieldtype": "Small Text",
+   "label": "Vehicle List Endpoint Outcome",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status_outcome",
+   "fieldtype": "Small Text",
+   "label": "Status Endpoint Outcome",
+   "read_only": 1
+  }
+ ],
+ "actions": [],
+ "links": [],
+ "states": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "issingle": 1,
+ "track_changes": 0,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
+ ]
+}

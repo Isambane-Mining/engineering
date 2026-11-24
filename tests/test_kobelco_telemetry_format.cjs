@@ -1,0 +1,16 @@
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+const path = require('node:path');
+const context = { Intl, Date, frappe: { provide() {}, kobelco_telemetry: {} } };
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../engineering/public/js/kobelco_telemetry_format.js'), 'utf8'), context);
+const format = context.frappe.kobelco_telemetry.format_datetime;
+assert.equal(format('2026-11-19 12:06:25'), '2026-11-19 14:06:25');
+assert.equal(format('2026-11-18T22:00:00Z'), '2026-11-19 00:00:00');
+assert.equal(format('2026-11-19T14:00:00+02:00'), '2026-11-19 14:00:00');
+assert.equal(format('2026-11-19 23:30:00.123456'), '2026-11-20 01:30:00');
+assert.equal(format('2026-11-19T21:45:00Z'), '2026-11-19 23:45:00');
+assert.equal(format('2026-11-19 21:45:00'), '2026-11-19 23:45:00');
+assert.equal(format(null), '');
+assert.equal(format('invalid'), '');
+console.log('8 UTC-to-Johannesburg formatting checks passed');

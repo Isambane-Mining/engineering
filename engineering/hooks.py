@@ -102,6 +102,7 @@ scheduler_events = {
         "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_hourly_gate",
         "engineering.controllers.importer.run_scheduled_wearcheck_sync",
         "engineering.controllers.fleet_card_import.recover_stalled_imports",
+        "engineering.controllers.kobelco.run_hourly_sync",
     ],
     "daily": [
         # Engineering Legals monthly SharePoint folders
@@ -146,6 +147,7 @@ scheduler_events = {
         ],
         "5 0 * * *": [
             "engineering.engineering.doctype.availability_and_utilisation.availability_and_utilisation.run_daily",
+            "is_production.production.doctype.monthly_production_planning.monthly_production_planning.queue_daily_mpp_machine_refresh",
         ],
         # ==========================================================
         # SERVICE SCHEDULE DAILY UPDATE (Runs at 01:00)
@@ -163,6 +165,9 @@ scheduler_events = {
 # DocType event hooks
 # ---------------------------------------------------------------------
 doc_events = {
+    "Scheduled Job Log": {
+        "on_change": "engineering.controllers.kobelco.sanitize_scheduled_job_log",
+    },
     "Asset Movement": {
         "on_submit": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",
         "on_cancel": "engineering.engineering.doctype.vehicle_licence.vehicle_licence.sync_location_from_asset_movement",

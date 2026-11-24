@@ -1,0 +1,139 @@
+{
+ "doctype": "DocType",
+ "name": "API Kobelco Settings",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "actions": [],
+ "links": [],
+ "states": [],
+ "allow_rename": 0,
+ "field_order": [
+  "api_configuration_tab",
+  "enabled",
+  "base_url",
+  "username",
+  "password",
+  "test_connection",
+  "fetch_fleet",
+  "sync_status_section",
+  "last_sync_timestamp",
+  "last_sync_status",
+  "last_successful_sync",
+  "last_sync_message",
+  "machine_mapping_tab",
+  "machine_mappings"
+ ],
+ "fields": [
+  {
+   "fieldname": "api_configuration_tab",
+   "fieldtype": "Tab Break",
+   "label": "API Configuration"
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "base_url",
+   "fieldtype": "Data",
+   "label": "Base URL",
+   "reqd": 1,
+   "description": "HTTPS API base URL, including the complete API path. /Fleet/1 is appended."
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Username",
+   "reqd": 1,
+   "default": ""
+  },
+  {
+   "fieldname": "password",
+   "fieldtype": "Password",
+   "label": "Password",
+   "reqd": 1
+  },
+  {
+   "fieldname": "test_connection",
+   "fieldtype": "Button",
+   "label": "Test Connection"
+  },
+  {
+   "fieldname": "fetch_fleet",
+   "fieldtype": "Button",
+   "label": "Fetch Fleet"
+  },
+  {
+   "fieldname": "sync_status_section",
+   "fieldtype": "Section Break",
+   "label": "Last Sync"
+  },
+  {
+   "fieldname": "last_sync_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Last Sync Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_status",
+   "fieldtype": "Select",
+   "label": "Last Sync Status",
+   "options": "\nSuccess\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_successful_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Sync",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "last_sync_message",
+   "fieldtype": "Small Text",
+   "label": "Last Sync Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "machine_mapping_tab",
+   "fieldtype": "Tab Break",
+   "label": "Machine Mapping"
+  },
+  {
+   "fieldname": "machine_mappings",
+   "fieldtype": "Table",
+   "label": "Map Kobelco Machines with Assets",
+   "options": "Kobelco Machine Mapping",
+   "cannot_add_rows": 1,
+   "cannot_delete_rows": 1,
+   "description": "Select an existing Asset for each machine. Orange Unmapped status identifies machines awaiting mapping."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Engineering Area Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Engineering Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "issingle": 1,
+ "grid_page_length": 50,
+ "rows_threshold_for_grid_search": 20
+}

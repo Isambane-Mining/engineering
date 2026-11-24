@@ -5,6 +5,7 @@ engineering.patches.rename_licence_registration_to_vehicle_licence
 engineering.patches.reset_engineering_doctype_custom_docperms
 engineering.patches.dedupe_hourly_downtime_summary_and_add_unique_key
 
+
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 #engineering.patches.update_isambane_opencast_mining_job_card_links THIS PATCH DOESN"T WORK AND WAS NOT TESTED, TEST IN LAB FIRST
@@ -20,3 +21,4 @@ engineering.patches.seed_engineering_legals_sharepoint_config
 engineering.patches.seed_machine_reliability_settings
 engineering.patches.use_failure_classification
 engineering.patches.backfill_wearcheck_machine_mappings
+engineering.patches.seed_failure_classification_keywords
