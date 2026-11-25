@@ -122,7 +122,6 @@ scheduler_events = {
     "cron": {
         "* * * * *": [
             "engineering.controllers.bell_additional.run_scheduled_syncs",
-            "engineering.controllers.bell_operating_hours.run_scheduled_retrieval",
         ],
         # Quarter past, so the last hour's breakdowns have time to be captured
         # and the run doesn't start with the on-the-hour bench backups. Runs in

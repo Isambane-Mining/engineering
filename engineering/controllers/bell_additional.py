@@ -179,13 +179,18 @@ def _key(prefix, pin, values):
 
 def _save_record(doctype, values):
     key = values["external_key"]
-    existing = frappe.db.exists(doctype, key)
+    existing = frappe.db.exists(doctype, {"external_key": key})
 
     if existing:
         doc = frappe.get_doc(doctype, existing)
         doc.update(values)
         doc.save(ignore_permissions=True)
         return "updated"
+
+    if doctype == FUEL_DOCTYPE:
+        title = values.get("record_title")
+        if title and frappe.db.exists(doctype, title):
+            values["record_title"] = f"{title} - {key[-6:]}"
 
     doc = frappe.get_doc({"doctype": doctype, **values})
     doc.insert(ignore_permissions=True)
@@ -247,8 +252,17 @@ def _set_machine_status(mapping, kind, success, message, checked_at):
         update_modified=False,
     )
 
+    if kind == "fuel_consumption" and mapping.pin:
+        frappe.db.set_value(
+            FUEL_DOCTYPE,
+            {"pin": mapping.pin},
+            "retrieval_status",
+            "Reporting" if success else "Not Reporting",
+            update_modified=False,
+        )
 
-def _run(kind, scheduled=False):
+
+def _run(kind, scheduled=False, site_filter=None, schedule_entries=None):
     settings = frappe.get_single(SETTINGS)
 
     if not settings.enabled:
@@ -278,6 +292,24 @@ def _run(kind, scheduled=False):
         now = datetime.now(timezone.utc)
         initial_start = now - timedelta(days=days)
         mappings = _machine_mappings(settings)
+
+        if site_filter is not None:
+            mappings = [
+                row for row in mappings
+                if frappe.db.get_value("Asset", row.asset, "location") in site_filter
+            ]
+            if not mappings:
+                return {
+                    "ok": True,
+                    "count": 0,
+                    "message": "No mapped Bell machines at scheduled sites.",
+                }
+
+        schedule_by_site = {
+            entry[0].site: entry
+            for entry in (schedule_entries or [])
+        }
+
         token = _credentials(settings)
 
         pending = []
@@ -286,6 +318,28 @@ def _run(kind, scheduled=False):
         skipped_machines = 0
 
         for mapping in mappings:
+            mapping_site = (
+                frappe.db.get_value("Asset", mapping.asset, "location")
+                if mapping.asset else None
+            )
+            schedule_entry = (
+                schedule_by_site.get(mapping_site)
+                if schedule_entries is not None else None
+            )
+
+            if schedule_entries is not None and not schedule_entry:
+                continue
+
+            if schedule_entry:
+                schedule_row, shift_date, run_key, scheduled_at = schedule_entry
+                shift_name = schedule_row.shift
+                pull_time = str(schedule_row.pull_time)[:5]
+            else:
+                local_now = datetime.now(ZoneInfo("Africa/Johannesburg"))
+                shift_date = local_now.date()
+                shift_name = "Manual"
+                pull_time = local_now.strftime("%H:%M")
+
             checked = _as_utc(mapping.get(f"{kind}_last_checked"))
             status = mapping.get(f"{kind}_status")
 
@@ -390,9 +444,27 @@ def _run(kind, scheduled=False):
                             (timestamp.isoformat(),),
                         )
 
+                        measurement_local = timestamp.replace(
+                            tzinfo=timezone.utc
+                        ).astimezone(ZoneInfo("Africa/Johannesburg"))
+
+                        record_title = (
+                            f"{mapping.asset} - {shift_date:%d-%m-%Y} - "
+                            f"{shift_name} ({pull_time}) - "
+                            f"{measurement_local:%H%M} - {key[-6:]}"
+                        )
+
                         values = {
                             **identity,
                             "external_key": key,
+                            "record_title": record_title,
+                            "site": mapping_site,
+                            "shift_date": shift_date,
+                            "shift": shift_name,
+                            "scheduled_pull_time": (
+                                pull_time if schedule_entry else None
+                            ),
+                            "retrieval_status": "Reporting",
                             "fuel_consumed": consumed,
                             "fuel_units": units,
                             "measurement_timestamp": timestamp,
@@ -494,6 +566,52 @@ def pull_fuel_consumption():
     return _run("fuel_consumption")
 
 
+def _schedule_time(value):
+    if hasattr(value, "hour"):
+        return value
+    return datetime.strptime(str(value)[:8], "%H:%M:%S").time()
+
+
+def _due_fuel_schedules(settings, now):
+    due = []
+
+    for row in settings.operating_hours_schedule or []:
+        if not row.enabled or not row.site:
+            continue
+
+        for shift_date in (now.date(), now.date() - timedelta(days=1)):
+            weekday = shift_date.weekday()
+            category = (
+                "Weekday" if weekday < 5
+                else "Saturday" if weekday == 5
+                else "Sunday"
+            )
+
+            if category != row.day_of_week:
+                continue
+
+            pull_time = _schedule_time(row.pull_time)
+            start_time = _schedule_time(row.shift_start)
+
+            pull_date = (
+                shift_date + timedelta(days=1)
+                if pull_time < start_time else shift_date
+            )
+
+            scheduled_at = datetime.combine(
+                pull_date, pull_time
+            ).replace(tzinfo=ZoneInfo("Africa/Johannesburg"))
+
+            age = (now - scheduled_at).total_seconds()
+
+            run_key = f"{row.name}|{scheduled_at.isoformat()}"
+
+            if 0 <= age < 360 and row.last_fuel_run_key != run_key:
+                due.append((row, shift_date, run_key, scheduled_at))
+
+    return due
+
+
 def run_scheduled_syncs():
     """Run Bell fault polling and the daily 18:00 SAST fuel pull."""
     settings = frappe.get_single(SETTINGS)
@@ -540,35 +658,53 @@ def run_scheduled_syncs():
                     "Scheduled Bell fault retrieval: %s", result
                 )
 
-        # Fuel polling: compare against South African local time explicitly.
-        if settings.fuel_consumption_enabled:
-            local_now = datetime.now(ZoneInfo("Africa/Johannesburg"))
-            pull_time = str(
-                settings.fuel_consumption_pull_time or "18:00:00"
-            )[:8]
+        # Fuel uses the same site/shift schedule as Operating Hours.
+        if (
+            settings.fuel_consumption_enabled
+            and settings.operating_hours_schedule_enabled
+        ):
+            local_now = datetime.now(
+                ZoneInfo("Africa/Johannesburg")
+            ).replace(second=0, microsecond=0)
 
-            today = local_now.date().isoformat()
-            last_date = str(
-                frappe.db.get_single_value(
-                    SETTINGS, "last_fuel_consumption_scheduled_date"
-                ) or ""
-            )
+            due = _due_fuel_schedules(settings, local_now)
 
-            if local_now.strftime("%H:%M:%S") >= pull_time and last_date != today:
-                # Mark before calling Bell to prevent duplicate daily requests.
-                frappe.db.set_single_value(
-                    SETTINGS,
-                    "last_fuel_consumption_scheduled_date",
-                    today,
-                    update_modified=False,
+            if due:
+                sites = {entry[0].site for entry in due}
+                checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+                # Reserve each shift before contacting Bell to prevent duplicates.
+                for row, shift_date, run_key, scheduled_at in due:
+                    frappe.db.set_value(
+                        "Bell Operating Hours Schedule",
+                        row.name,
+                        {
+                            "last_fuel_run_key": run_key,
+                            "last_fuel_run_at": checked_at,
+                        },
+                        update_modified=False,
+                    )
+
+                frappe.db.commit()
+
+                result = _run(
+                    "fuel_consumption",
+                    scheduled=True,
+                    site_filter=sites,
+                    schedule_entries=due,
                 )
                 frappe.db.commit()
 
-                result = _run("fuel_consumption", scheduled=True)
-                frappe.db.commit()
                 frappe.logger("bell_additional").info(
                     "Scheduled Bell fuel retrieval: %s", result
                 )
+
+        # Run operating-hours retrieval sequentially under the Bell scheduler.
+        # This avoids two independent Bell jobs competing at the same time.
+        from engineering.controllers.bell_operating_hours import (
+            run_scheduled_retrieval,
+        )
+        run_scheduled_retrieval()
 
     finally:
         frappe.db.sql("SELECT RELEASE_LOCK(%s)", (lock_name,))
