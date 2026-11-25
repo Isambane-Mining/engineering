@@ -1,7 +1,7 @@
 {
+ "actions": [],
+ "creation": "2026-11-19 17:53:39.525501",
  "doctype": "DocType",
- "name": "API MPI Settings",
- "module": "Engineering",
  "engine": "InnoDB",
  "field_order": [
   "api_configuration_tab",
@@ -25,23 +25,25 @@
    "label": "API Configuration"
   },
   {
+   "default": "0",
    "fieldname": "enabled",
    "fieldtype": "Check",
-   "label": "Enabled",
-   "default": "0"
+   "label": "Enabled"
   },
   {
+   "default": "https://web.mpitracking.co.za",
    "fieldname": "endpoint",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Endpoint",
-   "default": "https://web.mpitracking.co.za",
    "reqd": 1
   },
   {
+   "default": "3",
    "fieldname": "node",
    "fieldtype": "Int",
+   "in_list_view": 1,
    "label": "Node",
-   "default": "3",
    "reqd": 1
   },
   {
@@ -78,11 +80,11 @@
    "label": "Vehicle Mapping"
   },
   {
+   "description": "Review suggestions and select an Asset. Only unique raw identifiers are linked automatically. Existing Asset selections are preserved.",
    "fieldname": "vehicles",
    "fieldtype": "Table",
    "label": "Vehicles",
-   "options": "MPI Vehicle Mapping",
-   "description": "Review suggestions and select an Asset. Only unique raw identifiers are linked automatically. Existing Asset selections are preserved."
+   "options": "MPI Vehicle Mapping"
   },
   {
    "fieldname": "vehicle_list_outcome",
@@ -97,25 +99,48 @@
    "read_only": 1
   }
  ],
- "actions": [],
- "links": [],
- "states": [],
- "sort_field": "modified",
- "sort_order": "DESC",
  "issingle": 1,
- "track_changes": 0,
+ "link_display_mode": "Search",
+ "links": [],
+ "modified": "2026-11-24 14:20:21.357633",
+ "modified_by": "Administrator",
+ "module": "Engineering",
+ "name": "API MPI Settings",
+ "owner": "Administrator",
  "permissions": [
   {
-   "role": "System Manager",
+   "create": 1,
    "read": 1,
-   "write": 1,
-   "create": 1
+   "role": "System Manager",
+   "write": 1
   },
   {
-   "role": "Engineering Manager",
+   "create": 1,
    "read": 1,
-   "write": 1,
-   "create": 1
+   "role": "Engineering Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Production Area Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Production Manager",
+   "share": 1,
+   "write": 1
   }
- ]
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
 }

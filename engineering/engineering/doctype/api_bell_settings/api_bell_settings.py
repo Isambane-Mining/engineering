@@ -11,6 +11,32 @@ class APIBellSettings(Document):
     def validate(self):
         self._validate_configuration()
         self._validate_mappings()
+        self._validate_operating_hours_schedule()
+
+    def _validate_operating_hours_schedule(self):
+        seen = set()
+
+        for row in self.operating_hours_schedule or []:
+            if not row.enabled:
+                continue
+
+            key = (row.site, row.day_of_week, row.shift)
+            if key in seen:
+                frappe.throw(
+                    f"Duplicate operating-hours schedule: {row.site}, "
+                    f"{row.day_of_week}, {row.shift}."
+                )
+            seen.add(key)
+
+            if row.shift_start == row.shift_end:
+                frappe.throw(
+                    f"Shift start and end cannot be identical for {row.site}."
+                )
+
+            if row.pull_time is None:
+                frappe.throw(
+                    f"Pull time is required for {row.site}, {row.day_of_week}."
+                )
 
     def _validate_configuration(self):
         approved = {

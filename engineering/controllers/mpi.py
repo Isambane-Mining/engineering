@@ -252,6 +252,68 @@ def sync_now():
     return {"queued": True}
 
 
+@frappe.whitelist(methods=["POST"])
+def fetch_fleet():
+    settings = frappe.get_single(SETTINGS)
+    settings.check_permission("write")
+    if not settings.enabled:
+        frappe.throw("Enable and save MPI settings before fetching the fleet.")
+    validate_configuration(settings.endpoint, settings.node)
+    password = settings.get_password("api_password", raise_exception=False)
+    if not settings.username or not password:
+        frappe.throw("Save the MPI username and API password before fetching the fleet.")
+
+    lock = frappe.cache.lock(
+        f"{frappe.local.site}:mpi-fleet-sync",
+        timeout=JOB_TIMEOUT + 60,
+        blocking_timeout=1,
+    )
+    if not lock.acquire(blocking=True):
+        frappe.throw("An MPI sync or fleet fetch is already running. Try again shortly.")
+
+    client = None
+    try:
+        _sync_state(
+            last_attempt=now_datetime(),
+            last_error="MPI fleet discovery in progress.",
+            vehicle_list_outcome="Not attempted.",
+        )
+        client = MPIClient(settings.endpoint, settings.node, settings.username, password)
+        vehicles = client.object_list()
+        if not vehicles:
+            raise MPIError("MPI returned an empty vehicle list; existing mappings were retained.")
+
+        filters = {"parent": SETTINGS, "parenttype": SETTINGS, "parentfield": "vehicles"}
+        before = set(frappe.get_all("MPI Vehicle Mapping", filters=filters, pluck="imei"))
+        _discover(vehicles)
+        rows = frappe.get_all("MPI Vehicle Mapping", filters=filters, fields=["imei", "asset"])
+        added = len({row.imei for row in rows} - before)
+        unmapped = sum(not row.asset for row in rows)
+
+        _sync_state(last_error="", **_endpoint_outcomes(client))
+        return {
+            "ok": True,
+            "message": (
+                f"Fleet fetched: {len(vehicles)} vehicles; {added} new mappings; "
+                f"{unmapped} still need an Asset selection."
+            ),
+        }
+    except MPIError as error:
+        frappe.db.rollback()
+        message = str(error)
+    except Exception:
+        frappe.db.rollback()
+        message = "MPI fleet fetch failed internally; check the settings and retry on LAB."
+    finally:
+        lock.release()
+
+    try:
+        _sync_state(last_error=message, **_endpoint_outcomes(client))
+    except Exception:
+        pass
+    return {"ok": False, "message": message}
+
+
 def _sync_state(**values):
     frappe.db.set_single_value(SETTINGS, values, update_modified=False)
     frappe.db.commit()

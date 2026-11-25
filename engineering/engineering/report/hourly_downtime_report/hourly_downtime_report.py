@@ -16,6 +16,7 @@ CATEGORY_ORDER = {
     "Service Truck": 6,
     "FEL": 7,
     "Grader": 8,
+    "TLB": 9,
 }
 
 # Ignore old dirty open records before this date
@@ -79,6 +80,8 @@ def get_category_group(asset_category):
         return "FEL"
     if "grader" in value:
         return "Grader"
+    if "tlb" in value:
+        return "TLB"
 
     return ""
 

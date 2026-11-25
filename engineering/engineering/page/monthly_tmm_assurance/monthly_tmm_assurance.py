@@ -233,14 +233,6 @@ def count_summary(counts):
     return f"{counts['priority_category_count']} classifications account for {counts['priority_percent']:.1f}% of classified downtime ({counts['classified_hours']:.2f} h)."
 
 
-def completeness(counts):
-    records = (f"{counts['categorised_count']} categorised + {counts['unresolved_count']} unresolved = "
-               f"{counts['total_count']} breakdown records.")
-    if 'classified_hours' in counts:
-        return records + f" Classified: {counts['classified_hours']:.2f} h; classification review: {counts['unresolved_hours']:.2f} h (excluded from denominator). Timestamp review: {len(counts['invalid_records'])}."
-    return records + ' Cumulative percentages exclude unresolved categories.'
-
-
 def count_chart_image(counts, limit=10):
     metric = 'hours' if 'classified_hours' in counts else 'count'
     axis_title = 'Breakdown downtime (hours)' if metric == 'hours' else 'Number of breakdown records'
@@ -334,9 +326,7 @@ def report_html(data):
             actions.append('<tr>'+''.join(f'<td>{esc(action.get(k))}</td>' for k in ('cause','action','owner_name','due_date','status','breakdown_reference'))+'</tr>')
         action_table='<table><thead><tr><th>Category</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th><th>Breakdown Reference</th></tr></thead><tbody>'+''.join(actions)+'</tbody></table>' if actions else '<p class="text-muted">No saved corrective actions.</p>'
         omitted=f"Top 10 shown; {counts['omitted_categories']} categories / {counts.get('omitted_hours',0):.2f} hours omitted from chart (included in the denominator and full breakdown below)." if counts['omitted_categories'] else 'All categories with records are shown.'
-        sections.append(f'<section class="group-detail"><h2>{esc(group["group"])} · Breakdown downtime by classification</h2><p>{esc(data["population"])} · {esc(data["month_label"])}</p>{count_chart_image(counts)}<p>{esc(count_summary(counts))}</p><p>{esc(completeness(counts))}</p><p>{esc(omitted)}</p>{category_table}<h3>Breakdowns contributing to the first 80%</h3>{record_table(counts["priority_records"],data.get("base_url",""))}<h3>Unresolved categorisation — review</h3>{record_table(counts["unresolved_records"],data.get("base_url",""))}<h3>Corrective actions · {esc(group["group"])}</h3>{action_table}</section>')
-    if data.get('unassigned_records'):
-        sections.append('<section class="group-detail"><h2>Equipment group requires review</h2>'+record_table(data['unassigned_records'],data.get('base_url',''))+'</section>')
+        sections.append(f'<section class="group-detail"><h2>{esc(group["group"])} · Breakdown downtime by classification</h2><p>{esc(data["population"])} · {esc(data["month_label"])}</p>{count_chart_image(counts)}<p>{esc(count_summary(counts))}</p><p>{esc(omitted)}</p>{category_table}<h3>Breakdowns contributing to the first 80%</h3>{record_table(counts["priority_records"],data.get("base_url",""))}<h3>Corrective actions · {esc(group["group"])}</h3>{action_table}</section>')
     if not sections:
         sections=['<p class="text-muted">No availability, breakdown records or saved actions for this period.</p>']
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
@@ -879,8 +869,6 @@ def presentation_bytes(data):
         else:
             text(page,'No classified planning-adjusted breakdown downtime for this group in the selected MPP period.',.7,2.3,11.9,1.3,24)
         text(page,count_summary(counts),.55,5.95,12.2,.45,16,bold=True)
-        text(page,f"Top 10 shown; percentages use all {counts['classified_hours']:.2f} classified hours. Blue: first 80% set; grey: remaining. Dashed line: 80%.",.55,6.43,12.2,.4,12)
-        text(page,f"Classification review: {counts['unresolved_hours']:.2f} h (excluded); invalid timestamp records: {len(counts['invalid_records'])} — review in ERP.",.55,6.78,12.2,.3,12)
         priority = [row for row in counts['categories'] if row['priority']]
         for offset in range(0,len(priority),2):
             detail = slide(title+' · priority detail continued')

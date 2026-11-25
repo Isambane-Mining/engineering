@@ -1,0 +1,130 @@
+{
+ "doctype": "DocType",
+ "name": "Bell Operating Hours Reading",
+ "module": "Engineering",
+ "engine": "InnoDB",
+ "autoname": "field:reading_key",
+ "track_changes": 1,
+ "field_order": [
+  "reading_key",
+  "asset",
+  "site",
+  "shift_date",
+  "day_of_week",
+  "shift",
+  "shift_start",
+  "shift_end",
+  "scheduled_pull_time",
+  "operating_hours",
+  "source_measurement_timestamp",
+  "retrieved_at",
+  "fleet_snapshot_timestamp",
+  "source_checksum"
+ ],
+ "fields": [
+  {
+   "fieldname": "reading_key",
+   "fieldtype": "Data",
+   "label": "Reading Key",
+   "reqd": 1,
+   "unique": 1,
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Fleet Number",
+   "options": "Asset",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "shift_date",
+   "fieldtype": "Date",
+   "label": "Shift Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "day_of_week",
+   "fieldtype": "Select",
+   "label": "Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "Day\nNight\nManual",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shift_start",
+   "fieldtype": "Datetime",
+   "label": "Shift Start"
+  },
+  {
+   "fieldname": "shift_end",
+   "fieldtype": "Datetime",
+   "label": "Shift End"
+  },
+  {
+   "fieldname": "scheduled_pull_time",
+   "fieldtype": "Time",
+   "label": "Scheduled Pull Time"
+  },
+  {
+   "fieldname": "operating_hours",
+   "fieldtype": "Float",
+   "label": "Cumulative Operating Hours",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "source_measurement_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Bell Measurement Timestamp",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "retrieved_at",
+   "fieldtype": "Datetime",
+   "label": "Retrieved At",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "fleet_snapshot_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Bell Fleet Snapshot Timestamp"
+  },
+  {
+   "fieldname": "source_checksum",
+   "fieldtype": "Data",
+   "label": "Source Checksum",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "report": 1, "export": 1},
+  {"role": "Engineering Manager", "read": 1, "report": 1, "export": 1},
+  {"role": "Engineering Area Manager", "read": 1, "report": 1, "export": 1},
+  {"role": "Engineering User", "read": 1, "report": 1, "export": 1},
+  {"role": "Fleet Manager", "read": 1, "report": 1, "export": 1}
+ ],
+ "sort_field": "retrieved_at",
+ "sort_order": "DESC",
+ "search_fields": "asset,site,shift"
+}

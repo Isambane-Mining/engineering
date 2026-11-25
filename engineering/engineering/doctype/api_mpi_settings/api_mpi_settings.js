@@ -19,6 +19,24 @@ frappe.ui.form.on("API MPI Settings", {
             frm.add_custom_button(__("Import History"), () => {
                 frappe.new_doc("MPI History Import");
             });
+            frm.add_custom_button(__("Fetch Fleet"), async () => {
+                if (frm.is_dirty()) {
+                    frappe.msgprint(__("Save the MPI settings and mapping changes before fetching the fleet."));
+                    return;
+                }
+                const response = await frappe.call({
+                    method: "engineering.controllers.mpi.fetch_fleet",
+                    freeze: true,
+                    freeze_message: __("Fetching MPI vehicle list..."),
+                });
+                const result = response.message || {};
+                if (result.ok) {
+                    frappe.show_alert({message: __(result.message), indicator: "green"});
+                    await frm.reload_doc();
+                } else {
+                    frappe.msgprint(result.message || __("MPI fleet fetch failed."));
+                }
+            });
             frm.add_custom_button(__("Sync Now"), async () => {
                 if (frm.is_dirty()) {
                     frappe.msgprint(__("Save the MPI settings and mapping changes before syncing."));
