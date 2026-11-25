@@ -22,6 +22,7 @@
   "sync_now",
   "sync_status_section",
   "last_sync_timestamp",
+  "last_fleet_request_at",
   "last_sync_status",
   "last_successful_sync",
   "last_sync_message",
@@ -30,6 +31,8 @@
   "additional_telemetry_tab",
   "fault_codes_section",
   "fault_codes_enabled",
+  "fault_codes_interval_seconds",
+  "last_fault_codes_scheduled_at",
   "fault_codes_lookback_days",
   "pull_fault_codes",
   "view_fault_code_records",
@@ -39,6 +42,8 @@
   "fuel_consumption_tab",
   "fuel_consumption_section",
   "fuel_consumption_enabled",
+  "fuel_consumption_pull_time",
+  "last_fuel_consumption_scheduled_date",
   "fuel_consumption_lookback_days",
   "pull_fuel_consumption",
   "view_fuel_consumption_records",
@@ -46,13 +51,19 @@
   "last_fuel_consumption_status",
   "last_fuel_consumption_message",
   "active_regeneration_tab",
+  "active_regeneration_notice",
   "active_regeneration_section",
   "active_regeneration_enabled",
   "active_regeneration_pull_time",
   "last_active_regeneration_sync",
   "last_active_regeneration_status",
   "last_active_regeneration_message",
-  "view_active_regeneration_records"
+  "view_active_regeneration_records",
+  "operating_hours_schedule_tab",
+  "operating_hours_schedule_section",
+  "operating_hours_schedule_enabled",
+  "operating_hours_schedule",
+  "pull_operating_hours_now"
  ],
  "fields": [
   {
@@ -216,7 +227,7 @@
    "fieldname": "last_fault_codes_status",
    "fieldtype": "Select",
    "label": "Fault Retrieval Status",
-   "options": "\nNever Run\nSuccess\nFailed",
+   "options": "\nNever Run\nSuccess\nPartial\nFailed",
    "default": "Never Run",
    "read_only": 1
   },
@@ -258,7 +269,7 @@
    "fieldname": "last_fuel_consumption_status",
    "fieldtype": "Select",
    "label": "Fuel Retrieval Status",
-   "options": "\nNever Run\nSuccess\nFailed",
+   "options": "\nNever Run\nSuccess\nPartial\nFailed",
    "default": "Never Run",
    "read_only": 1
   },
@@ -277,13 +288,15 @@
    "fieldname": "active_regeneration_enabled",
    "fieldtype": "Check",
    "label": "Enable Active Regeneration Retrieval",
-   "default": "0"
+   "default": "0",
+   "read_only": 1
   },
   {
    "fieldname": "active_regeneration_pull_time",
    "fieldtype": "Time",
    "label": "Daily Retrieval Time",
-   "default": "23:00:00"
+   "default": "",
+   "read_only": 1
   },
   {
    "fieldname": "last_active_regeneration_sync",
@@ -329,6 +342,70 @@
    "fieldname": "view_active_regeneration_records",
    "fieldtype": "Button",
    "label": "View Bell Results"
+  },
+  {
+   "fieldname": "last_fleet_request_at",
+   "fieldtype": "Datetime",
+   "label": "Last Bell Fleet API Request",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fault_codes_interval_seconds",
+   "fieldtype": "Int",
+   "label": "Minimum Fault Retrieval Interval (Seconds)",
+   "default": "320",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fault_codes_scheduled_at",
+   "fieldtype": "Datetime",
+   "label": "Last Scheduled Fault Retrieval",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumption_pull_time",
+   "fieldtype": "Time",
+   "label": "Daily Fuel Retrieval Time",
+   "default": "18:00:00"
+  },
+  {
+   "fieldname": "last_fuel_consumption_scheduled_date",
+   "fieldtype": "Date",
+   "label": "Last Scheduled Fuel Retrieval",
+   "read_only": 1
+  },
+  {
+   "fieldname": "active_regeneration_notice",
+   "fieldtype": "HTML",
+   "label": "Availability Notice",
+   "options": "<div class=\"alert alert-info\"><b>Future update - not yet available.</b><br>Awaiting Bell confirmation of the Active Regeneration Hours API endpoint. No retrieval is currently configured.</div>"
+  },
+  {
+   "fieldname": "operating_hours_schedule_tab",
+   "fieldtype": "Tab Break",
+   "label": "Operating Hours Schedule"
+  },
+  {
+   "fieldname": "operating_hours_schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Operating Hours Retrieval Schedule"
+  },
+  {
+   "fieldname": "operating_hours_schedule_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Automatic Operating Hours Retrieval",
+   "default": "0"
+  },
+  {
+   "fieldname": "operating_hours_schedule",
+   "fieldtype": "Table",
+   "label": "Site and Shift Schedules",
+   "options": "Bell Operating Hours Schedule"
+  },
+  {
+   "fieldname": "pull_operating_hours_now",
+   "fieldtype": "Button",
+   "label": "Pull Operating Hours Now"
   }
  ],
  "permissions": [

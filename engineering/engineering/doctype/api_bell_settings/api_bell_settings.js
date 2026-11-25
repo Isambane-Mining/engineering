@@ -135,3 +135,13 @@ frappe.ui.form.on("API Bell Settings", {
         frappe.set_route("List", "Bell Results");
     }
 });
+
+frappe.ui.form.on("API Bell Settings", {
+    pull_operating_hours_now(frm) {
+        bell_settings_action(
+            frm,
+            "pull_operating_hours_now",
+            "Pull Operating Hours"
+        );
+    }
+});

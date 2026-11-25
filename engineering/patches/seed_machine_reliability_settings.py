@@ -1,9 +1,14 @@
 import frappe
-from engineering.patches.use_failure_classification import migrate_settings
+from engineering.engineering.doctype.machine_reliability_settings.machine_reliability_settings import DEFAULT_CATEGORIES
 
 
 def execute():
-    migrate_settings()
+    settings = frappe.get_doc('Machine Reliability Settings')
+    if not settings.categories:
+        _seed_missing_engineering_legals_sections()
+        for category, keywords, test_sections in DEFAULT_CATEGORIES:
+            settings.append('categories', dict(category=category, keywords=keywords, test_sections=test_sections))
+        settings.save(ignore_permissions=True)
     ensure_navigation()
     # Bound historical-source queries efficiently without altering ERP records.
     frappe.db.add_index('Plant Breakdown or Maintenance', ['breakdown_start_datetime', 'location'], 'machine_reliability_date_site')

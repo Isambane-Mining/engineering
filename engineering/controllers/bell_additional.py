@@ -2,6 +2,7 @@
 
 import hashlib
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from urllib.parse import quote, urljoin, urlparse
 import xml.etree.ElementTree as ET
 
@@ -88,7 +89,7 @@ def _links(root):
     return result
 
 
-def _fetch_events(settings, token, pin, metric, event_tag, start, end):
+def _fetch_events(settings, token, pin, metric, event_tag, start, end, allow_empty_404=False):
     base = settings.fleet_url.rstrip("/")
     url = (
         f"{base}/Equipment/{quote(pin, safe='')}/"
@@ -118,6 +119,9 @@ def _fetch_events(settings, token, pin, metric, event_tag, start, end):
             timeout=max(int(settings.timeout or 30), 60),
             allow_redirects=False,
         )
+
+        if response.status_code == 404 and allow_empty_404:
+            return []
 
         if response.status_code != 200:
             raise BellAdditionalError(
@@ -199,19 +203,31 @@ def _identity(mapping):
     }
 
 
-def _set_status(kind, success, message):
+def _set_status(kind, success, message, partial=False):
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
+    status = "Partial" if partial else ("Success" if success else "Failed")
+
     values = {
-        f"last_{kind}_status": "Success" if success else "Failed",
+        f"last_{kind}_status": status,
         f"last_{kind}_message": message[:500],
     }
 
-    if success:
+    if success or partial:
         values[f"last_{kind}_sync"] = now
 
     frappe.db.set_single_value(SETTINGS, values)
     frappe.clear_document_cache(SETTINGS, SETTINGS)
+
+
+def _as_utc(value):
+    if not value:
+        return None
+    if not isinstance(value, datetime):
+        value = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _set_machine_status(mapping, kind, success, message, checked_at):
@@ -221,6 +237,9 @@ def _set_machine_status(mapping, kind, success, message, checked_at):
         f"{kind}_last_error": "" if success else str(message)[:500],
     }
 
+    if success:
+        values[f"{kind}_last_successful_at"] = checked_at.replace(tzinfo=None)
+
     frappe.db.set_value(
         "Bell Machine Mapping",
         mapping.name,
@@ -229,7 +248,7 @@ def _set_machine_status(mapping, kind, success, message, checked_at):
     )
 
 
-def _run(kind):
+def _run(kind, scheduled=False):
     settings = frappe.get_single(SETTINGS)
 
     if not settings.enabled:
@@ -254,31 +273,62 @@ def _run(kind):
         )
 
         if not 1 <= days <= 365:
-            raise BellAdditionalError(
-                "Lookback period must be between 1 and 365 days."
-            )
+            raise BellAdditionalError("Lookback period must be 1-365 days.")
 
         now = datetime.now(timezone.utc)
-        start_dt = now - timedelta(days=days)
-
-        start = start_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-        end = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-
+        initial_start = now - timedelta(days=days)
         mappings = _machine_mappings(settings)
         token = _credentials(settings)
 
-        # Use existing Asset mappings. A failed machine must not block others.
         pending = []
         failures = []
         successful_machines = 0
+        skipped_machines = 0
 
         for mapping in mappings:
+            checked = _as_utc(mapping.get(f"{kind}_last_checked"))
+            status = mapping.get(f"{kind}_status")
+
+            # Do not repeatedly hammer machines already known to be failing.
+            if (
+                scheduled
+                and status == "Not Reporting"
+                and checked
+                and (now - checked) < timedelta(hours=6)
+            ):
+                skipped_machines += 1
+                continue
+
+            successful_at = _as_utc(
+                mapping.get(f"{kind}_last_successful_at")
+            )
+
+            if not successful_at and status == "Reporting":
+                successful_at = checked
+
+            if successful_at:
+                overlap = (
+                    timedelta(minutes=15)
+                    if kind == "fault_codes"
+                    else timedelta(hours=26)
+                )
+                machine_start = max(
+                    successful_at - overlap,
+                    initial_start,
+                )
+            else:
+                machine_start = initial_start
+
+            start = machine_start.strftime("%Y-%m-%dT%H:%M:%SZ")
+            end = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+
             try:
                 if kind == "fault_codes":
                     events = _fetch_events(
                         settings, token, mapping.pin,
                         "CautionCodes", "CautionDescription",
                         start, end,
+                        allow_empty_404=bool(successful_at),
                     )
                 else:
                     events = _fetch_events(
@@ -287,15 +337,16 @@ def _run(kind):
                         start, end,
                     )
 
-                successful_machines += 1
+                machine_pending = []
+                identity = _identity(mapping)
 
                 for timestamp, data, raw_xml in events:
-                    identity = _identity(mapping)
+                    checksum = hashlib.sha256(
+                        raw_xml.encode("utf-8")
+                    ).hexdigest()
 
                     if kind == "fault_codes":
                         code = (data.get("Identifier") or "").strip()
-                        description = data.get("Description") or ""
-
                         if not code:
                             raise BellAdditionalError(
                                 "Fault without an identifier."
@@ -310,15 +361,13 @@ def _run(kind):
                             **identity,
                             "external_key": key,
                             "fault_code": code,
-                            "description": description,
+                            "description": data.get("Description") or "",
                             "occurred_at": timestamp,
                             "retrieved_at": now.replace(tzinfo=None),
-                            "query_start": start_dt.replace(tzinfo=None),
+                            "query_start": machine_start.replace(tzinfo=None),
                             "query_end": now.replace(tzinfo=None),
                             "source_event_xml": raw_xml,
-                            "source_checksum": hashlib.sha256(
-                                raw_xml.encode("utf-8")
-                            ).hexdigest(),
+                            "source_checksum": checksum,
                         }
                         doctype = FAULT_DOCTYPE
 
@@ -336,8 +385,6 @@ def _run(kind):
                             )
 
                         units = data.get("FuelUnits") or ""
-
-                        # One record per machine and measurement timestamp.
                         key = _key(
                             "FUEL24", mapping.pin,
                             (timestamp.isoformat(),),
@@ -350,29 +397,36 @@ def _run(kind):
                             "fuel_units": units,
                             "measurement_timestamp": timestamp,
                             "retrieved_at": now.replace(tzinfo=None),
-                            "query_start": start_dt.replace(tzinfo=None),
+                            "query_start": machine_start.replace(tzinfo=None),
                             "query_end": now.replace(tzinfo=None),
                             "source_event_xml": raw_xml,
-                            "source_checksum": hashlib.sha256(
-                                raw_xml.encode("utf-8")
-                            ).hexdigest(),
+                            "source_checksum": checksum,
                         }
                         doctype = FUEL_DOCTYPE
 
-                    pending.append((doctype, values))
+                    machine_pending.append((doctype, values))
 
+                pending.extend(machine_pending)
+                successful_machines += 1
                 _set_machine_status(mapping, kind, True, "", now)
 
             except Exception as error:
                 _set_machine_status(mapping, kind, False, str(error), now)
                 failures.append(
-                    f"{mapping.equipment_id or mapping.pin}: "
-                    f"{str(error)[:180]}"
+                    f"{mapping.equipment_id or mapping.pin}: {str(error)[:180]}"
                 )
+
+        if successful_machines == 0 and skipped_machines:
+            return {
+                "ok": True,
+                "count": 0,
+                "skipped_machines": skipped_machines,
+                "message": "No machines due for retry. Existing reporting errors remain flagged.",
+            }
 
         if successful_machines == 0:
             raise BellAdditionalError(
-                "All mapped machines failed. No records were imported. "
+                "All eligible machines failed. No records imported. "
                 + "; ".join(failures[:5])
             )
 
@@ -398,19 +452,23 @@ def _run(kind):
             f"{created} created; {updated} updated."
         )
 
+        if skipped_machines:
+            message += f" {skipped_machines} failed machines temporarily skipped."
+
         if failures:
             message += " Machine failures: " + "; ".join(failures[:5])
 
-        _set_status(kind, not failures, message)
+        _set_status(kind, not failures and not skipped_machines, message, partial=bool(failures or skipped_machines) and successful_machines > 0)
 
         return {
-            "ok": not failures,
-            "partial": bool(failures),
+            "ok": not failures and not skipped_machines,
+            "partial": bool(failures or skipped_machines),
             "count": len(pending),
             "created": created,
             "updated": updated,
             "machines": successful_machines,
             "failed_machines": len(failures),
+            "skipped_machines": skipped_machines,
             "message": message,
         }
 
@@ -420,9 +478,7 @@ def _run(kind):
             if isinstance(error, BellAdditionalError)
             else f"Bell additional retrieval failed ({type(error).__name__})."
         )
-
         _set_status(kind, False, message)
-
         return {"ok": False, "message": message}
 
 
@@ -436,3 +492,83 @@ def pull_fault_codes():
 def pull_fuel_consumption():
     frappe.has_permission(SETTINGS, "write", throw=True)
     return _run("fuel_consumption")
+
+
+def run_scheduled_syncs():
+    """Run Bell fault polling and the daily 18:00 SAST fuel pull."""
+    settings = frappe.get_single(SETTINGS)
+
+    if not settings.enabled:
+        return
+
+    lock_name = "bell_additional_telemetry_scheduler"
+    locked = frappe.db.sql(
+        "SELECT GET_LOCK(%s, 0)", (lock_name,)
+    )
+
+    if not locked or locked[0][0] != 1:
+        return
+
+    try:
+        now_utc = datetime.now(timezone.utc)
+        now_db = now_utc.replace(tzinfo=None)
+
+        # Fault polling: never run the same cycle less than 320 seconds apart.
+        if settings.fault_codes_enabled:
+            last_run = _as_utc(
+                frappe.db.get_single_value(
+                    SETTINGS, "last_fault_codes_scheduled_at"
+                )
+            )
+            interval = max(
+                320,
+                int(settings.fault_codes_interval_seconds or 320),
+            )
+
+            if not last_run or (now_utc - last_run).total_seconds() >= interval:
+                frappe.db.set_single_value(
+                    SETTINGS,
+                    "last_fault_codes_scheduled_at",
+                    now_db,
+                    update_modified=False,
+                )
+                frappe.db.commit()
+
+                result = _run("fault_codes", scheduled=True)
+                frappe.db.commit()
+                frappe.logger("bell_additional").info(
+                    "Scheduled Bell fault retrieval: %s", result
+                )
+
+        # Fuel polling: compare against South African local time explicitly.
+        if settings.fuel_consumption_enabled:
+            local_now = datetime.now(ZoneInfo("Africa/Johannesburg"))
+            pull_time = str(
+                settings.fuel_consumption_pull_time or "18:00:00"
+            )[:8]
+
+            today = local_now.date().isoformat()
+            last_date = str(
+                frappe.db.get_single_value(
+                    SETTINGS, "last_fuel_consumption_scheduled_date"
+                ) or ""
+            )
+
+            if local_now.strftime("%H:%M:%S") >= pull_time and last_date != today:
+                # Mark before calling Bell to prevent duplicate daily requests.
+                frappe.db.set_single_value(
+                    SETTINGS,
+                    "last_fuel_consumption_scheduled_date",
+                    today,
+                    update_modified=False,
+                )
+                frappe.db.commit()
+
+                result = _run("fuel_consumption", scheduled=True)
+                frappe.db.commit()
+                frappe.logger("bell_additional").info(
+                    "Scheduled Bell fuel retrieval: %s", result
+                )
+
+    finally:
+        frappe.db.sql("SELECT RELEASE_LOCK(%s)", (lock_name,))

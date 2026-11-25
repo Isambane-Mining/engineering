@@ -17,6 +17,60 @@ class BellError(Exception):
     pass
 
 
+def _claim_fleet_request():
+    """Enforce one shared five-minute Bell Fleet request interval."""
+    import frappe
+    from frappe.utils import get_datetime, now_datetime
+
+    # Keep standalone unit tests independent of the ERP database.
+    if not getattr(frappe.local, "site", None):
+        return
+
+    lock_name = "bell_fleet_api_cooldown"
+    locked = frappe.db.sql(
+        "SELECT GET_LOCK(%s, 10)", (lock_name,)
+    )
+
+    if not locked or locked[0][0] != 1:
+        raise BellError(
+            "Could not reserve the Bell Fleet API request. Try again shortly."
+        )
+
+    try:
+        now = now_datetime()
+        last = frappe.db.get_single_value(
+            "API Bell Settings", "last_fleet_request_at"
+        )
+
+        if last:
+            last = get_datetime(last)
+            elapsed = (now - last).total_seconds()
+            remaining = 300 - elapsed
+
+            if remaining > 0:
+                minutes = max(1, int((remaining + 59) // 60))
+                raise BellError(
+                    f"Bell Fleet rate limit active. "
+                    f"Wait approximately {minutes} minute(s) before "
+                    f"the next Fleet request."
+                )
+
+        # Persist the request timestamp before contacting Bell.
+        frappe.db.set_single_value(
+            "API Bell Settings",
+            "last_fleet_request_at",
+            now,
+            update_modified=False,
+        )
+        frappe.db.commit()
+
+    finally:
+        frappe.db.sql(
+            "SELECT RELEASE_LOCK(%s)", (lock_name,)
+        )
+
+
+
 @dataclass
 class FleetSnapshot:
     machines: list
@@ -267,30 +321,20 @@ class BellClient:
         if not token:
             raise BellError("Bell did not return an access token.")
 
-        fleet = None
+        _claim_fleet_request()
 
-        for attempt in range(3):
-            try:
-                fleet = self._post(
-                    fleet_url,
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "Accept": "application/xml",
-                    },
-                    timeout=max(self.timeout, 60),
-                    allow_redirects=False,
-                )
-            except requests.RequestException:
-                if attempt == 2:
-                    raise BellError("Bell fleet connection failed.") from None
-                time.sleep(attempt + 1)
-                continue
-
-            if fleet.status_code != 405 or attempt == 2:
-                break
-
-            time.sleep(attempt + 1)
-
+        try:
+            fleet = self._post(
+                fleet_url,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/xml",
+                },
+                timeout=max(self.timeout, 60),
+                allow_redirects=False,
+            )
+        except requests.RequestException:
+            raise BellError("Bell fleet connection failed.") from None
 
         if not fleet.ok:
             raise BellError(

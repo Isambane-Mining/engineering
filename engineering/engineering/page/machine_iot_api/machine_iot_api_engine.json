@@ -1,0 +1,15 @@
+{
+ "doctype": "Page",
+ "name": "machine-iot-api-engine",
+ "page_name": "machine-iot-api-engine",
+ "title": "Machine IoT API Engine",
+ "module": "Engineering",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Engineering Manager"},
+  {"role": "Engineering Area Manager"},
+  {"role": "Engineering User"}
+ ]
+}

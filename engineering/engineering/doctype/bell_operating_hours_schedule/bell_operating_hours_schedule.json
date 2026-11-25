@@ -1,0 +1,89 @@
+{
+ "doctype": "DocType",
+ "name": "Bell Operating Hours Schedule",
+ "module": "Engineering",
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "site",
+  "day_of_week",
+  "shift",
+  "shift_start",
+  "shift_end",
+  "pull_time",
+  "enabled",
+  "last_run_key",
+  "last_run_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "site",
+   "fieldtype": "Link",
+   "label": "Site",
+   "options": "Location",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "day_of_week",
+   "fieldtype": "Select",
+   "label": "Day of Week",
+   "options": "Weekday\nSaturday\nSunday",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "Day\nNight",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shift_start",
+   "fieldtype": "Time",
+   "label": "Shift Start",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shift_end",
+   "fieldtype": "Time",
+   "label": "Shift End",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "pull_time",
+   "fieldtype": "Time",
+   "label": "Pull Time",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "last_run_key",
+   "fieldtype": "Data",
+   "label": "Last Scheduled Run Key",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_run_at",
+   "fieldtype": "Datetime",
+   "label": "Last Scheduled Run",
+   "read_only": 1
+  }
+ ],
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC"
+}

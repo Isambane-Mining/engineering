@@ -16,9 +16,11 @@
   "mapping_status",
   "fault_codes_status",
   "fault_codes_last_checked",
+  "fault_codes_last_successful_at",
   "fault_codes_last_error",
   "fuel_consumption_status",
   "fuel_consumption_last_checked",
+  "fuel_consumption_last_successful_at",
   "fuel_consumption_last_error",
   "last_seen"
  ],
@@ -136,6 +138,18 @@
    "fieldname": "fuel_consumption_last_error",
    "fieldtype": "Small Text",
    "label": "Fuel Consumption Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fault_codes_last_successful_at",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Fault Retrieval",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fuel_consumption_last_successful_at",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Fuel Retrieval",
    "read_only": 1
   }
  ],
